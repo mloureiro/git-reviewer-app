@@ -1,0 +1,29 @@
+{
+  "name": "git-reviewer",
+  "private": true,
+  "description": "Local code review tool with GitHub PR-like experience, powered by git-notes",
+  "scripts": {
+    "dev": "pnpm --filter @git-reviewer/server dev & pnpm --filter @git-reviewer/client dev",
+    "build": "pnpm --filter @git-reviewer/client build && pnpm --filter @git-reviewer/server build",
+    "lint": "eslint packages/*/src --ext .ts,.tsx",
+    "lint:fix": "eslint packages/*/src --ext .ts,.tsx --fix",
+    "format": "prettier --write \"packages/*/src/**/*.{ts,tsx,json,css}\"",
+    "format:check": "prettier --check \"packages/*/src/**/*.{ts,tsx,json,css}\"",
+    "typecheck": "tsc --build",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "packageManager": "pnpm@9.15.4",
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.0.3",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.57.1"
+  }
+}

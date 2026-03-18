@@ -1,0 +1,22 @@
+node_modules/
+dist/
+.env
+.env.local
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+packages/client/dist/
+packages/server/dist/
+
+# Ephemeral task planning docs
+wiki/
