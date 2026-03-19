@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@git-reviewer/shared": "workspace:*",
     "diff2html": "^3.4.48",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

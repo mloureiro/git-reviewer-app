@@ -32,6 +32,9 @@ importers:
 
   packages/client:
     dependencies:
+      '@git-reviewer/shared':
+        specifier: workspace:*
+        version: link:../shared
       diff2html:
         specifier: ^3.4.48
         version: 3.4.56
