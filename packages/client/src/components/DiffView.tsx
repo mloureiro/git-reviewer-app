@@ -1,3 +1,4 @@
+import React from 'react';
 import { parse } from 'diff2html';
 import type { DiffBlock, DiffFile, DiffLine } from 'diff2html/lib-esm/types';
 import { LineType } from 'diff2html/lib-esm/types';
@@ -55,18 +56,21 @@ interface DiffBlockProps {
   block: DiffBlock;
   filePath: string;
   onLineClick?: (data: DiffLineData) => void;
+  renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
 }
 
 interface DiffFileProps {
   file: DiffFile;
   colorScheme: ColorSchemeType;
   onLineClick?: (data: DiffLineData) => void;
+  renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
 }
 
 interface DiffViewProps {
   diffText: string;
   colorScheme?: ColorSchemeType;
   onLineClick?: (data: DiffLineData) => void;
+  renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,7 +127,12 @@ export function DiffLineRow({ line, filePath, onLineClick }: DiffLineRowProps) {
 // DiffBlock
 // ---------------------------------------------------------------------------
 
-export function DiffBlockComponent({ block, filePath, onLineClick }: DiffBlockProps) {
+export function DiffBlockComponent({
+  block,
+  filePath,
+  onLineClick,
+  renderAfterLine,
+}: DiffBlockProps) {
   return (
     <tbody className="d2h-diff-tbody">
       {/* Hunk header row */}
@@ -135,14 +144,27 @@ export function DiffBlockComponent({ block, filePath, onLineClick }: DiffBlockPr
         </td>
       </tr>
 
-      {block.lines.map((line, idx) => (
-        <DiffLineRow
-          key={`${line.type}-${line.oldNumber ?? 'x'}-${line.newNumber ?? 'x'}-${idx}`}
-          line={line}
-          filePath={filePath}
-          onLineClick={onLineClick}
-        />
-      ))}
+      {block.lines.map((line, idx) => {
+        const oldNum = line.type !== LineType.INSERT ? line.oldNumber : undefined;
+        const newNum = line.type !== LineType.DELETE ? line.newNumber : undefined;
+        const commentLine = newNum ?? oldNum ?? 0;
+        const commentSide: 'left' | 'right' = line.type === LineType.DELETE ? 'left' : 'right';
+        const lineContent = stripLinePrefix(line.content);
+        const lineData: DiffLineData = {
+          file: filePath,
+          line: commentLine,
+          side: commentSide,
+          content: lineContent,
+        };
+        const rowKey = `${line.type}-${line.oldNumber ?? 'x'}-${line.newNumber ?? 'x'}-${idx}`;
+
+        return (
+          <React.Fragment key={rowKey}>
+            <DiffLineRow line={line} filePath={filePath} onLineClick={onLineClick} />
+            {renderAfterLine != null ? renderAfterLine(lineData) : null}
+          </React.Fragment>
+        );
+      })}
     </tbody>
   );
 }
@@ -151,7 +173,12 @@ export function DiffBlockComponent({ block, filePath, onLineClick }: DiffBlockPr
 // DiffFileComponent
 // ---------------------------------------------------------------------------
 
-export function DiffFileComponent({ file, colorScheme, onLineClick }: DiffFileProps) {
+export function DiffFileComponent({
+  file,
+  colorScheme,
+  onLineClick,
+  renderAfterLine,
+}: DiffFileProps) {
   const filePath = file.isRename === true ? file.newName : file.newName || file.oldName;
   const sectionId = filePathToId(filePath);
   const schemeClass = colorSchemeClass(colorScheme);
@@ -178,6 +205,7 @@ export function DiffFileComponent({ file, colorScheme, onLineClick }: DiffFilePr
               block={block}
               filePath={filePath}
               onLineClick={onLineClick}
+              renderAfterLine={renderAfterLine}
             />
           ))}
         </table>
@@ -194,6 +222,7 @@ export function DiffView({
   diffText,
   colorScheme = ColorSchemeType.AUTO,
   onLineClick,
+  renderAfterLine,
 }: DiffViewProps) {
   const diffFiles = parse(diffText);
 
@@ -213,6 +242,7 @@ export function DiffView({
             file={file}
             colorScheme={colorScheme}
             onLineClick={onLineClick}
+            renderAfterLine={renderAfterLine}
           />
         );
       })}
