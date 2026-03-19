@@ -60,6 +60,9 @@ importers:
 
   packages/server:
     dependencies:
+      '@git-reviewer/shared':
+        specifier: workspace:*
+        version: link:../shared
       cors:
         specifier: ^2.8.5
         version: 2.8.6
@@ -85,6 +88,12 @@ importers:
       tsx:
         specifier: ^4.19.0
         version: 4.21.0
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/shared:
+    devDependencies:
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
