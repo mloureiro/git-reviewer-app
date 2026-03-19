@@ -1,38 +1,27 @@
-import { useEffect, useState } from 'react';
 import { DiffView } from './components/DiffView';
+import { useDiff } from './hooks/useDiff';
+import type { DiffQueryParams } from './types/review';
+
+function getDiffParams(): DiffQueryParams {
+  const params = new URLSearchParams(window.location.search);
+  const uncommitted = params.get('uncommitted');
+
+  if (uncommitted) {
+    return { uncommitted: 'true' };
+  }
+
+  return {
+    base: params.get('base') ?? 'main',
+    head: params.get('head') ?? 'HEAD',
+  };
+}
 
 export function App() {
-  const [diffText, setDiffText] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchDiff() {
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const base = params.get('base') ?? 'main';
-        const head = params.get('head') ?? 'HEAD';
-        const uncommitted = params.get('uncommitted');
-
-        const query = uncommitted ? '?uncommitted=true' : `?base=${base}&head=${head}`;
-        const response = await fetch(`/api/diff${query}`);
-        const data = (await response.json()) as { diff: string; error?: string };
-
-        if (!response.ok) throw new Error(data.error ?? 'Failed to fetch diff');
-        setDiffText(data.diff);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchDiff();
-  }, []);
+  const { diff, loading, error } = useDiff(getDiffParams());
 
   if (loading) return <div className="loading">Loading diff...</div>;
   if (error) return <div className="error">Error: {error}</div>;
-  if (!diffText) return <div className="empty">No changes to review.</div>;
+  if (!diff) return <div className="empty">No changes to review.</div>;
 
   return (
     <div className="app">
@@ -40,7 +29,7 @@ export function App() {
         <h1>git-reviewer</h1>
       </header>
       <main className="main">
-        <DiffView diffText={diffText} />
+        <DiffView diffText={diff} />
       </main>
     </div>
   );
