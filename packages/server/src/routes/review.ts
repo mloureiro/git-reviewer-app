@@ -3,7 +3,7 @@ import type { SimpleGit } from 'simple-git';
 import { v4 as uuid } from 'uuid';
 import { getDiffText, getUncommittedDiffText } from '../git/diff.js';
 import { listReviewNotes, readReviewNote, writeReviewNote } from '../git/notes.js';
-import type { ReviewComment, ReviewData } from '../types.js';
+import type { ReviewComment, ReviewData } from '@git-reviewer/shared';
 
 export function createReviewRouter(git: SimpleGit): Router {
   const router = Router();

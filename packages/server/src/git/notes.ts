@@ -1,5 +1,5 @@
 import type { SimpleGit } from 'simple-git';
-import type { ReviewData } from '../types.js';
+import type { ReviewData } from '@git-reviewer/shared';
 
 const NOTES_REF = 'git-reviewer';
 
