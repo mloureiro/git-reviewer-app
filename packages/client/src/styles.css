@@ -451,6 +451,30 @@ body {
   color: #8b949e;
 }
 
+/* ── Review Layout (two-column: sidebar + diff) ────────────────────────── */
+
+.review-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.review-layout__sidebar {
+  flex-shrink: 0;
+  width: 260px;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.review-layout__main {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── File Tree Sidebar ─────────────────────────────────────────────────── */
 
 .file-tree {
@@ -460,8 +484,7 @@ body {
   border: 1px solid #30363d;
   border-radius: 6px;
   overflow: hidden;
-  min-width: 220px;
-  max-width: 320px;
+  width: 100%;
 }
 
 .file-tree__header {
@@ -496,7 +519,7 @@ body {
 .file-tree__list {
   list-style: none;
   overflow-y: auto;
-  max-height: calc(100vh - 160px);
+  max-height: calc(100vh - 120px);
 }
 
 .file-tree__item {

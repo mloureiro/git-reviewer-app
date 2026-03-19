@@ -1,5 +1,7 @@
 import { apiGet, apiPost, apiPatch } from './client';
 import type {
+  FilesQueryParams,
+  FilesResponse,
   DiffQueryParams,
   DiffResponse,
   SessionListResponse,
@@ -12,6 +14,24 @@ import type {
   UpdateSessionStatusRequest,
   UpdateSessionStatusResponse,
 } from '../types/review';
+
+/** GET /api/files — Fetch the list of changed files for the given base/head/uncommitted params. */
+export function fetchFiles(params: FilesQueryParams): Promise<FilesResponse> {
+  const query = new URLSearchParams();
+
+  if (params.base !== undefined) {
+    query.set('base', params.base);
+  }
+  if (params.head !== undefined) {
+    query.set('head', params.head);
+  }
+  if (params.uncommitted !== undefined) {
+    query.set('uncommitted', params.uncommitted);
+  }
+
+  const qs = query.toString();
+  return apiGet<FilesResponse>(`/api/files${qs ? `?${qs}` : ''}`);
+}
 
 /** GET /api/diff — Fetch raw diff text for the given base/head/uncommitted params. */
 export function fetchDiff(params: DiffQueryParams): Promise<DiffResponse> {

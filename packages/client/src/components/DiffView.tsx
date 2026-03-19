@@ -7,7 +7,7 @@ interface DiffViewProps {
   colorScheme?: ColorSchemeType;
 }
 
-function filePathToId(filePath: string): string {
+export function filePathToId(filePath: string): string {
   return `file-${filePath.replace(/[^a-zA-Z0-9]/g, '-')}`;
 }
 

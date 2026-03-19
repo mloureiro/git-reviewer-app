@@ -1,4 +1,4 @@
-import type { ReviewComment, ReviewStatus, ReviewData } from '@git-reviewer/shared';
+import type { ReviewComment, ReviewStatus, ReviewData, DiffFile } from '@git-reviewer/shared';
 
 export type {
   ReviewComment,
@@ -18,6 +18,17 @@ export interface ApiSuccessResponse<T> {
 /** Error response returned by the server on failure */
 export interface ApiErrorResponse {
   error: string;
+}
+
+// GET /api/files
+export interface FilesQueryParams {
+  base?: string;
+  head?: string;
+  uncommitted?: 'true' | 'false';
+}
+
+export interface FilesResponse {
+  files: DiffFile[];
 }
 
 // GET /api/diff

@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { DiffView } from '../components/DiffView';
+import { DiffView, filePathToId } from '../components/DiffView';
+import { FileTree } from '../components/FileTree';
 import { useDiff } from '../hooks/useDiff';
+import { useFiles } from '../hooks/useFiles';
 import { useReviewSession } from '../hooks/useReviewSession';
 import type { ReviewStatus } from '../types/review';
 
@@ -16,6 +19,7 @@ function StatusBadge({ status }: { status: ReviewStatus }) {
 
 export function SessionDetailPage() {
   const { commitSha } = useParams<{ commitSha: string }>();
+  const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
 
   const {
     session: reviewData,
@@ -23,12 +27,24 @@ export function SessionDetailPage() {
     error: sessionError,
   } = useReviewSession(commitSha ?? '');
 
-  const diffParams =
+  const filesParams =
     reviewData != null
       ? { base: reviewData.session.baseRef, head: reviewData.session.headRef }
       : null;
 
+  const diffParams = filesParams;
+
+  const { files } = useFiles(filesParams);
   const { diff, loading: diffLoading, error: diffError } = useDiff(diffParams);
+
+  function handleFileClick(filePath: string): void {
+    setActiveFile(filePath);
+    const sectionId = filePathToId(filePath);
+    const element = document.getElementById(sectionId);
+    if (element != null) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
 
   if (sessionLoading) {
     return <div className="loading">Loading session...</div>;
@@ -82,12 +98,22 @@ export function SessionDetailPage() {
         </div>
       </div>
 
-      {diffLoading && <div className="loading">Loading diff...</div>}
-      {diffError && <div className="error">Error loading diff: {diffError}</div>}
-      {!diffLoading && !diffError && diff != null && <DiffView diffText={diff} />}
-      {!diffLoading && !diffError && diff == null && (
-        <div className="empty">No changes to review.</div>
-      )}
+      <div className="review-layout">
+        {files.length > 0 && (
+          <aside className="review-layout__sidebar">
+            <FileTree files={files} onFileClick={handleFileClick} activeFile={activeFile} />
+          </aside>
+        )}
+
+        <div className="review-layout__main">
+          {diffLoading && <div className="loading">Loading diff...</div>}
+          {diffError && <div className="error">Error loading diff: {diffError}</div>}
+          {!diffLoading && !diffError && diff != null && <DiffView diffText={diff} />}
+          {!diffLoading && !diffError && diff == null && (
+            <div className="empty">No changes to review.</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
