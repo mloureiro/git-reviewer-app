@@ -3,11 +3,10 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
+    "composite": true,
     "jsx": "react-jsx",
     "module": "ESNext",
-    "moduleResolution": "bundler",
-    "declaration": false,
-    "declarationMap": false
+    "moduleResolution": "bundler"
   },
   "include": ["src"],
   "references": [{ "path": "../shared" }]
