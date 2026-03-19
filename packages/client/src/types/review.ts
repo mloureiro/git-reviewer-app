@@ -108,3 +108,25 @@ export interface DiffLineData {
   side: 'left' | 'right';
   content: string;
 }
+
+/**
+ * Display metadata for a given ReviewStatus value.
+ * Used by StatusBadge to render the correct label and color variant.
+ */
+export interface ReviewStatusMeta {
+  label: string;
+  /** Semantic color variant key for CSS styling. */
+  variant: 'neutral' | 'success' | 'warning';
+}
+
+/** Lookup map from each ReviewStatus to its display metadata. */
+export type ReviewStatusMetaMap = Record<ReviewStatus, ReviewStatusMeta>;
+
+/**
+ * Aggregated comment counts for a review session.
+ * Used by ReviewSummaryBar to show total and unresolved comment tallies.
+ */
+export interface ReviewSummaryStats {
+  total: number;
+  unresolved: number;
+}
