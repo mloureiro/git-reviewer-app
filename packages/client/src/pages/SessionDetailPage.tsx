@@ -4,21 +4,12 @@ import { CommentThread } from '../components/CommentThread';
 import { DiffView, filePathToId } from '../components/DiffView';
 import { FileTree } from '../components/FileTree';
 import { InlineCommentForm } from '../components/InlineCommentForm';
+import { StatusBadge } from '../components/StatusBadge';
 import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
 import { useDiff } from '../hooks/useDiff';
 import { useFiles } from '../hooks/useFiles';
 import { useReviewSession } from '../hooks/useReviewSession';
-import type { CommentFormData, DiffLineData, ReviewComment, ReviewStatus } from '../types/review';
-
-const STATUS_LABELS: Record<ReviewStatus, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  changes_requested: 'Changes Requested',
-};
-
-function StatusBadge({ status }: { status: ReviewStatus }) {
-  return <span className={`status-badge status-badge--${status}`}>{STATUS_LABELS[status]}</span>;
-}
+import type { CommentFormData, DiffLineData, ReviewComment } from '../types/review';
 
 /** Stable key for grouping comments by file + line. */
 function commentKey(file: string, line: number): string {

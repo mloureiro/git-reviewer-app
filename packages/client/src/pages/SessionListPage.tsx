@@ -1,16 +1,6 @@
 import { Link } from 'react-router-dom';
+import { StatusBadge } from '../components/StatusBadge';
 import { useSessions } from '../hooks/useSessions';
-import type { ReviewStatus } from '../types/review';
-
-const STATUS_LABELS: Record<ReviewStatus, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  changes_requested: 'Changes Requested',
-};
-
-function StatusBadge({ status }: { status: ReviewStatus }) {
-  return <span className={`status-badge status-badge--${status}`}>{STATUS_LABELS[status]}</span>;
-}
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
