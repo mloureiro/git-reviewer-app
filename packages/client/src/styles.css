@@ -260,6 +260,110 @@ body {
   border-color: rgba(240, 246, 252, 0.1);
 }
 
-.btn--primary:hover {
+.btn--primary:hover:not(:disabled) {
   background-color: #2ea043;
+}
+
+.btn--primary:disabled {
+  background-color: #238636;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn--secondary {
+  background-color: transparent;
+  color: #e6edf3;
+  border-color: #30363d;
+}
+
+.btn--secondary:hover {
+  background-color: rgba(177, 186, 196, 0.08);
+  border-color: #8b949e;
+}
+
+/* ── Session Create Page ───────────────────────────────────────────────── */
+
+.session-create {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 600px;
+}
+
+.session-create__header {
+  display: flex;
+  align-items: center;
+}
+
+.session-create__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.session-create__form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.session-create__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 4px;
+}
+
+.session-create__error {
+  font-size: 14px;
+  color: #f85149;
+  padding: 10px 14px;
+  background-color: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  border-radius: 6px;
+}
+
+/* ── Form Field ────────────────────────────────────────────────────────── */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-field__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e6edf3;
+}
+
+.form-field__input {
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #e6edf3;
+  background-color: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  font-family: inherit;
+}
+
+.form-field__input::placeholder {
+  color: #484f58;
+}
+
+.form-field__input:focus {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+}
+
+.form-field__input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-field__hint {
+  font-size: 12px;
+  color: #8b949e;
 }
