@@ -80,10 +80,41 @@ body {
   color: #f85149;
 }
 
+.diff-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.diff-file-section {
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.diff-file-section__header {
+  display: flex;
+  align-items: center;
+  padding: 8px 16px;
+  background-color: #161b22;
+  border-bottom: 1px solid #30363d;
+}
+
+.diff-file-section__filename {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 13px;
+  color: #e6edf3;
+}
+
 .diff-container {
   border: 1px solid #30363d;
   border-radius: 6px;
   overflow: hidden;
+}
+
+.diff-file-section .diff-container {
+  border: none;
+  border-radius: 0;
 }
 
 /* ── Session List Page ─────────────────────────────────────────────────── */
