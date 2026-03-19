@@ -4,6 +4,7 @@ interface FileTreeProps {
   files: DiffFile[];
   onFileClick: (filePath: string) => void;
   activeFile?: string;
+  unresolvedCounts?: Record<string, number>;
 }
 
 const STATUS_LABELS: Record<DiffFile['status'], string> = {
@@ -28,7 +29,7 @@ function formatPath(file: DiffFile): string {
   return file.path;
 }
 
-export function FileTree({ files, onFileClick, activeFile }: FileTreeProps) {
+export function FileTree({ files, onFileClick, activeFile, unresolvedCounts }: FileTreeProps) {
   if (files.length === 0) {
     return null;
   }
@@ -43,6 +44,7 @@ export function FileTree({ files, onFileClick, activeFile }: FileTreeProps) {
         {files.map((file) => {
           const isActive = file.path === activeFile;
           const label = formatPath(file);
+          const unresolvedCount = unresolvedCounts != null ? (unresolvedCounts[file.path] ?? 0) : 0;
 
           return (
             <li key={file.path}>
@@ -63,6 +65,15 @@ export function FileTree({ files, onFileClick, activeFile }: FileTreeProps) {
                     <span className="file-tree__deletions">-{file.deletions}</span>
                   )}
                 </span>
+                {unresolvedCount > 0 && (
+                  <span
+                    className="file-tree__unresolved-badge"
+                    title={`${unresolvedCount} unresolved comment${unresolvedCount === 1 ? '' : 's'}`}
+                    aria-label={`${unresolvedCount} unresolved`}
+                  >
+                    {unresolvedCount}
+                  </span>
+                )}
               </button>
             </li>
           );

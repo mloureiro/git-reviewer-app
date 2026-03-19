@@ -50,6 +50,7 @@ interface DiffLineRowProps {
   line: DiffLine;
   filePath: string;
   onLineClick?: (data: DiffLineData) => void;
+  hasComment?: boolean;
 }
 
 interface DiffBlockProps {
@@ -57,6 +58,7 @@ interface DiffBlockProps {
   filePath: string;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
+  hasCommentOnLine?: (lineData: DiffLineData) => boolean;
 }
 
 interface DiffFileProps {
@@ -64,6 +66,7 @@ interface DiffFileProps {
   colorScheme: ColorSchemeType;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
+  hasCommentOnLine?: (lineData: DiffLineData) => boolean;
 }
 
 interface DiffViewProps {
@@ -71,13 +74,14 @@ interface DiffViewProps {
   colorScheme?: ColorSchemeType;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
+  hasCommentOnLine?: (lineData: DiffLineData) => boolean;
 }
 
 // ---------------------------------------------------------------------------
 // DiffLineRow
 // ---------------------------------------------------------------------------
 
-export function DiffLineRow({ line, filePath, onLineClick }: DiffLineRowProps) {
+export function DiffLineRow({ line, filePath, onLineClick, hasComment }: DiffLineRowProps) {
   const typeClass = lineTypeClass(line.type);
   const oldNum = line.type !== LineType.INSERT ? line.oldNumber : undefined;
   const newNum = line.type !== LineType.DELETE ? line.newNumber : undefined;
@@ -88,22 +92,39 @@ export function DiffLineRow({ line, filePath, onLineClick }: DiffLineRowProps) {
   const commentLine = newNum ?? oldNum ?? 0;
   const commentSide: 'left' | 'right' = line.type === LineType.DELETE ? 'left' : 'right';
 
+  const isClickable = onLineClick != null;
+
   function handleClick(): void {
     if (onLineClick != null) {
       onLineClick({ file: filePath, line: commentLine, side: commentSide, content: lineContent });
     }
   }
 
+  const rowClass = [
+    'd2h-diff-tr',
+    typeClass,
+    isClickable ? 'diff-line--clickable' : '',
+    hasComment === true ? 'diff-line--has-comment' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <tr
-      className={`d2h-diff-tr ${typeClass}`}
+      className={rowClass}
       data-file-path={filePath}
       data-line-number={commentLine}
       data-line-side={commentSide}
-      onClick={onLineClick != null ? handleClick : undefined}
+      onClick={isClickable ? handleClick : undefined}
     >
-      {/* Left line number */}
+      {/* Left line number — shows "+" affordance on hover, comment dot when comment exists */}
       <td className="d2h-code-linenumber">
+        {hasComment === true && (
+          <span className="diff-line__comment-dot" aria-label="Has comment" />
+        )}
+        <span className="diff-line__plus-icon" aria-hidden="true">
+          +
+        </span>
         <div className="line-num1">{oldNum}</div>
         <div className="line-num2">{newNum}</div>
       </td>
@@ -132,6 +153,7 @@ export function DiffBlockComponent({
   filePath,
   onLineClick,
   renderAfterLine,
+  hasCommentOnLine,
 }: DiffBlockProps) {
   return (
     <tbody className="d2h-diff-tbody">
@@ -157,10 +179,16 @@ export function DiffBlockComponent({
           content: lineContent,
         };
         const rowKey = `${line.type}-${line.oldNumber ?? 'x'}-${line.newNumber ?? 'x'}-${idx}`;
+        const hasComment = hasCommentOnLine != null ? hasCommentOnLine(lineData) : false;
 
         return (
           <React.Fragment key={rowKey}>
-            <DiffLineRow line={line} filePath={filePath} onLineClick={onLineClick} />
+            <DiffLineRow
+              line={line}
+              filePath={filePath}
+              onLineClick={onLineClick}
+              hasComment={hasComment}
+            />
             {renderAfterLine != null ? renderAfterLine(lineData) : null}
           </React.Fragment>
         );
@@ -178,6 +206,7 @@ export function DiffFileComponent({
   colorScheme,
   onLineClick,
   renderAfterLine,
+  hasCommentOnLine,
 }: DiffFileProps) {
   const filePath = file.isRename === true ? file.newName : file.newName || file.oldName;
   const sectionId = filePathToId(filePath);
@@ -206,6 +235,7 @@ export function DiffFileComponent({
               filePath={filePath}
               onLineClick={onLineClick}
               renderAfterLine={renderAfterLine}
+              hasCommentOnLine={hasCommentOnLine}
             />
           ))}
         </table>
@@ -223,6 +253,7 @@ export function DiffView({
   colorScheme = ColorSchemeType.AUTO,
   onLineClick,
   renderAfterLine,
+  hasCommentOnLine,
 }: DiffViewProps) {
   const diffFiles = parse(diffText);
 
@@ -243,6 +274,7 @@ export function DiffView({
             colorScheme={colorScheme}
             onLineClick={onLineClick}
             renderAfterLine={renderAfterLine}
+            hasCommentOnLine={hasCommentOnLine}
           />
         );
       })}

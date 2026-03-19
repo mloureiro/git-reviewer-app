@@ -156,6 +156,7 @@ body {
   color: #6e7681;
   text-align: right;
   cursor: pointer;
+  position: relative;
 }
 
 .diff-file-section .d2h-code-linenumber .line-num1,
@@ -163,6 +164,47 @@ body {
   display: inline-block;
   width: 32px;
   text-align: right;
+}
+
+/* ── Hover "+" affordance ──────────────────────────────────────────────── */
+
+/* Hidden by default; shown when hovering a clickable row */
+.diff-file-section .diff-line--clickable .diff-line__plus-icon {
+  display: none;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: #58a6ff;
+  pointer-events: none;
+}
+
+.diff-file-section .diff-line--clickable:hover .diff-line__plus-icon {
+  display: block;
+}
+
+/* ── Comment indicator dot ─────────────────────────────────────────────── */
+
+.diff-file-section .diff-line__comment-dot {
+  display: inline-block;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #58a6ff;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* When hovering a line that already has a comment, the "+" replaces the dot */
+.diff-file-section .diff-line--has-comment.diff-line--clickable:hover .diff-line__comment-dot {
+  display: none;
 }
 
 /* +/- prefix cell */
@@ -718,6 +760,25 @@ body {
 
 .file-tree__deletions {
   color: #f85149;
+}
+
+/* ── Unresolved comment count badge ────────────────────────────────────── */
+
+.file-tree__unresolved-badge {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  line-height: 1;
+  color: #ffffff;
+  background-color: #d29922;
+  border-radius: 20px;
 }
 
 /* ── Inline Comment Form ───────────────────────────────────────────────── */

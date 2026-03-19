@@ -120,6 +120,24 @@ export function SessionDetailPage() {
   const comments = reviewData?.comments ?? [];
   const commentsByLine = groupCommentsByLine(comments);
 
+  /** Returns true if any comment exists on the given diff line. */
+  const hasCommentOnLine = useCallback(
+    (lineData: DiffLineData): boolean => {
+      const key = commentKey(lineData.file, lineData.line);
+      const lineComments = commentsByLine.get(key);
+      return lineComments != null && lineComments.length > 0;
+    },
+    [commentsByLine],
+  );
+
+  /** Map of file path -> count of unresolved comments on that file. */
+  const unresolvedCounts: Record<string, number> = {};
+  for (const comment of comments) {
+    if (!comment.resolved) {
+      unresolvedCounts[comment.file] = (unresolvedCounts[comment.file] ?? 0) + 1;
+    }
+  }
+
   const renderAfterLine = useCallback(
     (lineData: DiffLineData): React.ReactNode => {
       const key = commentKey(lineData.file, lineData.line);
@@ -210,7 +228,12 @@ export function SessionDetailPage() {
       <div className="review-layout">
         {files.length > 0 && (
           <aside className="review-layout__sidebar">
-            <FileTree files={files} onFileClick={handleFileClick} activeFile={activeFile} />
+            <FileTree
+              files={files}
+              onFileClick={handleFileClick}
+              activeFile={activeFile}
+              unresolvedCounts={unresolvedCounts}
+            />
           </aside>
         )}
 
@@ -222,6 +245,7 @@ export function SessionDetailPage() {
               diffText={diff}
               onLineClick={handleLineClick}
               renderAfterLine={renderAfterLine}
+              hasCommentOnLine={hasCommentOnLine}
             />
           )}
           {!diffLoading && !diffError && diff == null && (
