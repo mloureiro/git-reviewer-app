@@ -78,3 +78,27 @@ export interface UpdateSessionStatusRequest {
 
 /** Response for PATCH /api/sessions/:commitSha */
 export type UpdateSessionStatusResponse = ReviewData['session'];
+
+// Client-only UI types (not API types)
+
+/**
+ * Shape of data needed to create a new comment from the review UI.
+ * Excludes server-assigned fields (id, author, createdAt, resolved).
+ */
+export interface CommentFormData {
+  file: string;
+  line: number;
+  side: 'left' | 'right';
+  body: string;
+}
+
+/**
+ * Metadata for a clickable diff line, captured when the user clicks a line
+ * in the diff view. Used by the inline comment UI to know which line was clicked.
+ */
+export interface DiffLineData {
+  file: string;
+  line: number;
+  side: 'left' | 'right';
+  content: string;
+}
