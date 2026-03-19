@@ -450,3 +450,140 @@ body {
   font-size: 12px;
   color: #8b949e;
 }
+
+/* ── File Tree Sidebar ─────────────────────────────────────────────────── */
+
+.file-tree {
+  display: flex;
+  flex-direction: column;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow: hidden;
+  min-width: 220px;
+  max-width: 320px;
+}
+
+.file-tree__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #30363d;
+  background-color: #161b22;
+}
+
+.file-tree__title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #8b949e;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.file-tree__count {
+  font-size: 12px;
+  color: #8b949e;
+  background-color: rgba(110, 118, 129, 0.1);
+  border: 1px solid #30363d;
+  border-radius: 20px;
+  padding: 0 6px;
+  line-height: 18px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.file-tree__list {
+  list-style: none;
+  overflow-y: auto;
+  max-height: calc(100vh - 160px);
+}
+
+.file-tree__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: #8b949e;
+  font-size: 12px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  transition: background-color 0.1s ease;
+  min-width: 0;
+}
+
+.file-tree__item:hover {
+  background-color: rgba(177, 186, 196, 0.08);
+  color: #e6edf3;
+}
+
+.file-tree__item--active {
+  background-color: rgba(88, 166, 255, 0.1);
+  color: #e6edf3;
+}
+
+.file-tree__item--active:hover {
+  background-color: rgba(88, 166, 255, 0.15);
+}
+
+.file-tree__status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  line-height: 1;
+}
+
+.file-tree__status--added {
+  background-color: rgba(35, 134, 54, 0.2);
+  color: #3fb950;
+}
+
+.file-tree__status--deleted {
+  background-color: rgba(248, 81, 73, 0.2);
+  color: #f85149;
+}
+
+.file-tree__status--modified {
+  background-color: rgba(210, 153, 34, 0.2);
+  color: #d29922;
+}
+
+.file-tree__status--renamed {
+  background-color: rgba(88, 166, 255, 0.2);
+  color: #58a6ff;
+}
+
+.file-tree__path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.file-tree__stats {
+  flex-shrink: 0;
+  display: flex;
+  gap: 4px;
+  font-size: 11px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.file-tree__additions {
+  color: #3fb950;
+}
+
+.file-tree__deletions {
+  color: #f85149;
+}
