@@ -61,6 +61,15 @@ describe('useDiff', () => {
     expect(mockFetchDiff).toHaveBeenCalledTimes(2);
   });
 
+  it('returns idle state and does not fetch when params are null', () => {
+    const { result } = renderHook(() => useDiff(null));
+
+    expect(result.current.loading).toBe(false);
+    expect(result.current.diff).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(mockFetchDiff).not.toHaveBeenCalled();
+  });
+
   it('handles non-Error rejections gracefully', async () => {
     mockFetchDiff.mockRejectedValue('plain string error');
 

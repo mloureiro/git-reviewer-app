@@ -28,11 +28,7 @@ export function SessionDetailPage() {
       ? { base: reviewData.session.baseRef, head: reviewData.session.headRef }
       : null;
 
-  const {
-    diff,
-    loading: diffLoading,
-    error: diffError,
-  } = useDiff(diffParams ?? { base: '', head: '' });
+  const { diff, loading: diffLoading, error: diffError } = useDiff(diffParams);
 
   if (sessionLoading) {
     return <div className="loading">Loading session...</div>;

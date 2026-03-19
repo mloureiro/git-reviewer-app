@@ -11,22 +11,33 @@ export interface UseDiffResult {
 /**
  * Fetches diff text from the API for the given query params.
  * Re-fetches whenever params change.
+ * Pass `null` to skip fetching (returns idle state with no HTTP request).
  */
-export function useDiff(params: DiffQueryParams): UseDiffResult {
+export function useDiff(params: DiffQueryParams | null): UseDiffResult {
   const [diff, setDiff] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Stringify params to create a stable primitive dependency that changes only when params content changes
+  // null is serialised as the string "null" so it also forms a stable key
   const paramsKey = JSON.stringify(params);
 
   useEffect(() => {
+    const parsedParams = JSON.parse(paramsKey) as DiffQueryParams | null;
+
+    if (parsedParams === null) {
+      setDiff(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
     let cancelled = false;
 
     setLoading(true);
     setError(null);
 
-    const currentParams: DiffQueryParams = JSON.parse(paramsKey) as DiffQueryParams;
+    const currentParams: DiffQueryParams = parsedParams;
 
     fetchDiff(currentParams)
       .then((response) => {
