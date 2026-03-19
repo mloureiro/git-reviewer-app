@@ -943,3 +943,69 @@ body {
   font-size: 12px;
   padding: 4px 12px;
 }
+
+/* ── Review Actions ────────────────────────────────────────────────────── */
+
+.review-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.review-actions__btn {
+  font-size: 13px;
+  padding: 5px 14px;
+}
+
+/* Approve — green */
+.review-actions__btn--approve {
+  background-color: #238636;
+  color: #ffffff;
+  border-color: rgba(240, 246, 252, 0.1);
+}
+
+.review-actions__btn--approve:hover:not(:disabled) {
+  background-color: #2ea043;
+}
+
+.review-actions__btn--approve:disabled {
+  background-color: #238636;
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Request Changes — red */
+.review-actions__btn--request-changes {
+  background-color: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border-color: rgba(248, 81, 73, 0.4);
+}
+
+.review-actions__btn--request-changes:hover:not(:disabled) {
+  background-color: rgba(248, 81, 73, 0.25);
+  border-color: rgba(248, 81, 73, 0.6);
+}
+
+.review-actions__btn--request-changes:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Revert to Pending — neutral */
+.review-actions__btn--revert {
+  background-color: transparent;
+  color: #8b949e;
+  border-color: #30363d;
+}
+
+.review-actions__btn--revert:hover:not(:disabled) {
+  background-color: rgba(177, 186, 196, 0.08);
+  border-color: #8b949e;
+  color: #e6edf3;
+}
+
+.review-actions__btn--revert:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
