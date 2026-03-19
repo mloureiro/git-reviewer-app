@@ -1,4 +1,5 @@
 import { html, parse } from 'diff2html';
+import { ColorSchemeType } from 'diff2html/lib-esm/types';
 import 'diff2html/bundles/css/diff2html.min.css';
 
 interface DiffViewProps {
@@ -11,7 +12,7 @@ export function DiffView({ diffText }: DiffViewProps) {
     outputFormat: 'line-by-line',
     drawFileList: true,
     matching: 'lines',
-    colorScheme: 'auto',
+    colorScheme: ColorSchemeType.AUTO,
   });
 
   return <div className="diff-container" dangerouslySetInnerHTML={{ __html: diffHtml }} />;
