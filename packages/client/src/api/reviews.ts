@@ -1,0 +1,72 @@
+import { apiGet, apiPost, apiPatch } from './client';
+import type {
+  DiffQueryParams,
+  DiffResponse,
+  SessionListResponse,
+  SessionResponse,
+  CreateSessionRequest,
+  CreateCommentRequest,
+  CreateCommentResponse,
+  UpdateCommentRequest,
+  UpdateCommentResponse,
+  UpdateSessionStatusRequest,
+  UpdateSessionStatusResponse,
+} from '../types/review';
+
+/** GET /api/diff — Fetch raw diff text for the given base/head/uncommitted params. */
+export function fetchDiff(params: DiffQueryParams): Promise<DiffResponse> {
+  const query = new URLSearchParams();
+
+  if (params.base !== undefined) {
+    query.set('base', params.base);
+  }
+  if (params.head !== undefined) {
+    query.set('head', params.head);
+  }
+  if (params.uncommitted !== undefined) {
+    query.set('uncommitted', params.uncommitted);
+  }
+
+  const qs = query.toString();
+  return apiGet<DiffResponse>(`/api/diff${qs ? `?${qs}` : ''}`);
+}
+
+/** GET /api/sessions — List all review sessions. */
+export function fetchSessions(): Promise<SessionListResponse> {
+  return apiGet<SessionListResponse>('/api/sessions');
+}
+
+/** GET /api/sessions/:commitSha — Fetch a single review session by its head commit SHA. */
+export function fetchSession(commitSha: string): Promise<SessionResponse> {
+  return apiGet<SessionResponse>(`/api/sessions/${commitSha}`);
+}
+
+/** POST /api/sessions — Create a new review session. */
+export function createSession(data: CreateSessionRequest): Promise<SessionResponse> {
+  return apiPost<SessionResponse>('/api/sessions', data);
+}
+
+/** POST /api/sessions/:commitSha/comments — Add a comment to a review session. */
+export function createComment(
+  commitSha: string,
+  data: CreateCommentRequest,
+): Promise<CreateCommentResponse> {
+  return apiPost<CreateCommentResponse>(`/api/sessions/${commitSha}/comments`, data);
+}
+
+/** PATCH /api/sessions/:commitSha/comments/:commentId — Resolve or unresolve a comment. */
+export function updateComment(
+  commitSha: string,
+  commentId: string,
+  data: UpdateCommentRequest,
+): Promise<UpdateCommentResponse> {
+  return apiPatch<UpdateCommentResponse>(`/api/sessions/${commitSha}/comments/${commentId}`, data);
+}
+
+/** PATCH /api/sessions/:commitSha — Update the status of a review session. */
+export function updateSessionStatus(
+  commitSha: string,
+  data: UpdateSessionStatusRequest,
+): Promise<UpdateSessionStatusResponse> {
+  return apiPatch<UpdateSessionStatusResponse>(`/api/sessions/${commitSha}`, data);
+}
