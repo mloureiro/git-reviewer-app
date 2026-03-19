@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DiffView, filePathToId } from '../components/DiffView';
 import { FileTree } from '../components/FileTree';
+import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
 import { useDiff } from '../hooks/useDiff';
 import { useFiles } from '../hooks/useFiles';
 import { useReviewSession } from '../hooks/useReviewSession';
@@ -21,6 +22,11 @@ export function SessionDetailPage() {
   const { commitSha } = useParams<{ commitSha: string }>();
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
 
+  // When the user clicks a file in the sidebar we suppress scroll-based
+  // activeFile updates for 1 s so the observer does not immediately override
+  // the just-clicked file.
+  const suppressScrollUpdateRef = useRef(false);
+
   const {
     session: reviewData,
     loading: sessionLoading,
@@ -37,8 +43,19 @@ export function SessionDetailPage() {
   const { files } = useFiles(filesParams);
   const { diff, loading: diffLoading, error: diffError } = useDiff(diffParams);
 
+  const filePaths = files.map((f) => f.path);
+
+  useActiveFileOnScroll(filePaths, setActiveFile, suppressScrollUpdateRef);
+
   function handleFileClick(filePath: string): void {
     setActiveFile(filePath);
+
+    // Suppress observer-driven updates while the smooth scroll is in flight.
+    suppressScrollUpdateRef.current = true;
+    setTimeout(() => {
+      suppressScrollUpdateRef.current = false;
+    }, 1000);
+
     const sectionId = filePathToId(filePath);
     const element = document.getElementById(sectionId);
     if (element != null) {
