@@ -281,6 +281,58 @@ body {
   border-color: #8b949e;
 }
 
+/* ── Session Detail Page ───────────────────────────────────────────────── */
+
+.session-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.session-detail__back {
+  display: flex;
+  align-items: center;
+}
+
+.session-detail__header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #30363d;
+}
+
+.session-detail__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.session-detail__title {
+  font-size: 22px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.session-detail__refs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #8b949e;
+}
+
+.session-detail__refs code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  background-color: rgba(110, 118, 129, 0.1);
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: #e6edf3;
+}
+
 /* ── Session Create Page ───────────────────────────────────────────────── */
 
 .session-create {
