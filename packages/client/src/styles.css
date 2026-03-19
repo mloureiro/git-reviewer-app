@@ -104,6 +104,115 @@ body {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 13px;
   color: #e6edf3;
+  flex: 1;
+}
+
+.diff-file-section__stats {
+  display: flex;
+  gap: 6px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+}
+
+.diff-file-section__additions {
+  color: #3fb950;
+}
+
+.diff-file-section__deletions {
+  color: #f85149;
+}
+
+/* ── Controlled diff table (replaces dangerouslySetInnerHTML) ──────────── */
+
+.diff-file-section .d2h-file-diff {
+  overflow-x: auto;
+}
+
+.diff-file-section .d2h-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  tab-size: 4;
+}
+
+.diff-file-section .d2h-diff-tr {
+  line-height: 1.5;
+}
+
+.diff-file-section .d2h-diff-tr:hover {
+  filter: brightness(1.08);
+}
+
+/* Line number cell */
+.diff-file-section .d2h-code-linenumber {
+  width: 80px;
+  min-width: 80px;
+  padding: 0 8px;
+  vertical-align: top;
+  white-space: nowrap;
+  user-select: none;
+  border-right: 1px solid #21262d;
+  color: #6e7681;
+  text-align: right;
+  cursor: pointer;
+}
+
+.diff-file-section .d2h-code-linenumber .line-num1,
+.diff-file-section .d2h-code-linenumber .line-num2 {
+  display: inline-block;
+  width: 32px;
+  text-align: right;
+}
+
+/* +/- prefix cell */
+.diff-file-section .d2h-code-line-prefix {
+  width: 14px;
+  min-width: 14px;
+  padding: 0 4px;
+  text-align: center;
+  vertical-align: top;
+  user-select: none;
+  border-right: 1px solid #21262d;
+  color: #6e7681;
+}
+
+/* Content cell */
+.diff-file-section .d2h-code-line {
+  padding: 0 12px;
+  vertical-align: top;
+  white-space: pre;
+}
+
+.diff-file-section .d2h-code-line-ctn {
+  white-space: pre;
+}
+
+/* Row type backgrounds (dark theme) */
+.diff-file-section .d2h-ins,
+.diff-file-section .d2h-auto-color-scheme .d2h-ins,
+.diff-file-section .d2h-dark-color-scheme .d2h-ins {
+  background-color: rgba(46, 160, 67, 0.15);
+}
+
+.diff-file-section .d2h-ins .d2h-code-line-prefix {
+  color: #3fb950;
+}
+
+.diff-file-section .d2h-del,
+.diff-file-section .d2h-auto-color-scheme .d2h-del,
+.diff-file-section .d2h-dark-color-scheme .d2h-del {
+  background-color: rgba(248, 81, 73, 0.1);
+}
+
+.diff-file-section .d2h-del .d2h-code-line-prefix {
+  color: #f85149;
+}
+
+.diff-file-section .d2h-info {
+  background-color: rgba(56, 139, 253, 0.1);
+  color: #6e7681;
+  font-style: italic;
 }
 
 .diff-container {
