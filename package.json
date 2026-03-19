@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter @git-reviewer/server dev & pnpm --filter @git-reviewer/client dev",
     "build": "pnpm --filter @git-reviewer/shared build && pnpm --filter @git-reviewer/server build && pnpm --filter @git-reviewer/client build",
+    "test": "pnpm --filter @git-reviewer/server test -- --run && pnpm --filter @git-reviewer/client test -- --run",
     "lint": "eslint packages/*/src --ext .ts,.tsx",
     "lint:fix": "eslint packages/*/src --ext .ts,.tsx --fix",
     "format": "prettier --write \"packages/*/src/**/*.{ts,tsx,json,css}\"",
