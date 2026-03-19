@@ -14,17 +14,26 @@ vi.mock('../git/notes.js', () => ({
 vi.mock('../git/diff.js', () => ({
   getDiffText: vi.fn(),
   getUncommittedDiffText: vi.fn(),
+  getChangedFiles: vi.fn(),
+  getUncommittedChangedFiles: vi.fn(),
   createGitClient: vi.fn(),
 }));
 
 import { listReviewNotes, readReviewNote, writeReviewNote } from '../git/notes.js';
-import { getDiffText, getUncommittedDiffText } from '../git/diff.js';
+import {
+  getDiffText,
+  getUncommittedDiffText,
+  getChangedFiles,
+  getUncommittedChangedFiles,
+} from '../git/diff.js';
 
 const mockListReviewNotes = vi.mocked(listReviewNotes);
 const mockReadReviewNote = vi.mocked(readReviewNote);
 const mockWriteReviewNote = vi.mocked(writeReviewNote);
 const mockGetDiffText = vi.mocked(getDiffText);
 const mockGetUncommittedDiffText = vi.mocked(getUncommittedDiffText);
+const mockGetChangedFiles = vi.mocked(getChangedFiles);
+const mockGetUncommittedChangedFiles = vi.mocked(getUncommittedChangedFiles);
 
 // Minimal SimpleGit stub — routes call git.revparse only in POST /sessions
 const mockRevparse = vi.fn();
@@ -103,6 +112,57 @@ describe('review API routes — integration', () => {
 
       expect(res.status).toBe(200);
       expect(mockGetDiffText).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // GET /api/files
+  // ---------------------------------------------------------------------------
+  describe('GET /api/files', () => {
+    it('returns changed files for base and head query params', async () => {
+      const files = [
+        { path: 'src/foo.ts', status: 'modified' as const, additions: 5, deletions: 2 },
+        { path: 'src/bar.ts', status: 'added' as const, additions: 10, deletions: 0 },
+      ];
+      mockGetChangedFiles.mockResolvedValueOnce(files);
+
+      const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ files });
+      expect(mockGetChangedFiles).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+    });
+
+    it('returns uncommitted changed files when uncommitted=true is passed', async () => {
+      const files = [
+        { path: 'src/baz.ts', status: 'modified' as const, additions: 3, deletions: 1 },
+      ];
+      mockGetUncommittedChangedFiles.mockResolvedValueOnce(files);
+
+      const res = await request(app).get('/api/files').query({ uncommitted: 'true' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ files });
+      expect(mockGetUncommittedChangedFiles).toHaveBeenCalledWith(mockGit);
+      expect(mockGetChangedFiles).not.toHaveBeenCalled();
+    });
+
+    it('falls back to main..HEAD when base and head params are omitted', async () => {
+      mockGetChangedFiles.mockResolvedValueOnce([]);
+
+      const res = await request(app).get('/api/files');
+
+      expect(res.status).toBe(200);
+      expect(mockGetChangedFiles).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+    });
+
+    it('returns an empty files array when there are no changed files', async () => {
+      mockGetChangedFiles.mockResolvedValueOnce([]);
+
+      const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ files: [] });
     });
   });
 

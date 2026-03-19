@@ -1,7 +1,12 @@
 import { Router } from 'express';
 import type { SimpleGit } from 'simple-git';
 import { v4 as uuid } from 'uuid';
-import { getDiffText, getUncommittedDiffText } from '../git/diff.js';
+import {
+  getDiffText,
+  getUncommittedDiffText,
+  getChangedFiles,
+  getUncommittedChangedFiles,
+} from '../git/diff.js';
 import { listReviewNotes, readReviewNote, writeReviewNote } from '../git/notes.js';
 import type { ReviewComment, ReviewData } from '@git-reviewer/shared';
 
@@ -19,6 +24,22 @@ export function createReviewRouter(git: SimpleGit): Router {
           : await getDiffText(git, String(base ?? 'main'), String(head ?? 'HEAD'));
 
       res.json({ diff: diffText });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Get changed files between base and head
+  router.get('/files', async (req, res) => {
+    try {
+      const { base, head, uncommitted } = req.query;
+
+      const files =
+        uncommitted === 'true'
+          ? await getUncommittedChangedFiles(git)
+          : await getChangedFiles(git, String(base ?? 'main'), String(head ?? 'HEAD'));
+
+      res.json({ files });
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }
