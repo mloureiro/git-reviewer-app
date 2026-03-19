@@ -20,10 +20,44 @@ body {
   padding: 12px 24px;
 }
 
-.header h1 {
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.nav-brand {
   font-size: 18px;
   font-weight: 600;
   color: #e6edf3;
+  text-decoration: none;
+}
+
+.nav-brand:hover {
+  color: #58a6ff;
+}
+
+.nav-links {
+  display: flex;
+  gap: 16px;
+}
+
+.nav-link {
+  font-size: 14px;
+  color: #8b949e;
+  text-decoration: none;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: #e6edf3;
+}
+
+.session-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #8b949e;
+  margin-bottom: 16px;
 }
 
 .main {
