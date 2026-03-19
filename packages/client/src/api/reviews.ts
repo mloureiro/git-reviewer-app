@@ -7,6 +7,7 @@ import type {
   SessionListResponse,
   SessionResponse,
   CreateSessionRequest,
+  CommentsResponse,
   CreateCommentRequest,
   CreateCommentResponse,
   UpdateCommentRequest,
@@ -66,21 +67,54 @@ export function createSession(data: CreateSessionRequest): Promise<SessionRespon
   return apiPost<SessionResponse>('/api/sessions', data);
 }
 
+/**
+ * GET /api/sessions/:commitSha/comments — Fetch all comments for a review session.
+ * Comments are stored as part of the session in git-notes, so this extracts them
+ * from the full session response rather than a dedicated endpoint.
+ */
+export async function fetchComments(commitSha: string): Promise<CommentsResponse> {
+  const session = await fetchSession(commitSha);
+  return { comments: session.comments };
+}
+
 /** POST /api/sessions/:commitSha/comments — Add a comment to a review session. */
-export function createComment(
+export function postComment(
   commitSha: string,
   data: CreateCommentRequest,
 ): Promise<CreateCommentResponse> {
   return apiPost<CreateCommentResponse>(`/api/sessions/${commitSha}/comments`, data);
 }
 
+/**
+ * @deprecated Use `postComment` instead.
+ * @TODO remove after 30-04-2026 @mloureiro
+ */
+export function createComment(
+  commitSha: string,
+  data: CreateCommentRequest,
+): Promise<CreateCommentResponse> {
+  return postComment(commitSha, data);
+}
+
 /** PATCH /api/sessions/:commitSha/comments/:commentId — Resolve or unresolve a comment. */
-export function updateComment(
+export function patchComment(
   commitSha: string,
   commentId: string,
   data: UpdateCommentRequest,
 ): Promise<UpdateCommentResponse> {
   return apiPatch<UpdateCommentResponse>(`/api/sessions/${commitSha}/comments/${commentId}`, data);
+}
+
+/**
+ * @deprecated Use `patchComment` instead.
+ * @TODO remove after 30-04-2026 @mloureiro
+ */
+export function updateComment(
+  commitSha: string,
+  commentId: string,
+  data: UpdateCommentRequest,
+): Promise<UpdateCommentResponse> {
+  return patchComment(commitSha, commentId, data);
 }
 
 /** PATCH /api/sessions/:commitSha — Update the status of a review session. */

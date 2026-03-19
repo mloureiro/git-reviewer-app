@@ -63,6 +63,12 @@ export type CreateCommentRequest = Omit<ReviewComment, 'id' | 'createdAt' | 'res
 /** Response for POST /api/sessions/:commitSha/comments (201) */
 export type CreateCommentResponse = ReviewComment;
 
+// GET /api/sessions/:commitSha/comments (extracted from session response)
+/** Response shape for fetchComments — the comments array from a session. */
+export interface CommentsResponse {
+  comments: ReviewComment[];
+}
+
 // PATCH /api/sessions/:commitSha/comments/:commentId
 export interface UpdateCommentRequest {
   resolved: boolean;
