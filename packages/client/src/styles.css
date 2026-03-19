@@ -85,3 +85,181 @@ body {
   border-radius: 6px;
   overflow: hidden;
 }
+
+/* ── Session List Page ─────────────────────────────────────────────────── */
+
+.session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.session-list__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.session-list__title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.session-list__items {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Session Card ──────────────────────────────────────────────────────── */
+
+.session-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  transition: border-color 0.15s ease;
+}
+
+.session-card:hover {
+  border-color: #58a6ff;
+}
+
+.session-card__main {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.session-card__title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #58a6ff;
+  text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-card__title:hover {
+  text-decoration: underline;
+}
+
+.session-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.session-card__refs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.session-card__refs code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  background-color: rgba(110, 118, 129, 0.1);
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  padding: 1px 5px;
+  color: #e6edf3;
+}
+
+.session-card__arrow {
+  color: #484f58;
+}
+
+.session-card__date {
+  font-size: 12px;
+  color: #8b949e;
+}
+
+.session-card__aside {
+  flex-shrink: 0;
+}
+
+/* ── Status Badge ──────────────────────────────────────────────────────── */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.status-badge--pending {
+  background-color: rgba(210, 153, 34, 0.15);
+  color: #d29922;
+  border: 1px solid rgba(210, 153, 34, 0.4);
+}
+
+.status-badge--approved {
+  background-color: rgba(35, 134, 54, 0.15);
+  color: #3fb950;
+  border: 1px solid rgba(35, 134, 54, 0.4);
+}
+
+.status-badge--changes_requested {
+  background-color: rgba(248, 81, 73, 0.15);
+  color: #f85149;
+  border: 1px solid rgba(248, 81, 73, 0.4);
+}
+
+/* ── Empty State ───────────────────────────────────────────────────────── */
+
+.session-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 200px;
+  color: #8b949e;
+}
+
+.session-list-empty__message {
+  font-size: 16px;
+}
+
+/* ── Button ────────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.btn--primary {
+  background-color: #238636;
+  color: #ffffff;
+  border-color: rgba(240, 246, 252, 0.1);
+}
+
+.btn--primary:hover {
+  background-color: #2ea043;
+}
