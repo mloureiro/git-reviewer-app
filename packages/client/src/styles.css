@@ -1009,3 +1009,43 @@ body {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* ── Review Summary Bar ────────────────────────────────────────────────── */
+
+.review-summary-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background-color: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.review-summary-bar__counts {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.review-summary-bar__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #8b949e;
+}
+
+.review-summary-bar__count-value {
+  font-weight: 600;
+  color: #e6edf3;
+}
+
+.review-summary-bar__count--unresolved .review-summary-bar__count-value {
+  color: #d29922;
+}
+
+.review-summary-bar__count--unresolved {
+  color: #8b949e;
+}
