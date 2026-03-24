@@ -1057,3 +1057,84 @@ body {
 .review-summary-bar__count--unresolved {
   color: #8b949e;
 }
+
+/* ── Diff View Mode Toggle ─────────────────────────────────────────────── */
+
+.diff-view-toggle {
+  display: inline-flex;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.diff-view-toggle__btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #8b949e;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+  white-space: nowrap;
+}
+
+.diff-view-toggle__btn:not(:first-child) {
+  border-left: 1px solid #30363d;
+}
+
+.diff-view-toggle__btn:hover:not(.diff-view-toggle__btn--active) {
+  background-color: rgba(177, 186, 196, 0.08);
+  color: #e6edf3;
+}
+
+.diff-view-toggle__btn--active {
+  background-color: rgba(88, 166, 255, 0.15);
+  color: #58a6ff;
+  cursor: default;
+}
+
+/* ── Side-by-side diff table layout ───────────────────────────────────── */
+
+/* Enable horizontal scroll for the wide split view */
+.diff-file-section .d2h-file-diff--sbs {
+  overflow-x: auto;
+}
+
+.diff-file-section .d2h-file-diff--sbs .d2h-diff-table {
+  /* Each side gets at least half the available width */
+  min-width: 100%;
+  table-layout: fixed;
+}
+
+/* Thin vertical divider between left and right panes */
+.diff-file-section .d2h-sbs-divider {
+  width: 2px;
+  min-width: 2px;
+  padding: 0;
+  background-color: #21262d;
+}
+
+/* Side-by-side line number cells — single number per side */
+.diff-file-section .d2h-sbs-linenumber {
+  width: 50px;
+  min-width: 50px;
+}
+
+/* Empty half-row cells (when one side has more lines than the other) */
+.diff-file-section .d2h-sbs-empty {
+  background-color: rgba(110, 118, 129, 0.05);
+}
+
+.diff-file-section .d2h-sbs-linenumber--empty {
+  background-color: rgba(110, 118, 129, 0.05);
+  border-right: 1px solid #21262d;
+}
+
+/* Each side's content cell takes equal space */
+.diff-file-section .d2h-diff-tr--sbs .d2h-code-line {
+  width: 45%;
+}

@@ -130,3 +130,9 @@ export interface ReviewSummaryStats {
   total: number;
   unresolved: number;
 }
+
+/**
+ * Diff display mode — controls whether the diff is rendered line-by-line
+ * (unified) or side-by-side (split view).
+ */
+export type DiffViewMode = 'line-by-line' | 'side-by-side';

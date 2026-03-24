@@ -6,7 +6,7 @@ import { ColorSchemeType } from 'diff2html/lib-esm/types';
 import 'diff2html/bundles/css/diff2html.min.css';
 import hljs from 'highlight.js/lib/common';
 
-import type { DiffLineData } from '../types/review';
+import type { DiffLineData, DiffViewMode } from '../types/review';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -109,6 +109,72 @@ function highlightLine(content: string, language: string | null): string | null 
   }
 }
 
+/** A paired row for side-by-side rendering: left (old) and right (new) lines. */
+interface SideBySidePair {
+  left: DiffLine | null;
+  right: DiffLine | null;
+}
+
+/**
+ * Pair up the lines in a diff block for side-by-side rendering.
+ * DELETE lines go to the left column, INSERT lines go to the right column.
+ * Adjacent DELETE+INSERT runs are paired together. CONTEXT lines span both.
+ */
+function pairLinesForSideBySide(lines: readonly DiffLine[]): SideBySidePair[] {
+  const pairs: SideBySidePair[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line == null) {
+      i = i + 1;
+      continue;
+    }
+
+    if (line.type === LineType.CONTEXT) {
+      pairs.push({ left: line, right: line });
+      i = i + 1;
+      continue;
+    }
+
+    if (line.type === LineType.DELETE) {
+      // Collect the run of DELETE lines
+      const deletes: DiffLine[] = [];
+      while (i < lines.length) {
+        const current = lines[i];
+        if (current == null || current.type !== LineType.DELETE) break;
+        deletes.push(current);
+        i = i + 1;
+      }
+      // Collect the immediately following INSERT lines
+      const inserts: DiffLine[] = [];
+      while (i < lines.length) {
+        const current = lines[i];
+        if (current == null || current.type !== LineType.INSERT) break;
+        inserts.push(current);
+        i = i + 1;
+      }
+      // Pair them up — the longer side gets null on the other side
+      const count = Math.max(deletes.length, inserts.length);
+      for (let j = 0; j < count; j = j + 1) {
+        pairs.push({ left: deletes[j] ?? null, right: inserts[j] ?? null });
+      }
+      continue;
+    }
+
+    // INSERT without a preceding DELETE (shouldn't normally happen but handle it)
+    if (line.type === LineType.INSERT) {
+      pairs.push({ left: null, right: line });
+      i = i + 1;
+      continue;
+    }
+
+    i = i + 1;
+  }
+
+  return pairs;
+}
+
 // ---------------------------------------------------------------------------
 // Props types
 // ---------------------------------------------------------------------------
@@ -125,6 +191,7 @@ interface DiffBlockProps {
   block: DiffBlock;
   filePath: string;
   language: string | null;
+  viewMode: DiffViewMode;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
@@ -133,6 +200,7 @@ interface DiffBlockProps {
 interface DiffFileProps {
   file: DiffFile;
   colorScheme: ColorSchemeType;
+  viewMode: DiffViewMode;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
@@ -141,13 +209,14 @@ interface DiffFileProps {
 interface DiffViewProps {
   diffText: string;
   colorScheme?: ColorSchemeType;
+  viewMode?: DiffViewMode;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
 }
 
 // ---------------------------------------------------------------------------
-// DiffLineRow
+// DiffLineRow (line-by-line mode)
 // ---------------------------------------------------------------------------
 
 export function DiffLineRow({
@@ -228,6 +297,130 @@ export function DiffLineRow({
 }
 
 // ---------------------------------------------------------------------------
+// SideBySideRow — renders a paired left/right row
+// ---------------------------------------------------------------------------
+
+interface SideBySideRowProps {
+  pair: SideBySidePair;
+  filePath: string;
+  language: string | null;
+  onLineClick?: (data: DiffLineData) => void;
+  hasCommentOnLine?: (lineData: DiffLineData) => boolean;
+}
+
+function renderSideCell(
+  line: DiffLine | null,
+  filePath: string,
+  language: string | null,
+  side: 'left' | 'right',
+  onLineClick: ((data: DiffLineData) => void) | undefined,
+  hasComment: boolean,
+): React.ReactNode {
+  if (line === null) {
+    return (
+      <>
+        <td className="d2h-code-linenumber d2h-sbs-linenumber d2h-sbs-linenumber--empty" />
+        <td className="d2h-code-line-prefix d2h-sbs-empty" />
+        <td className="d2h-code-line d2h-sbs-empty" />
+      </>
+    );
+  }
+
+  const lineContent = stripLinePrefix(line.content);
+  const highlightedHtml = highlightLine(lineContent, language);
+  const lineNum = side === 'left' ? line.oldNumber : line.newNumber;
+  const isClickable = onLineClick != null;
+
+  function handleClick(): void {
+    if (onLineClick != null && lineNum != null) {
+      onLineClick({ file: filePath, line: lineNum, side, content: lineContent });
+    }
+  }
+
+  return (
+    <>
+      <td
+        className={[
+          'd2h-code-linenumber',
+          'd2h-sbs-linenumber',
+          isClickable ? 'diff-line--clickable' : '',
+          hasComment ? 'diff-line--has-comment' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        onClick={isClickable ? handleClick : undefined}
+      >
+        {hasComment && <span className="diff-line__comment-dot" aria-label="Has comment" />}
+        {isClickable && (
+          <span className="diff-line__plus-icon" aria-hidden="true">
+            +
+          </span>
+        )}
+        <div className="line-num1">{lineNum}</div>
+      </td>
+      <td className="d2h-code-line-prefix">
+        {line.type === LineType.INSERT && '+'}
+        {line.type === LineType.DELETE && '-'}
+        {line.type === LineType.CONTEXT && ' '}
+      </td>
+      <td className="d2h-code-line">
+        {highlightedHtml != null ? (
+          <span
+            className="d2h-code-line-ctn"
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
+        ) : (
+          <span className="d2h-code-line-ctn">{lineContent}</span>
+        )}
+      </td>
+    </>
+  );
+}
+
+function SideBySideRow({
+  pair,
+  filePath,
+  language,
+  onLineClick,
+  hasCommentOnLine,
+}: SideBySideRowProps) {
+  const { left, right } = pair;
+
+  const leftTypeClass = left != null ? lineTypeClass(left.type) : '';
+  const rightTypeClass = right != null ? lineTypeClass(right.type) : '';
+
+  // For comment checks: use the appropriate line number and side
+  const leftLineNum =
+    left != null ? (left.type !== LineType.INSERT ? left.oldNumber : undefined) : undefined;
+  const rightLineNum =
+    right != null ? (right.type !== LineType.DELETE ? right.newNumber : undefined) : undefined;
+
+  const leftLineData: DiffLineData | null =
+    leftLineNum != null ? { file: filePath, line: leftLineNum, side: 'left', content: '' } : null;
+  const rightLineData: DiffLineData | null =
+    rightLineNum != null
+      ? { file: filePath, line: rightLineNum, side: 'right', content: '' }
+      : null;
+
+  const hasLeftComment =
+    leftLineData != null && hasCommentOnLine != null ? hasCommentOnLine(leftLineData) : false;
+  const hasRightComment =
+    rightLineData != null && hasCommentOnLine != null ? hasCommentOnLine(rightLineData) : false;
+
+  const rowClass = ['d2h-diff-tr', 'd2h-diff-tr--sbs', leftTypeClass || rightTypeClass]
+    .filter(Boolean)
+    .join(' ');
+
+  return (
+    <tr className={rowClass}>
+      {renderSideCell(left, filePath, language, 'left', onLineClick, hasLeftComment)}
+      <td className="d2h-sbs-divider" />
+      {renderSideCell(right, filePath, language, 'right', onLineClick, hasRightComment)}
+    </tr>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // DiffBlock
 // ---------------------------------------------------------------------------
 
@@ -235,10 +428,40 @@ export function DiffBlockComponent({
   block,
   filePath,
   language,
+  viewMode,
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
 }: DiffBlockProps) {
+  if (viewMode === 'side-by-side') {
+    const pairs = pairLinesForSideBySide(block.lines);
+
+    return (
+      <tbody className="d2h-diff-tbody">
+        {/* Hunk header row — spans all 7 columns (3 left + divider + 3 right) */}
+        <tr className="d2h-diff-tr d2h-info">
+          <td className="d2h-code-linenumber d2h-info" />
+          <td className="d2h-code-line-prefix d2h-info" />
+          <td className="d2h-code-line d2h-info" colSpan={5}>
+            <span className="d2h-code-line-ctn">{block.header}</span>
+          </td>
+        </tr>
+
+        {pairs.map((pair, idx) => (
+          <SideBySideRow
+            key={`pair-${idx}`}
+            pair={pair}
+            filePath={filePath}
+            language={language}
+            onLineClick={onLineClick}
+            hasCommentOnLine={hasCommentOnLine}
+          />
+        ))}
+      </tbody>
+    );
+  }
+
+  // Default: line-by-line
   return (
     <tbody className="d2h-diff-tbody">
       {/* Hunk header row */}
@@ -289,6 +512,7 @@ export function DiffBlockComponent({
 export function DiffFileComponent({
   file,
   colorScheme,
+  viewMode,
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
@@ -312,7 +536,9 @@ export function DiffFileComponent({
         </span>
       </div>
 
-      <div className={`d2h-file-diff ${schemeClass}`}>
+      <div
+        className={`d2h-file-diff ${schemeClass}${viewMode === 'side-by-side' ? ' d2h-file-diff--sbs' : ''}`}
+      >
         <table className="d2h-diff-table">
           {file.blocks.map((block, idx) => (
             <DiffBlockComponent
@@ -320,6 +546,7 @@ export function DiffFileComponent({
               block={block}
               filePath={filePath}
               language={language}
+              viewMode={viewMode}
               onLineClick={onLineClick}
               renderAfterLine={renderAfterLine}
               hasCommentOnLine={hasCommentOnLine}
@@ -338,6 +565,7 @@ export function DiffFileComponent({
 export function DiffView({
   diffText,
   colorScheme = ColorSchemeType.AUTO,
+  viewMode = 'line-by-line',
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
@@ -359,6 +587,7 @@ export function DiffView({
             key={sectionId}
             file={file}
             colorScheme={colorScheme}
+            viewMode={viewMode}
             onLineClick={onLineClick}
             renderAfterLine={renderAfterLine}
             hasCommentOnLine={hasCommentOnLine}

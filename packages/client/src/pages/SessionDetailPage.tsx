@@ -2,6 +2,7 @@ import React, { useCallback, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CommentThread } from '../components/CommentThread';
 import { DiffView, filePathToId } from '../components/DiffView';
+import { DiffViewToggle } from '../components/DiffViewToggle';
 import { FileTree } from '../components/FileTree';
 import { InlineCommentForm } from '../components/InlineCommentForm';
 import { ReviewActions } from '../components/ReviewActions';
@@ -10,8 +11,15 @@ import { StatusBadge } from '../components/StatusBadge';
 import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
 import { useDiff } from '../hooks/useDiff';
 import { useFiles } from '../hooks/useFiles';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useReviewSession } from '../hooks/useReviewSession';
-import type { CommentFormData, DiffLineData, ReviewComment, ReviewStatus } from '../types/review';
+import type {
+  CommentFormData,
+  DiffLineData,
+  DiffViewMode,
+  ReviewComment,
+  ReviewStatus,
+} from '../types/review';
 
 /** Stable key for grouping comments by file + line. */
 function commentKey(file: string, line: number): string {
@@ -38,6 +46,10 @@ export function SessionDetailPage() {
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
   const [activeLine, setActiveLine] = useState<DiffLineData | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [diffViewMode, setDiffViewMode] = useLocalStorage<DiffViewMode>(
+    'git-reviewer:diff-view-mode',
+    'line-by-line',
+  );
 
   // When the user clicks a file in the sidebar we suppress scroll-based
   // activeFile updates for 1 s so the observer does not immediately override
@@ -240,6 +252,7 @@ export function SessionDetailPage() {
             onStatusChange={handleStatusChange}
             disabled={statusUpdating}
           />
+          <DiffViewToggle mode={diffViewMode} onChange={setDiffViewMode} />
         </div>
       </div>
 
@@ -261,6 +274,7 @@ export function SessionDetailPage() {
           {!diffLoading && !diffError && diff != null && (
             <DiffView
               diffText={diff}
+              viewMode={diffViewMode}
               onLineClick={handleLineClick}
               renderAfterLine={renderAfterLine}
               hasCommentOnLine={hasCommentOnLine}
