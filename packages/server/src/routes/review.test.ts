@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import type { ReviewData } from '@git-reviewer/shared';
 import { createApp } from '../app.js';
@@ -25,6 +25,7 @@ import {
   getUncommittedDiffText,
   getChangedFiles,
   getUncommittedChangedFiles,
+  createGitClient,
 } from '../git/diff.js';
 
 const mockListReviewNotes = vi.mocked(listReviewNotes);
@@ -34,6 +35,7 @@ const mockGetDiffText = vi.mocked(getDiffText);
 const mockGetUncommittedDiffText = vi.mocked(getUncommittedDiffText);
 const mockGetChangedFiles = vi.mocked(getChangedFiles);
 const mockGetUncommittedChangedFiles = vi.mocked(getUncommittedChangedFiles);
+const mockCreateGitClient = vi.mocked(createGitClient);
 
 // Minimal SimpleGit stub — routes call git.revparse only in POST /sessions
 const mockRevparse = vi.fn();
@@ -71,7 +73,12 @@ const sampleComment = {
 };
 
 describe('review API routes — integration', () => {
-  const app = createApp(mockGit);
+  let app: ReturnType<typeof createApp>;
+
+  beforeAll(() => {
+    mockCreateGitClient.mockReturnValue(mockGit);
+    app = createApp({ repoPath: '/mock/repo' });
+  });
 
   beforeEach(() => {
     vi.resetAllMocks();

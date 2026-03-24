@@ -1,11 +1,9 @@
 import { createApp } from './app.js';
-import { createGitClient } from './git/diff.js';
 
 const PORT = Number(process.env.PORT ?? 3847);
 const REPO_PATH = process.env.REPO_PATH ?? process.cwd();
 
-const git = createGitClient(REPO_PATH);
-const app = createApp(git);
+const app = createApp({ repoPath: REPO_PATH });
 
 app.listen(PORT, () => {
   console.log(`git-reviewer server running at http://localhost:${PORT}`);
