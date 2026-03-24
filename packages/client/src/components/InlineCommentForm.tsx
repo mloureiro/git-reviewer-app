@@ -10,13 +10,19 @@ interface InlineCommentFormProps {
   lineData: DiffLineData;
   onSubmit: (data: CommentFormData) => void;
   onCancel: () => void;
+  colSpan?: number;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function InlineCommentForm({ lineData, onSubmit, onCancel }: InlineCommentFormProps) {
+export function InlineCommentForm({
+  lineData,
+  onSubmit,
+  onCancel,
+  colSpan = 3,
+}: InlineCommentFormProps) {
   const [body, setBody] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -57,7 +63,7 @@ export function InlineCommentForm({ lineData, onSubmit, onCancel }: InlineCommen
 
   return (
     <tr className="inline-comment-form-row">
-      <td className="inline-comment-form-cell" colSpan={3}>
+      <td className="inline-comment-form-cell" colSpan={colSpan}>
         <div className="inline-comment-form">
           <textarea
             ref={textareaRef}

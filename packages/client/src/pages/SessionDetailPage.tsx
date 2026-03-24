@@ -161,13 +161,14 @@ export function SessionDetailPage() {
   const summaryStats = { total: comments.length, unresolved: totalUnresolved };
 
   const renderAfterLine = useCallback(
-    (lineData: DiffLineData): React.ReactNode => {
+    (lineData: DiffLineData, colSpan?: number): React.ReactNode => {
       const key = commentKey(lineData.file, lineData.line);
       const lineComments = commentsByLine.get(key);
       const isActiveLine =
         activeLine != null &&
         activeLine.file === lineData.file &&
-        activeLine.line === lineData.line;
+        activeLine.line === lineData.line &&
+        activeLine.side === lineData.side;
 
       if (!isActiveLine && (lineComments == null || lineComments.length === 0)) {
         return null;
@@ -180,6 +181,7 @@ export function SessionDetailPage() {
               comments={lineComments}
               onResolve={handleCommentResolve}
               onReply={isActiveLine ? undefined : () => setActiveLine(lineData)}
+              colSpan={colSpan}
             />
           )}
           {isActiveLine && (
@@ -187,6 +189,7 @@ export function SessionDetailPage() {
               lineData={activeLine}
               onSubmit={handleCommentSubmit}
               onCancel={() => setActiveLine(null)}
+              colSpan={colSpan}
             />
           )}
         </>

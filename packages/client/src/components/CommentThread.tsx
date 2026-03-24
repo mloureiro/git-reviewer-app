@@ -33,16 +33,17 @@ interface CommentThreadProps {
   comments: ReviewComment[];
   onResolve: (commentId: string, resolved: boolean) => void;
   onReply?: () => void;
+  colSpan?: number;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export function CommentThread({ comments, onResolve, onReply }: CommentThreadProps) {
+export function CommentThread({ comments, onResolve, onReply, colSpan = 3 }: CommentThreadProps) {
   return (
     <tr className="comment-thread-row">
-      <td className="comment-thread-cell" colSpan={3}>
+      <td className="comment-thread-cell" colSpan={colSpan}>
         <div className="comment-thread">
           {comments.map((comment) => (
             <div

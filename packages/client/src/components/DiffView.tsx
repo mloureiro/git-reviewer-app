@@ -193,7 +193,7 @@ interface DiffBlockProps {
   language: string | null;
   viewMode: DiffViewMode;
   onLineClick?: (data: DiffLineData) => void;
-  renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
+  renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
 }
 
@@ -202,7 +202,7 @@ interface DiffFileProps {
   colorScheme: ColorSchemeType;
   viewMode: DiffViewMode;
   onLineClick?: (data: DiffLineData) => void;
-  renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
+  renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
 }
 
@@ -211,7 +211,7 @@ interface DiffViewProps {
   colorScheme?: ColorSchemeType;
   viewMode?: DiffViewMode;
   onLineClick?: (data: DiffLineData) => void;
-  renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
+  renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
 }
 
@@ -447,16 +447,60 @@ export function DiffBlockComponent({
           </td>
         </tr>
 
-        {pairs.map((pair, idx) => (
-          <SideBySideRow
-            key={`pair-${idx}`}
-            pair={pair}
-            filePath={filePath}
-            language={language}
-            onLineClick={onLineClick}
-            hasCommentOnLine={hasCommentOnLine}
-          />
-        ))}
+        {pairs.map((pair, idx) => {
+          const { left, right } = pair;
+
+          const leftLineNum =
+            left != null ? (left.type !== LineType.INSERT ? left.oldNumber : undefined) : undefined;
+          const rightLineNum =
+            right != null
+              ? right.type !== LineType.DELETE
+                ? right.newNumber
+                : undefined
+              : undefined;
+
+          const leftLineData: DiffLineData | null =
+            leftLineNum != null
+              ? {
+                  file: filePath,
+                  line: leftLineNum,
+                  side: 'left',
+                  content: left != null ? stripLinePrefix(left.content) : '',
+                }
+              : null;
+          const rightLineData: DiffLineData | null =
+            rightLineNum != null
+              ? {
+                  file: filePath,
+                  line: rightLineNum,
+                  side: 'right',
+                  content: right != null ? stripLinePrefix(right.content) : '',
+                }
+              : null;
+
+          const leftAfter =
+            renderAfterLine != null && leftLineData != null
+              ? renderAfterLine(leftLineData, 7)
+              : null;
+          const rightAfter =
+            renderAfterLine != null && rightLineData != null
+              ? renderAfterLine(rightLineData, 7)
+              : null;
+
+          return (
+            <React.Fragment key={`pair-${idx}`}>
+              <SideBySideRow
+                pair={pair}
+                filePath={filePath}
+                language={language}
+                onLineClick={onLineClick}
+                hasCommentOnLine={hasCommentOnLine}
+              />
+              {leftAfter}
+              {rightAfter}
+            </React.Fragment>
+          );
+        })}
       </tbody>
     );
   }
