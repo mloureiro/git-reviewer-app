@@ -89,7 +89,10 @@ body {
 .diff-file-section {
   border: 1px solid #30363d;
   border-radius: 6px;
-  overflow: hidden;
+  /* Use `clip` instead of `hidden` so the border-radius still clips the header
+     corners visually, but children (the diff table wrapper) can still establish
+     their own scroll containers and show scrollbars. */
+  overflow: clip;
 }
 
 .diff-file-section__header {
@@ -1099,14 +1102,19 @@ body {
 
 /* ── Side-by-side diff table layout ───────────────────────────────────── */
 
-/* Enable horizontal scroll for the wide split view */
+/* Enable horizontal scroll for the wide split view.
+   scrollbar-gutter: stable reserves space so the layout doesn't jump
+   when a scrollbar appears/disappears. */
 .diff-file-section .d2h-file-diff--sbs {
   overflow-x: auto;
+  scrollbar-gutter: stable;
 }
 
 .diff-file-section .d2h-file-diff--sbs .d2h-diff-table {
-  /* Each side gets at least half the available width */
-  min-width: 100%;
+  /* Allow the table to grow past the container so long lines trigger
+     horizontal scroll rather than wrapping.
+     800 px is the practical minimum for a readable two-column layout. */
+  min-width: max(100%, 800px);
   table-layout: fixed;
 }
 
@@ -1124,6 +1132,20 @@ body {
   min-width: 50px;
 }
 
+/* The +/- prefix cell in side-by-side rows */
+.diff-file-section .d2h-diff-tr--sbs .d2h-code-line-prefix {
+  width: 14px;
+  min-width: 14px;
+}
+
+/* Each side's code content cell: no wrapping — long lines extend the table
+   horizontally which is handled by the scrollable wrapper above. */
+.diff-file-section .d2h-diff-tr--sbs .d2h-code-line {
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: clip;
+}
+
 /* Empty half-row cells (when one side has more lines than the other) */
 .diff-file-section .d2h-sbs-empty {
   background-color: rgba(110, 118, 129, 0.05);
@@ -1134,7 +1156,36 @@ body {
   border-right: 1px solid #21262d;
 }
 
-/* Each side's content cell takes equal space */
-.diff-file-section .d2h-diff-tr--sbs .d2h-code-line {
-  width: 45%;
+/* ── Responsive: narrow screens ────────────────────────────────────────── */
+
+/* Below 900 px the two-column review layout shifts to a single column
+   so the file tree no longer consumes horizontal space. */
+@media (max-width: 900px) {
+  .review-layout {
+    flex-direction: column;
+  }
+
+  .review-layout__sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+
+  /* Collapse the file-tree list so it doesn't dominate the screen */
+  .review-layout__sidebar .file-tree__list {
+    max-height: 200px;
+  }
+}
+
+/* Below 640 px the session header controls wrap more gracefully */
+@media (max-width: 640px) {
+  .session-detail__review-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* The .main padding is too generous on small screens */
+  .main {
+    padding: 16px;
+  }
 }

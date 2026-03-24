@@ -12,6 +12,7 @@ import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
 import { useDiff } from '../hooks/useDiff';
 import { useFiles } from '../hooks/useFiles';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useResponsiveDiffMode } from '../hooks/useResponsiveDiffMode';
 import { useReviewSession } from '../hooks/useReviewSession';
 import type {
   CommentFormData,
@@ -46,10 +47,30 @@ export function SessionDetailPage() {
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
   const [activeLine, setActiveLine] = useState<DiffLineData | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  // The user's stored preference (persisted to localStorage).
   const [diffViewMode, setDiffViewMode] = useLocalStorage<DiffViewMode>(
     'git-reviewer:diff-view-mode',
     'line-by-line',
   );
+
+  // The mode actually rendered — may be overridden to 'line-by-line' on narrow
+  // screens regardless of the stored preference.
+  const [activeDiffViewMode, setActiveDiffViewMode] = useState<DiffViewMode>(diffViewMode);
+
+  // When the user explicitly changes the mode via the toggle, persist the
+  // preference AND apply it as the active mode immediately.
+  const handleDiffViewModeChange = useCallback(
+    (mode: DiffViewMode): void => {
+      setDiffViewMode(mode);
+      setActiveDiffViewMode(mode);
+    },
+    [setDiffViewMode],
+  );
+
+  // Sync activeDiffViewMode when the viewport width crosses the narrow
+  // threshold (e.g. resize to mobile → force line-by-line; resize back →
+  // restore stored preference).
+  useResponsiveDiffMode(diffViewMode, activeDiffViewMode, setActiveDiffViewMode);
 
   // When the user clicks a file in the sidebar we suppress scroll-based
   // activeFile updates for 1 s so the observer does not immediately override
@@ -255,7 +276,7 @@ export function SessionDetailPage() {
             onStatusChange={handleStatusChange}
             disabled={statusUpdating}
           />
-          <DiffViewToggle mode={diffViewMode} onChange={setDiffViewMode} />
+          <DiffViewToggle mode={activeDiffViewMode} onChange={handleDiffViewModeChange} />
         </div>
       </div>
 
@@ -277,7 +298,7 @@ export function SessionDetailPage() {
           {!diffLoading && !diffError && diff != null && (
             <DiffView
               diffText={diff}
-              viewMode={diffViewMode}
+              viewMode={activeDiffViewMode}
               onLineClick={handleLineClick}
               renderAfterLine={renderAfterLine}
               hasCommentOnLine={hasCommentOnLine}
