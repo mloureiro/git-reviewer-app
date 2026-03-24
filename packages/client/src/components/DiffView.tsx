@@ -4,6 +4,7 @@ import type { DiffBlock, DiffFile, DiffLine } from 'diff2html/lib-esm/types';
 import { LineType } from 'diff2html/lib-esm/types';
 import { ColorSchemeType } from 'diff2html/lib-esm/types';
 import 'diff2html/bundles/css/diff2html.min.css';
+import hljs from 'highlight.js/lib/common';
 
 import type { DiffLineData } from '../types/review';
 
@@ -42,6 +43,72 @@ function stripLinePrefix(content: string): string {
   return content.length > 0 ? content.slice(1) : content;
 }
 
+/**
+ * Map a file path's extension to an highlight.js language identifier.
+ * Returns null when the extension is unknown or not supported.
+ */
+function getFileLanguage(filePath: string): string | null {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  const map: Record<string, string> = {
+    ts: 'typescript',
+    tsx: 'typescript',
+    js: 'javascript',
+    jsx: 'javascript',
+    mjs: 'javascript',
+    cjs: 'javascript',
+    json: 'json',
+    css: 'css',
+    scss: 'scss',
+    html: 'xml',
+    htm: 'xml',
+    xml: 'xml',
+    svg: 'xml',
+    md: 'markdown',
+    sh: 'bash',
+    bash: 'bash',
+    zsh: 'bash',
+    py: 'python',
+    rb: 'ruby',
+    go: 'go',
+    rs: 'rust',
+    java: 'java',
+    kt: 'kotlin',
+    swift: 'swift',
+    c: 'c',
+    cpp: 'cpp',
+    cc: 'cpp',
+    cxx: 'cpp',
+    h: 'c',
+    hpp: 'cpp',
+    cs: 'csharp',
+    php: 'php',
+    yaml: 'yaml',
+    yml: 'yaml',
+    toml: 'ini',
+    ini: 'ini',
+    sql: 'sql',
+    graphql: 'graphql',
+    gql: 'graphql',
+    dockerfile: 'dockerfile',
+  };
+  return map[ext] ?? null;
+}
+
+/**
+ * Highlight a single line of code using highlight.js.
+ * Returns the highlighted HTML string, or null if the language is not
+ * recognised or the content is empty (caller should render plain text).
+ */
+function highlightLine(content: string, language: string | null): string | null {
+  if (language === null || content.trim() === '') return null;
+  if (hljs.getLanguage(language) == null) return null;
+  try {
+    return hljs.highlight(content, { language, ignoreIllegals: true }).value;
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Props types
 // ---------------------------------------------------------------------------
@@ -49,6 +116,7 @@ function stripLinePrefix(content: string): string {
 interface DiffLineRowProps {
   line: DiffLine;
   filePath: string;
+  language: string | null;
   onLineClick?: (data: DiffLineData) => void;
   hasComment?: boolean;
 }
@@ -56,6 +124,7 @@ interface DiffLineRowProps {
 interface DiffBlockProps {
   block: DiffBlock;
   filePath: string;
+  language: string | null;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
@@ -81,11 +150,18 @@ interface DiffViewProps {
 // DiffLineRow
 // ---------------------------------------------------------------------------
 
-export function DiffLineRow({ line, filePath, onLineClick, hasComment }: DiffLineRowProps) {
+export function DiffLineRow({
+  line,
+  filePath,
+  language,
+  onLineClick,
+  hasComment,
+}: DiffLineRowProps) {
   const typeClass = lineTypeClass(line.type);
   const oldNum = line.type !== LineType.INSERT ? line.oldNumber : undefined;
   const newNum = line.type !== LineType.DELETE ? line.newNumber : undefined;
   const lineContent = stripLinePrefix(line.content);
+  const highlightedHtml = highlightLine(lineContent, language);
 
   // The authoritative line number for the comment system: prefer newNumber
   // (insert / context), fall back to oldNumber (delete).
@@ -138,7 +214,14 @@ export function DiffLineRow({ line, filePath, onLineClick, hasComment }: DiffLin
 
       {/* Line content */}
       <td className="d2h-code-line">
-        <span className="d2h-code-line-ctn">{lineContent}</span>
+        {highlightedHtml != null ? (
+          <span
+            className="d2h-code-line-ctn"
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
+        ) : (
+          <span className="d2h-code-line-ctn">{lineContent}</span>
+        )}
       </td>
     </tr>
   );
@@ -151,6 +234,7 @@ export function DiffLineRow({ line, filePath, onLineClick, hasComment }: DiffLin
 export function DiffBlockComponent({
   block,
   filePath,
+  language,
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
@@ -186,6 +270,7 @@ export function DiffBlockComponent({
             <DiffLineRow
               line={line}
               filePath={filePath}
+              language={language}
               onLineClick={onLineClick}
               hasComment={hasComment}
             />
@@ -211,6 +296,7 @@ export function DiffFileComponent({
   const filePath = file.isRename === true ? file.newName : file.newName || file.oldName;
   const sectionId = filePathToId(filePath);
   const schemeClass = colorSchemeClass(colorScheme);
+  const language = getFileLanguage(filePath);
 
   return (
     <section key={sectionId} id={sectionId} className="diff-file-section">
@@ -233,6 +319,7 @@ export function DiffFileComponent({
               key={`block-${idx}`}
               block={block}
               filePath={filePath}
+              language={language}
               onLineClick={onLineClick}
               renderAfterLine={renderAfterLine}
               hasCommentOnLine={hasCommentOnLine}
