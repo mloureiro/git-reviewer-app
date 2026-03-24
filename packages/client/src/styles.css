@@ -505,6 +505,14 @@ body {
   color: #8b949e;
 }
 
+.session-detail__review-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
 .session-detail__refs code {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 12px;

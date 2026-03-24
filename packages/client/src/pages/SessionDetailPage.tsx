@@ -4,12 +4,14 @@ import { CommentThread } from '../components/CommentThread';
 import { DiffView, filePathToId } from '../components/DiffView';
 import { FileTree } from '../components/FileTree';
 import { InlineCommentForm } from '../components/InlineCommentForm';
+import { ReviewActions } from '../components/ReviewActions';
+import { ReviewSummaryBar } from '../components/ReviewSummaryBar';
 import { StatusBadge } from '../components/StatusBadge';
 import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
 import { useDiff } from '../hooks/useDiff';
 import { useFiles } from '../hooks/useFiles';
 import { useReviewSession } from '../hooks/useReviewSession';
-import type { CommentFormData, DiffLineData, ReviewComment } from '../types/review';
+import type { CommentFormData, DiffLineData, ReviewComment, ReviewStatus } from '../types/review';
 
 /** Stable key for grouping comments by file + line. */
 function commentKey(file: string, line: number): string {
@@ -35,6 +37,7 @@ export function SessionDetailPage() {
   const { commitSha } = useParams<{ commitSha: string }>();
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
   const [activeLine, setActiveLine] = useState<DiffLineData | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   // When the user clicks a file in the sidebar we suppress scroll-based
   // activeFile updates for 1 s so the observer does not immediately override
@@ -45,6 +48,7 @@ export function SessionDetailPage() {
     session: reviewData,
     loading: sessionLoading,
     error: sessionError,
+    updateStatus,
     addComment,
     resolveComment,
   } = useReviewSession(commitSha ?? '');
@@ -108,6 +112,18 @@ export function SessionDetailPage() {
     [resolveComment],
   );
 
+  const handleStatusChange = useCallback(
+    async (status: ReviewStatus): Promise<void> => {
+      setStatusUpdating(true);
+      try {
+        await updateStatus(status);
+      } finally {
+        setStatusUpdating(false);
+      }
+    },
+    [updateStatus],
+  );
+
   const comments = reviewData?.comments ?? [];
   const commentsByLine = groupCommentsByLine(comments);
 
@@ -128,6 +144,9 @@ export function SessionDetailPage() {
       unresolvedCounts[comment.file] = (unresolvedCounts[comment.file] ?? 0) + 1;
     }
   }
+
+  const totalUnresolved = comments.filter((c) => !c.resolved).length;
+  const summaryStats = { total: comments.length, unresolved: totalUnresolved };
 
   const renderAfterLine = useCallback(
     (lineData: DiffLineData): React.ReactNode => {
@@ -213,6 +232,14 @@ export function SessionDetailPage() {
           <code>{session.baseRef}</code>
           <span className="session-card__arrow">→</span>
           <code>{session.headRef}</code>
+        </div>
+        <div className="session-detail__review-bar">
+          <ReviewSummaryBar status={session.status} stats={summaryStats} />
+          <ReviewActions
+            currentStatus={session.status}
+            onStatusChange={handleStatusChange}
+            disabled={statusUpdating}
+          />
         </div>
       </div>
 
