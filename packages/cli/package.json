@@ -1,0 +1,23 @@
+{
+  "name": "@git-reviewer/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "git-reviewer": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@git-reviewer/server": "workspace:*",
+    "@git-reviewer/shared": "workspace:*",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
