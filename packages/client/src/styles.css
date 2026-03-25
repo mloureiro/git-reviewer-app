@@ -104,6 +104,14 @@ body {
   box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
 }
 
+/* Line-level keyboard focus highlight applied when j/k navigation lands on this row. */
+.diff-file-section .diff-line--focused {
+  outline: 2px solid rgba(88, 166, 255, 0.7);
+  outline-offset: -2px;
+  position: relative;
+  z-index: 1;
+}
+
 .diff-file-section__header {
   display: flex;
   align-items: center;

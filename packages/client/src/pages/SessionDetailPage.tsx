@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CommentThread } from '../components/CommentThread';
 import { DiffView, filePathToId } from '../components/DiffView';
@@ -13,9 +13,11 @@ import { useDiff } from '../hooks/useDiff';
 import { useFileFocus } from '../hooks/useFileFocus';
 import { useFiles } from '../hooks/useFiles';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useLineFocus } from '../hooks/useLineFocus';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useResponsiveDiffMode } from '../hooks/useResponsiveDiffMode';
 import { useReviewSession } from '../hooks/useReviewSession';
+import { extractFocusableLines } from '../utils/diffLines';
 import type {
   CommentFormData,
   DiffLineData,
@@ -102,9 +104,36 @@ export function SessionDetailPage() {
 
   const { focusedFilePath, focusNext, focusPrev } = useFileFocus(filePaths);
 
+  // Derive the flat list of focusable lines from the parsed diff.
+  const focusableLines = useMemo(() => extractFocusableLines(diff ?? ''), [diff]);
+
+  // When the line focus crosses a file boundary, sync the file-level focus.
+  const handleLineBoundary = useCallback(
+    (filePath: string): void => {
+      const fileIndex = filePaths.indexOf(filePath);
+      if (fileIndex === -1) return;
+
+      // Directly scroll the section into view; file focus state is managed by
+      // useFileFocus internally via focusNext/focusPrev, so here we just scroll.
+      const sectionId = filePathToId(filePath);
+      const element = document.getElementById(sectionId);
+      if (element != null) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    },
+    [filePaths],
+  );
+
+  const { focusedLine, focusLineNext, focusLinePrev } = useLineFocus(
+    focusableLines,
+    handleLineBoundary,
+  );
+
   useKeyboardShortcuts([
     { key: 'n', description: 'Focus next file', handler: focusNext },
     { key: 'p', description: 'Focus previous file', handler: focusPrev },
+    { key: 'j', description: 'Focus next diff line', handler: focusLineNext },
+    { key: 'k', description: 'Focus previous diff line', handler: focusLinePrev },
   ]);
 
   useActiveFileOnScroll(filePaths, setActiveFile, suppressScrollUpdateRef);
@@ -309,6 +338,7 @@ export function SessionDetailPage() {
               diffText={diff}
               viewMode={activeDiffViewMode}
               focusedFile={focusedFilePath}
+              focusedLine={focusedLine}
               onLineClick={handleLineClick}
               renderAfterLine={renderAfterLine}
               hasCommentOnLine={hasCommentOnLine}
