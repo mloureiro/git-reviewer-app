@@ -89,6 +89,15 @@ describe('review API routes — integration', () => {
   // GET /api/diff
   // ---------------------------------------------------------------------------
   describe('GET /api/diff', () => {
+    it('returns 500 when getDiffText throws', async () => {
+      mockGetDiffText.mockRejectedValueOnce(new Error('git diff failed'));
+
+      const res = await request(app).get('/api/diff').query({ base: 'main', head: 'HEAD' });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
+
     it('returns diff text for base and head query params', async () => {
       const diffText = 'diff --git a/src/foo.ts b/src/foo.ts\n+added line\n';
       mockGetDiffText.mockResolvedValueOnce(diffText);
@@ -126,6 +135,15 @@ describe('review API routes — integration', () => {
   // GET /api/files
   // ---------------------------------------------------------------------------
   describe('GET /api/files', () => {
+    it('returns 500 when getChangedFiles throws', async () => {
+      mockGetChangedFiles.mockRejectedValueOnce(new Error('git diff --name-status failed'));
+
+      const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
+
     it('returns changed files for base and head query params', async () => {
       const files = [
         { path: 'src/foo.ts', status: 'modified' as const, additions: 5, deletions: 2 },
@@ -177,6 +195,15 @@ describe('review API routes — integration', () => {
   // GET /api/sessions
   // ---------------------------------------------------------------------------
   describe('GET /api/sessions', () => {
+    it('returns 500 when listReviewNotes throws', async () => {
+      mockListReviewNotes.mockRejectedValueOnce(new Error('git notes list failed'));
+
+      const res = await request(app).get('/api/sessions');
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
+
     it('returns an empty sessions array when no notes exist', async () => {
       mockListReviewNotes.mockResolvedValueOnce([]);
 
@@ -201,6 +228,15 @@ describe('review API routes — integration', () => {
   // GET /api/sessions/:commitSha
   // ---------------------------------------------------------------------------
   describe('GET /api/sessions/:commitSha', () => {
+    it('returns 500 when readReviewNote throws', async () => {
+      mockReadReviewNote.mockRejectedValueOnce(new Error('git notes show failed'));
+
+      const res = await request(app).get(`/api/sessions/${COMMIT_SHA}`);
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
+
     it('returns the review session for a known commitSha', async () => {
       mockReadReviewNote.mockResolvedValueOnce(sampleSession);
 
@@ -302,6 +338,18 @@ describe('review API routes — integration', () => {
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });
     });
+
+    it('returns 500 when writeReviewNote throws during comment creation', async () => {
+      mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession, comments: [] });
+      mockWriteReviewNote.mockRejectedValueOnce(new Error('git notes write failed'));
+
+      const res = await request(app)
+        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .send({ file: 'src/foo.ts', line: 1, body: 'boom', author: 'reviewer' });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -339,6 +387,30 @@ describe('review API routes — integration', () => {
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Comment not found' });
     });
+
+    it('returns 404 when the session is not found during PATCH comment', async () => {
+      mockReadReviewNote.mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .send({ resolved: true });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Review session not found' });
+    });
+
+    it('returns 500 when writeReviewNote throws during comment resolve', async () => {
+      const sessionWithComment: ReviewData = { ...sampleSession, comments: [{ ...sampleComment }] };
+      mockReadReviewNote.mockResolvedValueOnce(sessionWithComment);
+      mockWriteReviewNote.mockRejectedValueOnce(new Error('git notes write failed'));
+
+      const res = await request(app)
+        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .send({ resolved: true });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -367,6 +439,18 @@ describe('review API routes — integration', () => {
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });
+    });
+
+    it('returns 500 when writeReviewNote throws during status update', async () => {
+      mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
+      mockWriteReviewNote.mockRejectedValueOnce(new Error('git notes write failed'));
+
+      const res = await request(app)
+        .patch(`/api/sessions/${COMMIT_SHA}`)
+        .send({ status: 'approved' });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
     });
   });
 });
