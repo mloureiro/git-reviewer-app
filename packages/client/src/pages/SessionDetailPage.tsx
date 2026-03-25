@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CommentThread } from '../components/CommentThread';
 import { DiffView, filePathToId } from '../components/DiffView';
@@ -130,6 +130,15 @@ export function SessionDetailPage() {
     focusableLines,
     handleLineBoundary,
   );
+
+  // Reset all focus and the open comment form whenever the diff data changes
+  // (e.g. when the session's refs produce a different diff set). This prevents
+  // stale focused indices from pointing at lines that no longer exist.
+  useEffect(() => {
+    clearFocus();
+    clearLineFocus();
+    setActiveLine(null);
+  }, [diff, clearFocus, clearLineFocus]);
 
   /**
    * Open the inline comment form for the currently focused line.

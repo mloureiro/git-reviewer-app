@@ -23,15 +23,14 @@ interface ShortcutsHelpModalProps {
  * Toggled by pressing `?` and closed by pressing `Escape` or clicking the backdrop.
  */
 export function ShortcutsHelpModal({ isOpen, onClose, shortcuts }: ShortcutsHelpModalProps) {
-  // Close when Escape is pressed — this fires even while the modal is open because
-  // the modal's dialog element is not a form element, so isTypingTarget returns false.
-  // However, we wire Escape directly here as well so the modal can close itself
-  // independently of the shortcut registry (which may be disabled while open).
+  // Close when Escape or '?' is pressed while the modal is open.
+  // The shortcut registry is disabled while the modal is open (enabled=false), so
+  // we wire these keys directly here so the modal can close itself independently.
   useEffect(() => {
     if (!isOpen) return;
 
     function handleKeyDown(event: KeyboardEvent): void {
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' || event.key === '?') {
         event.preventDefault();
         onClose();
       }
