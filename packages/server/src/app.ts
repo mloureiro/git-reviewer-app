@@ -4,6 +4,14 @@ import path from 'path';
 import { createGitClient } from './git/diff.js';
 import { createReviewRouter } from './routes/review.js';
 
+export { createGitClient } from './git/diff.js';
+export { validateRefs, createAutoSession } from './git/session.js';
+export type {
+  ValidateRefsOptions,
+  ValidateRefsResult,
+  CreateAutoSessionOptions,
+} from './git/session.js';
+
 export interface CreateAppOptions {
   repoPath: string;
   staticDir?: string;

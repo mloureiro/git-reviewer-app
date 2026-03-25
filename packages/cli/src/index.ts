@@ -3,7 +3,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Command } from 'commander';
-import { createApp } from '@git-reviewer/server';
+import { createApp, createGitClient, validateRefs, createAutoSession } from '@git-reviewer/server';
 
 const program = new Command();
 
@@ -21,7 +21,7 @@ program
   .option('--repo <path>', 'Path to the git repository to review', process.cwd())
   .option('--port <number>', 'Port to listen on', '3847')
   .action(
-    (options: {
+    async (options: {
       base?: string;
       head?: string;
       uncommitted: boolean;
@@ -31,22 +31,58 @@ program
       const repoPath = path.resolve(options.repo);
       const port = parseInt(options.port, 10);
 
+      const git = createGitClient(repoPath);
+
+      // Validate refs (or uncommitted state) before starting the server.
+      // Exits with a clear error message if validation fails.
+      let baseCommit: string;
+      let headCommit: string;
+
+      try {
+        const result = await validateRefs(git, {
+          base: options.base,
+          head: options.head,
+          uncommitted: options.uncommitted,
+        });
+        baseCommit = result.baseCommit;
+        headCommit = result.headCommit;
+      } catch (err) {
+        console.error(`Error: ${err instanceof Error ? err.message : String(err)}`);
+        process.exit(1);
+      }
+
+      // Auto-create the review session in git-notes so the server can find it on load.
+      let sessionCommit: string;
+
+      try {
+        const session = await createAutoSession(git, {
+          base: options.base,
+          head: options.head,
+          uncommitted: options.uncommitted,
+          baseCommit,
+          headCommit,
+        });
+        sessionCommit = session.session.headCommit;
+        console.log(`Review session created: ${session.session.title} (${session.session.id})`);
+      } catch (err) {
+        console.error(
+          `Error creating review session: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        process.exit(1);
+      }
+
       // Resolve the built client assets relative to this file.
       // In production: packages/cli/dist/index.js -> ../../client/dist
       const thisDir = path.dirname(fileURLToPath(import.meta.url));
       const candidateStaticDir = path.resolve(thisDir, '../../client/dist');
       const staticDir = existsSync(candidateStaticDir) ? candidateStaticDir : undefined;
 
-      // --base and --head will be used in 7.5 for auto-session creation
-      void options.base;
-      void options.head;
-      void options.uncommitted;
-
       const app = createApp({ repoPath, staticDir });
 
       app.listen(port, () => {
         console.log(`git-reviewer running at http://localhost:${port}`);
         console.log(`Reviewing repo: ${repoPath}`);
+        console.log(`Review session: http://localhost:${port}/session/${sessionCommit}`);
         if (staticDir) {
           console.log(`Serving client from: ${staticDir}`);
         }
