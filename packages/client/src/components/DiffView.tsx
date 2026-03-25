@@ -6,6 +6,7 @@ import { ColorSchemeType } from 'diff2html/lib-esm/types';
 import 'diff2html/bundles/css/diff2html.min.css';
 import hljs from 'highlight.js/lib/common';
 
+import type { FocusableLine } from '../hooks/useLineFocus';
 import type { DiffLineData, DiffViewMode } from '../types/review';
 
 // ---------------------------------------------------------------------------
@@ -176,6 +177,24 @@ function pairLinesForSideBySide(lines: readonly DiffLine[]): SideBySidePair[] {
 }
 
 // ---------------------------------------------------------------------------
+// Focus helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns true when `entry` matches the currently focused line.
+ * Null-safe: returns false when either argument is null/undefined.
+ */
+function isLineFocused(
+  focusedLine: FocusableLine | null | undefined,
+  file: string,
+  lineNum: number,
+  side: 'left' | 'right',
+): boolean {
+  if (focusedLine == null) return false;
+  return focusedLine.file === file && focusedLine.line === lineNum && focusedLine.side === side;
+}
+
+// ---------------------------------------------------------------------------
 // Props types
 // ---------------------------------------------------------------------------
 
@@ -185,6 +204,7 @@ interface DiffLineRowProps {
   language: string | null;
   onLineClick?: (data: DiffLineData) => void;
   hasComment?: boolean;
+  isFocusedLine?: boolean;
 }
 
 interface DiffBlockProps {
@@ -192,6 +212,7 @@ interface DiffBlockProps {
   filePath: string;
   language: string | null;
   viewMode: DiffViewMode;
+  focusedLine?: FocusableLine | null;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
@@ -202,6 +223,7 @@ interface DiffFileProps {
   colorScheme: ColorSchemeType;
   viewMode: DiffViewMode;
   isFocused?: boolean;
+  focusedLine?: FocusableLine | null;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
@@ -213,6 +235,8 @@ interface DiffViewProps {
   viewMode?: DiffViewMode;
   /** When set, the section for this file path receives a visual focus highlight. */
   focusedFile?: string | null;
+  /** When set, the matching diff row receives a visual line-level focus highlight. */
+  focusedLine?: FocusableLine | null;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
@@ -228,6 +252,7 @@ export function DiffLineRow({
   language,
   onLineClick,
   hasComment,
+  isFocusedLine = false,
 }: DiffLineRowProps) {
   const typeClass = lineTypeClass(line.type);
   const oldNum = line.type !== LineType.INSERT ? line.oldNumber : undefined;
@@ -253,6 +278,7 @@ export function DiffLineRow({
     typeClass,
     isClickable ? 'diff-line--clickable' : '',
     hasComment === true ? 'diff-line--has-comment' : '',
+    isFocusedLine ? 'diff-line--focused' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -263,6 +289,7 @@ export function DiffLineRow({
       data-file-path={filePath}
       data-line-number={commentLine}
       data-line-side={commentSide}
+      data-line-focused={isFocusedLine ? 'true' : undefined}
       onClick={isClickable ? handleClick : undefined}
     >
       {/* Left line number — shows "+" affordance on hover, comment dot when comment exists */}
@@ -307,6 +334,7 @@ interface SideBySideRowProps {
   pair: SideBySidePair;
   filePath: string;
   language: string | null;
+  focusedLine?: FocusableLine | null;
   onLineClick?: (data: DiffLineData) => void;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
 }
@@ -318,6 +346,7 @@ function renderSideCell(
   side: 'left' | 'right',
   onLineClick: ((data: DiffLineData) => void) | undefined,
   hasComment: boolean,
+  isFocused: boolean,
 ): React.ReactNode {
   if (line === null) {
     return (
@@ -348,6 +377,7 @@ function renderSideCell(
           'd2h-sbs-linenumber',
           isClickable ? 'diff-line--clickable' : '',
           hasComment ? 'diff-line--has-comment' : '',
+          isFocused ? 'diff-line--focused' : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -384,6 +414,7 @@ function SideBySideRow({
   pair,
   filePath,
   language,
+  focusedLine,
   onLineClick,
   hasCommentOnLine,
 }: SideBySideRowProps) {
@@ -410,15 +441,33 @@ function SideBySideRow({
   const hasRightComment =
     rightLineData != null && hasCommentOnLine != null ? hasCommentOnLine(rightLineData) : false;
 
-  const rowClass = ['d2h-diff-tr', 'd2h-diff-tr--sbs', leftTypeClass || rightTypeClass]
+  const isLeftFocused =
+    leftLineNum != null ? isLineFocused(focusedLine, filePath, leftLineNum, 'left') : false;
+  const isRightFocused =
+    rightLineNum != null ? isLineFocused(focusedLine, filePath, rightLineNum, 'right') : false;
+
+  const rowClass = [
+    'd2h-diff-tr',
+    'd2h-diff-tr--sbs',
+    leftTypeClass || rightTypeClass,
+    isLeftFocused || isRightFocused ? 'diff-line--focused' : '',
+  ]
     .filter(Boolean)
     .join(' ');
 
   return (
     <tr className={rowClass}>
-      {renderSideCell(left, filePath, language, 'left', onLineClick, hasLeftComment)}
+      {renderSideCell(left, filePath, language, 'left', onLineClick, hasLeftComment, isLeftFocused)}
       <td className="d2h-sbs-divider" />
-      {renderSideCell(right, filePath, language, 'right', onLineClick, hasRightComment)}
+      {renderSideCell(
+        right,
+        filePath,
+        language,
+        'right',
+        onLineClick,
+        hasRightComment,
+        isRightFocused,
+      )}
     </tr>
   );
 }
@@ -432,6 +481,7 @@ export function DiffBlockComponent({
   filePath,
   language,
   viewMode,
+  focusedLine,
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
@@ -496,6 +546,7 @@ export function DiffBlockComponent({
                 pair={pair}
                 filePath={filePath}
                 language={language}
+                focusedLine={focusedLine}
                 onLineClick={onLineClick}
                 hasCommentOnLine={hasCommentOnLine}
               />
@@ -534,6 +585,7 @@ export function DiffBlockComponent({
         };
         const rowKey = `${line.type}-${line.oldNumber ?? 'x'}-${line.newNumber ?? 'x'}-${idx}`;
         const hasComment = hasCommentOnLine != null ? hasCommentOnLine(lineData) : false;
+        const isFocusedLine = isLineFocused(focusedLine, filePath, commentLine, commentSide);
 
         return (
           <React.Fragment key={rowKey}>
@@ -543,6 +595,7 @@ export function DiffBlockComponent({
               language={language}
               onLineClick={onLineClick}
               hasComment={hasComment}
+              isFocusedLine={isFocusedLine}
             />
             {renderAfterLine != null ? renderAfterLine(lineData) : null}
           </React.Fragment>
@@ -561,6 +614,7 @@ export function DiffFileComponent({
   colorScheme,
   viewMode,
   isFocused = false,
+  focusedLine,
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
@@ -598,6 +652,7 @@ export function DiffFileComponent({
               filePath={filePath}
               language={language}
               viewMode={viewMode}
+              focusedLine={focusedLine}
               onLineClick={onLineClick}
               renderAfterLine={renderAfterLine}
               hasCommentOnLine={hasCommentOnLine}
@@ -618,6 +673,7 @@ export function DiffView({
   colorScheme = ColorSchemeType.AUTO,
   viewMode = 'line-by-line',
   focusedFile = null,
+  focusedLine = null,
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
@@ -641,6 +697,7 @@ export function DiffView({
             colorScheme={colorScheme}
             viewMode={viewMode}
             isFocused={focusedFile === filePath}
+            focusedLine={focusedLine}
             onLineClick={onLineClick}
             renderAfterLine={renderAfterLine}
             hasCommentOnLine={hasCommentOnLine}
