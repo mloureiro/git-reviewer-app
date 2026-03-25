@@ -9,5 +9,10 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
     passWithNoTests: true,
     setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx', 'src/test/**'],
+    },
   },
 });
