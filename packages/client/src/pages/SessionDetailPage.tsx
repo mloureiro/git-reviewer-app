@@ -7,6 +7,7 @@ import { FileTree } from '../components/FileTree';
 import { InlineCommentForm } from '../components/InlineCommentForm';
 import { ReviewActions } from '../components/ReviewActions';
 import { ReviewSummaryBar } from '../components/ReviewSummaryBar';
+import { ShortcutsHelpModal } from '../components/ShortcutsHelpModal';
 import { StatusBadge } from '../components/StatusBadge';
 import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
 import { useDiff } from '../hooks/useDiff';
@@ -51,6 +52,7 @@ export function SessionDetailPage() {
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
   const [activeLine, setActiveLine] = useState<DiffLineData | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
   // The user's stored preference (persisted to localStorage).
   const [diffViewMode, setDiffViewMode] = useLocalStorage<DiffViewMode>(
     'git-reviewer:diff-view-mode',
@@ -151,14 +153,19 @@ export function SessionDetailPage() {
 
   /**
    * Hierarchical Escape handler:
-   *   1. Dismiss open comment form if one is active.
-   *   2. Clear line focus if a line is focused but no form is open.
-   *   3. Clear file focus if a file is focused but no line is focused.
+   *   1. Close the help modal if it is open.
+   *   2. Dismiss open comment form if one is active.
+   *   3. Clear line focus if a line is focused but no form is open.
+   *   4. Clear file focus if a file is focused but no line is focused.
    *
    * Note: when the comment form's textarea has DOM focus the global keydown
    * listener is suppressed by isTypingTarget, so InlineCommentForm handles
    * Escape internally. This handler fires only when the textarea is NOT focused
    * (e.g. the form row is visible but focus has moved away).
+   *
+   * Note: when the help modal is open, ShortcutsHelpModal has its own Escape
+   * listener that fires first. The shortcut registry is also disabled while
+   * the modal is open, so this handler only fires when the modal is closed.
    */
   const handleEscape = useCallback((): void => {
     if (activeLine != null) {
@@ -174,14 +181,29 @@ export function SessionDetailPage() {
     }
   }, [activeLine, focusedLine, focusedFilePath, clearLineFocus, clearFocus]);
 
-  useKeyboardShortcuts([
-    { key: 'n', description: 'Focus next file', handler: focusNext },
-    { key: 'p', description: 'Focus previous file', handler: focusPrev },
-    { key: 'j', description: 'Focus next diff line', handler: focusLineNext },
-    { key: 'k', description: 'Focus previous diff line', handler: focusLinePrev },
-    { key: 'c', description: 'Comment on focused line', handler: handleOpenCommentOnFocusedLine },
-    { key: 'Escape', description: 'Dismiss / clear focus', handler: handleEscape },
-  ]);
+  const handleToggleHelp = useCallback((): void => {
+    setIsHelpOpen((prev) => !prev);
+  }, []);
+
+  const handleCloseHelp = useCallback((): void => {
+    setIsHelpOpen(false);
+  }, []);
+
+  // Shortcuts are disabled while the help modal is open so that pressing keys
+  // while reading the modal does not trigger navigation or comment actions.
+  // The modal's own Escape listener handles closing it independently.
+  const shortcutEntries = useKeyboardShortcuts(
+    [
+      { key: 'n', description: 'Focus next file', handler: focusNext },
+      { key: 'p', description: 'Focus previous file', handler: focusPrev },
+      { key: 'j', description: 'Focus next diff line', handler: focusLineNext },
+      { key: 'k', description: 'Focus previous diff line', handler: focusLinePrev },
+      { key: 'c', description: 'Comment on focused line', handler: handleOpenCommentOnFocusedLine },
+      { key: 'Escape', description: 'Dismiss / clear focus', handler: handleEscape },
+      { key: '?', description: 'Show keyboard shortcuts', handler: handleToggleHelp },
+    ],
+    !isHelpOpen,
+  );
 
   useActiveFileOnScroll(filePaths, setActiveFile, suppressScrollUpdateRef);
 
@@ -396,6 +418,12 @@ export function SessionDetailPage() {
           )}
         </div>
       </div>
+
+      <ShortcutsHelpModal
+        isOpen={isHelpOpen}
+        onClose={handleCloseHelp}
+        shortcuts={shortcutEntries}
+      />
     </div>
   );
 }
