@@ -48,7 +48,15 @@ export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
   const git = createGitClient(repoPath);
   const app = express();
 
-  app.use(cors());
+  const resolvedStaticDir = resolveStaticDir(staticDir);
+
+  // In development the client runs on a separate Vite dev server (different
+  // origin), so CORS headers are required.  In production the server serves
+  // the built client directly (same origin), so CORS is unnecessary.
+  if (!resolvedStaticDir) {
+    app.use(cors());
+  }
+
   app.use(express.json());
 
   app.use('/api', createReviewRouter(git));
@@ -56,8 +64,6 @@ export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
   });
-
-  const resolvedStaticDir = resolveStaticDir(staticDir);
 
   if (resolvedStaticDir) {
     app.use(express.static(resolvedStaticDir));
