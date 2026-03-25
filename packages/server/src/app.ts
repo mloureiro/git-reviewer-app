@@ -1,5 +1,6 @@
 import cors from 'cors';
 import express, { type Express } from 'express';
+import path from 'path';
 import { createGitClient } from './git/diff.js';
 import { createReviewRouter } from './routes/review.js';
 
@@ -8,7 +9,7 @@ export interface CreateAppOptions {
   staticDir?: string;
 }
 
-export function createApp({ repoPath, staticDir: _staticDir }: CreateAppOptions): Express {
+export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
   const git = createGitClient(repoPath);
   const app = express();
 
@@ -20,6 +21,14 @@ export function createApp({ repoPath, staticDir: _staticDir }: CreateAppOptions)
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });
   });
+
+  if (staticDir) {
+    const resolvedStaticDir = path.resolve(staticDir);
+    app.use(express.static(resolvedStaticDir));
+    app.get('*', (_req, res) => {
+      res.sendFile(path.join(resolvedStaticDir, 'index.html'));
+    });
+  }
 
   return app;
 }
