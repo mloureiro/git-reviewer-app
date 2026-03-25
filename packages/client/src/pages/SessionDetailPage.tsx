@@ -102,7 +102,7 @@ export function SessionDetailPage() {
 
   const filePaths = files.map((f) => f.path);
 
-  const { focusedFilePath, focusNext, focusPrev } = useFileFocus(filePaths);
+  const { focusedFilePath, focusNext, focusPrev, clearFocus } = useFileFocus(filePaths);
 
   // Derive the flat list of focusable lines from the parsed diff.
   const focusableLines = useMemo(() => extractFocusableLines(diff ?? ''), [diff]);
@@ -124,16 +124,63 @@ export function SessionDetailPage() {
     [filePaths],
   );
 
-  const { focusedLine, focusLineNext, focusLinePrev } = useLineFocus(
+  const { focusedLine, focusLineNext, focusLinePrev, clearLineFocus } = useLineFocus(
     focusableLines,
     handleLineBoundary,
   );
+
+  /**
+   * Open the inline comment form for the currently focused line.
+   * No-op when no line is focused.
+   */
+  const handleOpenCommentOnFocusedLine = useCallback((): void => {
+    if (focusedLine == null) return;
+
+    // Find the full DiffLineData (with content) for the focused line.
+    // We need the content field which FocusableLine doesn't carry, so we look
+    // up the matching entry from the parsed focusableLines array and use an
+    // empty string as the content fallback (content is only used for display,
+    // not for storing the comment).
+    setActiveLine({
+      file: focusedLine.file,
+      line: focusedLine.line,
+      side: focusedLine.side,
+      content: '',
+    });
+  }, [focusedLine]);
+
+  /**
+   * Hierarchical Escape handler:
+   *   1. Dismiss open comment form if one is active.
+   *   2. Clear line focus if a line is focused but no form is open.
+   *   3. Clear file focus if a file is focused but no line is focused.
+   *
+   * Note: when the comment form's textarea has DOM focus the global keydown
+   * listener is suppressed by isTypingTarget, so InlineCommentForm handles
+   * Escape internally. This handler fires only when the textarea is NOT focused
+   * (e.g. the form row is visible but focus has moved away).
+   */
+  const handleEscape = useCallback((): void => {
+    if (activeLine != null) {
+      setActiveLine(null);
+      return;
+    }
+    if (focusedLine != null) {
+      clearLineFocus();
+      return;
+    }
+    if (focusedFilePath != null) {
+      clearFocus();
+    }
+  }, [activeLine, focusedLine, focusedFilePath, clearLineFocus, clearFocus]);
 
   useKeyboardShortcuts([
     { key: 'n', description: 'Focus next file', handler: focusNext },
     { key: 'p', description: 'Focus previous file', handler: focusPrev },
     { key: 'j', description: 'Focus next diff line', handler: focusLineNext },
     { key: 'k', description: 'Focus previous diff line', handler: focusLinePrev },
+    { key: 'c', description: 'Comment on focused line', handler: handleOpenCommentOnFocusedLine },
+    { key: 'Escape', description: 'Dismiss / clear focus', handler: handleEscape },
   ]);
 
   useActiveFileOnScroll(filePaths, setActiveFile, suppressScrollUpdateRef);
