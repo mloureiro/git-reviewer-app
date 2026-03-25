@@ -17,6 +17,7 @@ Thumbs.db
 # Build artifacts
 packages/client/dist/
 packages/server/dist/
+packages/server/public/
 
 # Ephemeral task planning docs
 wiki/
