@@ -3,6 +3,7 @@ import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Command } from 'commander';
+import open from 'open';
 import { createApp, createGitClient, validateRefs, createAutoSession } from '@git-reviewer/server';
 
 const program = new Command();
@@ -20,6 +21,7 @@ program
   .option('--uncommitted', 'Review uncommitted (working tree) changes', false)
   .option('--repo <path>', 'Path to the git repository to review', process.cwd())
   .option('--port <number>', 'Port to listen on', '3847')
+  .option('--no-open', 'Do not automatically open the browser after starting')
   .action(
     async (options: {
       base?: string;
@@ -27,6 +29,7 @@ program
       uncommitted: boolean;
       repo: string;
       port: string;
+      open: boolean;
     }) => {
       const repoPath = path.resolve(options.repo);
       const port = parseInt(options.port, 10);
@@ -79,12 +82,22 @@ program
 
       const app = createApp({ repoPath, staticDir });
 
+      const sessionUrl = `http://localhost:${port}/session/${sessionCommit}`;
+
       app.listen(port, () => {
         console.log(`git-reviewer running at http://localhost:${port}`);
         console.log(`Reviewing repo: ${repoPath}`);
-        console.log(`Review session: http://localhost:${port}/session/${sessionCommit}`);
+        console.log(`Review session: ${sessionUrl}`);
         if (staticDir) {
           console.log(`Serving client from: ${staticDir}`);
+        }
+
+        if (options.open) {
+          open(sessionUrl).catch((err: unknown) => {
+            console.warn(
+              `Could not open browser: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          });
         }
       });
     },
