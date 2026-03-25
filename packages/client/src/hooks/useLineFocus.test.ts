@@ -271,4 +271,56 @@ describe('useLineFocus', () => {
       act(() => result.current.focusLineNext());
     }).not.toThrow();
   });
+
+  // -------------------------------------------------------------------------
+  // Single-line edge cases
+  // -------------------------------------------------------------------------
+
+  it('focusLineNext with a single line stays on that line after reaching the end', () => {
+    vi.spyOn(document, 'querySelector').mockReturnValue(makeScrollTarget());
+    const { result } = renderHook(() => useLineFocus([LINE_A1]));
+
+    act(() => result.current.focusLineNext()); // → LINE_A1
+
+    expect(result.current.focusedLine).toEqual(LINE_A1);
+
+    act(() => result.current.focusLineNext()); // already at last, no-op
+
+    expect(result.current.focusedLine).toEqual(LINE_A1);
+  });
+
+  it('focusLinePrev with a single line stays on that line after the first focus', () => {
+    vi.spyOn(document, 'querySelector').mockReturnValue(makeScrollTarget());
+    const { result } = renderHook(() => useLineFocus([LINE_A1]));
+
+    act(() => result.current.focusLinePrev()); // → LINE_A1 (starts at last = only)
+    expect(result.current.focusedLine).toEqual(LINE_A1);
+
+    act(() => result.current.focusLinePrev()); // at first, no-op
+    expect(result.current.focusedLine).toEqual(LINE_A1);
+  });
+
+  // -------------------------------------------------------------------------
+  // Focus clamp when lines array shrinks
+  // -------------------------------------------------------------------------
+
+  it('returns null focusedLine when the focused index is out-of-bounds after lines shrinks', () => {
+    vi.spyOn(document, 'querySelector').mockReturnValue(makeScrollTarget());
+
+    const { result, rerender } = renderHook(
+      ({ lines }: { lines: typeof ALL_LINES }) => useLineFocus(lines),
+      { initialProps: { lines: ALL_LINES } },
+    );
+
+    // Advance to the last line (index 4)
+    for (let i = 0; i < ALL_LINES.length; i = i + 1) {
+      act(() => result.current.focusLineNext());
+    }
+    expect(result.current.focusedLine).toEqual(LINE_B2);
+
+    // Shrink to a single-line array — index 4 is now out-of-bounds
+    rerender({ lines: [LINE_A1] });
+
+    expect(result.current.focusedLine).toBeNull();
+  });
 });

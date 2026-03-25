@@ -232,6 +232,70 @@ describe('useFileFocus', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Single-file edge case
+  // -------------------------------------------------------------------------
+
+  it('focusNext on a single-file list keeps returning that file (wrap to same)', () => {
+    const stub = makeElementStub();
+    vi.spyOn(document, 'getElementById').mockReturnValue(stub as unknown as HTMLElement);
+
+    const { result } = renderHook(() => useFileFocus(['only.ts']));
+
+    act(() => {
+      result.current.focusNext(); // → only.ts
+    });
+    expect(result.current.focusedFilePath).toBe('only.ts');
+
+    act(() => {
+      result.current.focusNext(); // wraps → still only.ts
+    });
+    expect(result.current.focusedFilePath).toBe('only.ts');
+  });
+
+  it('focusPrev on a single-file list keeps returning that file (wrap to same)', () => {
+    const stub = makeElementStub();
+    vi.spyOn(document, 'getElementById').mockReturnValue(stub as unknown as HTMLElement);
+
+    const { result } = renderHook(() => useFileFocus(['only.ts']));
+
+    act(() => {
+      result.current.focusPrev(); // → only.ts
+    });
+    expect(result.current.focusedFilePath).toBe('only.ts');
+
+    act(() => {
+      result.current.focusPrev(); // wraps → still only.ts
+    });
+    expect(result.current.focusedFilePath).toBe('only.ts');
+  });
+
+  // -------------------------------------------------------------------------
+  // Focus clamp when filePaths shrinks
+  // -------------------------------------------------------------------------
+
+  it('returns null focusedFilePath when the focused index is out-of-bounds after filePaths shrinks', () => {
+    const stub = makeElementStub();
+    vi.spyOn(document, 'getElementById').mockReturnValue(stub as unknown as HTMLElement);
+
+    const { result, rerender } = renderHook(
+      ({ paths }: { paths: string[] }) => useFileFocus(paths),
+      { initialProps: { paths: ['a.ts', 'b.ts', 'c.ts'] } },
+    );
+
+    // Focus last file (index 2)
+    act(() => result.current.focusNext()); // → a.ts (0)
+    act(() => result.current.focusNext()); // → b.ts (1)
+    act(() => result.current.focusNext()); // → c.ts (2)
+    expect(result.current.focusedFilePath).toBe('c.ts');
+
+    // Shrink list so index 2 is out-of-bounds
+    rerender({ paths: ['a.ts'] });
+
+    // focusedFilePath should be null (bounds check in hook)
+    expect(result.current.focusedFilePath).toBeNull();
+  });
+
+  // -------------------------------------------------------------------------
   // Dynamic filePaths list
   // -------------------------------------------------------------------------
 

@@ -288,4 +288,50 @@ describe('useKeyboardShortcuts', () => {
 
     expect(handler).not.toHaveBeenCalled();
   });
+
+  // -------------------------------------------------------------------------
+  // Integration: modal open (enabled=false) disables all registered shortcuts
+  // -------------------------------------------------------------------------
+
+  it('suppresses all shortcuts while a help modal is open (enabled=false)', () => {
+    const nextHandler = vi.fn();
+    const prevHandler = vi.fn();
+    const helpHandler = vi.fn();
+    const escHandler = vi.fn();
+    const shortcuts: ShortcutDescriptor[] = [
+      { key: 'n', description: 'Next file', handler: nextHandler },
+      { key: 'p', description: 'Previous file', handler: prevHandler },
+      { key: '?', description: 'Show help', handler: helpHandler },
+      { key: 'Escape', description: 'Dismiss', handler: escHandler },
+    ];
+
+    // Simulate modal open: enabled=false
+    renderHook(() => useKeyboardShortcuts(shortcuts, false));
+
+    act(() => {
+      fireKeyDown('n');
+      fireKeyDown('p');
+      fireKeyDown('?');
+      fireKeyDown('Escape');
+    });
+
+    expect(nextHandler).not.toHaveBeenCalled();
+    expect(prevHandler).not.toHaveBeenCalled();
+    expect(helpHandler).not.toHaveBeenCalled();
+    expect(escHandler).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // Edge cases: no shortcuts registered
+  // -------------------------------------------------------------------------
+
+  it('does not throw when a key is pressed and no shortcuts are registered', () => {
+    renderHook(() => useKeyboardShortcuts([]));
+
+    expect(() => {
+      act(() => {
+        fireKeyDown('n');
+      });
+    }).not.toThrow();
+  });
 });

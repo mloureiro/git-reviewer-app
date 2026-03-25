@@ -109,7 +109,16 @@ describe('ShortcutsHelpModal', () => {
       expect(onClose).toHaveBeenCalledOnce();
     });
 
-    it('does not call onClose when a non-Escape key is pressed', () => {
+    it('calls onClose when "?" is pressed (toggle closed while open)', () => {
+      const onClose = vi.fn();
+      render(<ShortcutsHelpModal isOpen onClose={onClose} shortcuts={SHORTCUTS} />);
+
+      fireEvent.keyDown(window, { key: '?' });
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it('does not call onClose when a non-Escape/non-? key is pressed', () => {
       const onClose = vi.fn();
       render(<ShortcutsHelpModal isOpen onClose={onClose} shortcuts={SHORTCUTS} />);
 
