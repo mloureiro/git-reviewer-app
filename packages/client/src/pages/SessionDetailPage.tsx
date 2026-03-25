@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { CommentThread } from '../components/CommentThread';
+import { ColorSchemeType } from 'diff2html/lib-esm/types';
 import { DiffView, filePathToId } from '../components/DiffView';
 import { DiffViewToggle } from '../components/DiffViewToggle';
 import { FileTree } from '../components/FileTree';
@@ -18,6 +19,7 @@ import { useLineFocus } from '../hooks/useLineFocus';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useResponsiveDiffMode } from '../hooks/useResponsiveDiffMode';
 import { useReviewSession } from '../hooks/useReviewSession';
+import { useTheme } from '../hooks/useTheme';
 import { extractFocusableLines } from '../utils/diffLines';
 import type {
   CommentFormData,
@@ -49,6 +51,8 @@ function groupCommentsByLine(comments: ReviewComment[]): Map<string, ReviewComme
 
 export function SessionDetailPage() {
   const { commitSha } = useParams<{ commitSha: string }>();
+  const { theme } = useTheme();
+  const colorScheme = theme === 'dark' ? ColorSchemeType.DARK : ColorSchemeType.LIGHT;
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
   const [activeLine, setActiveLine] = useState<DiffLineData | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
@@ -414,6 +418,7 @@ export function SessionDetailPage() {
           {!diffLoading && !diffError && diff != null && (
             <DiffView
               diffText={diff}
+              colorScheme={colorScheme}
               viewMode={activeDiffViewMode}
               focusedFile={focusedFilePath}
               focusedLine={focusedLine}
