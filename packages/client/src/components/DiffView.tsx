@@ -201,6 +201,7 @@ interface DiffFileProps {
   file: DiffFile;
   colorScheme: ColorSchemeType;
   viewMode: DiffViewMode;
+  isFocused?: boolean;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
@@ -210,6 +211,8 @@ interface DiffViewProps {
   diffText: string;
   colorScheme?: ColorSchemeType;
   viewMode?: DiffViewMode;
+  /** When set, the section for this file path receives a visual focus highlight. */
+  focusedFile?: string | null;
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
@@ -557,6 +560,7 @@ export function DiffFileComponent({
   file,
   colorScheme,
   viewMode,
+  isFocused = false,
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
@@ -565,9 +569,12 @@ export function DiffFileComponent({
   const sectionId = filePathToId(filePath);
   const schemeClass = colorSchemeClass(colorScheme);
   const language = getFileLanguage(filePath);
+  const sectionClass = ['diff-file-section', isFocused ? 'diff-file-section--focused' : '']
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <section key={sectionId} id={sectionId} className="diff-file-section">
+    <section key={sectionId} id={sectionId} className={sectionClass}>
       <div className="diff-file-section__header">
         <span className="diff-file-section__filename">{filePath}</span>
         <span className="diff-file-section__stats">
@@ -610,6 +617,7 @@ export function DiffView({
   diffText,
   colorScheme = ColorSchemeType.AUTO,
   viewMode = 'line-by-line',
+  focusedFile = null,
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
@@ -632,6 +640,7 @@ export function DiffView({
             file={file}
             colorScheme={colorScheme}
             viewMode={viewMode}
+            isFocused={focusedFile === filePath}
             onLineClick={onLineClick}
             renderAfterLine={renderAfterLine}
             hasCommentOnLine={hasCommentOnLine}

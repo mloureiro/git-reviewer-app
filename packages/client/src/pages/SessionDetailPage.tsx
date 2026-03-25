@@ -10,7 +10,9 @@ import { ReviewSummaryBar } from '../components/ReviewSummaryBar';
 import { StatusBadge } from '../components/StatusBadge';
 import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
 import { useDiff } from '../hooks/useDiff';
+import { useFileFocus } from '../hooks/useFileFocus';
 import { useFiles } from '../hooks/useFiles';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useResponsiveDiffMode } from '../hooks/useResponsiveDiffMode';
 import { useReviewSession } from '../hooks/useReviewSession';
@@ -97,6 +99,13 @@ export function SessionDetailPage() {
   const { diff, loading: diffLoading, error: diffError } = useDiff(diffParams);
 
   const filePaths = files.map((f) => f.path);
+
+  const { focusedFilePath, focusNext, focusPrev } = useFileFocus(filePaths);
+
+  useKeyboardShortcuts([
+    { key: 'n', description: 'Focus next file', handler: focusNext },
+    { key: 'p', description: 'Focus previous file', handler: focusPrev },
+  ]);
 
   useActiveFileOnScroll(filePaths, setActiveFile, suppressScrollUpdateRef);
 
@@ -299,6 +308,7 @@ export function SessionDetailPage() {
             <DiffView
               diffText={diff}
               viewMode={activeDiffViewMode}
+              focusedFile={focusedFilePath}
               onLineClick={handleLineClick}
               renderAfterLine={renderAfterLine}
               hasCommentOnLine={hasCommentOnLine}

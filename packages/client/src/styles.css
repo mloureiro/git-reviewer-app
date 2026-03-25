@@ -93,6 +93,15 @@ body {
      corners visually, but children (the diff table wrapper) can still establish
      their own scroll containers and show scrollbars. */
   overflow: clip;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+/* Keyboard-focus highlight applied when n/p navigation lands on this file. */
+.diff-file-section--focused {
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
 }
 
 .diff-file-section__header {
