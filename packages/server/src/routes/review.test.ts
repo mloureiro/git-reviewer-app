@@ -8,6 +8,7 @@ import type { SimpleGit } from 'simple-git';
 vi.mock('../git/notes.js', () => ({
   listReviewNotes: vi.fn(),
   readReviewNote: vi.fn(),
+  removeReviewNote: vi.fn(),
   writeReviewNote: vi.fn(),
 }));
 
@@ -19,7 +20,12 @@ vi.mock('../git/diff.js', () => ({
   createGitClient: vi.fn(),
 }));
 
-import { listReviewNotes, readReviewNote, writeReviewNote } from '../git/notes.js';
+import {
+  listReviewNotes,
+  readReviewNote,
+  removeReviewNote,
+  writeReviewNote,
+} from '../git/notes.js';
 import {
   getDiffText,
   getUncommittedDiffText,
@@ -30,6 +36,7 @@ import {
 
 const mockListReviewNotes = vi.mocked(listReviewNotes);
 const mockReadReviewNote = vi.mocked(readReviewNote);
+const mockRemoveReviewNote = vi.mocked(removeReviewNote);
 const mockWriteReviewNote = vi.mocked(writeReviewNote);
 const mockGetDiffText = vi.mocked(getDiffText);
 const mockGetUncommittedDiffText = vi.mocked(getUncommittedDiffText);
@@ -83,6 +90,7 @@ describe('review API routes — integration', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mockWriteReviewNote.mockResolvedValue(undefined);
+    mockRemoveReviewNote.mockResolvedValue(undefined);
   });
 
   // ---------------------------------------------------------------------------
@@ -128,6 +136,32 @@ describe('review API routes — integration', () => {
 
       expect(res.status).toBe(200);
       expect(mockGetDiffText).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+    });
+
+    it('returns 400 when base contains shell-dangerous characters', async () => {
+      const res = await request(app)
+        .get('/api/diff')
+        .query({ base: 'main;rm -rf /', head: 'HEAD' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockGetDiffText).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when head contains shell-dangerous characters', async () => {
+      const res = await request(app).get('/api/diff').query({ base: 'main', head: '$(evil)' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockGetDiffText).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when base contains a path traversal sequence', async () => {
+      const res = await request(app).get('/api/diff').query({ base: '../other', head: 'HEAD' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockGetDiffText).not.toHaveBeenCalled();
     });
   });
 
@@ -188,6 +222,24 @@ describe('review API routes — integration', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ files: [] });
+    });
+
+    it('returns 400 when base contains shell-dangerous characters', async () => {
+      const res = await request(app)
+        .get('/api/files')
+        .query({ base: 'main|cat /etc/passwd', head: 'HEAD' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockGetChangedFiles).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when head contains shell-dangerous characters', async () => {
+      const res = await request(app).get('/api/files').query({ base: 'main', head: '`whoami`' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockGetChangedFiles).not.toHaveBeenCalled();
     });
   });
 
@@ -250,10 +302,26 @@ describe('review API routes — integration', () => {
     it('returns 404 when the commitSha has no associated session', async () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
-      const res = await request(app).get('/api/sessions/nonexistent');
+      const res = await request(app).get(`/api/sessions/${COMMIT_SHA.slice(0, 8)}`);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });
+    });
+
+    it('returns 400 for a commitSha that is not valid hex', async () => {
+      const res = await request(app).get('/api/sessions/nonexistent');
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 for a commitSha that is too short (fewer than 4 hex chars)', async () => {
+      const res = await request(app).get('/api/sessions/abc');
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
     });
   });
 
@@ -295,6 +363,42 @@ describe('review API routes — integration', () => {
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
     });
+
+    it('returns 400 when title is missing', async () => {
+      const res = await request(app)
+        .post('/api/sessions')
+        .send({ baseRef: 'main', headRef: 'HEAD' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockRevparse).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when title is an empty string', async () => {
+      const res = await request(app)
+        .post('/api/sessions')
+        .send({ title: '   ', baseRef: 'main', headRef: 'HEAD' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockRevparse).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when baseRef is missing', async () => {
+      const res = await request(app).post('/api/sessions').send({ title: 'Test', headRef: 'HEAD' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockRevparse).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when headRef is missing', async () => {
+      const res = await request(app).post('/api/sessions').send({ title: 'Test', baseRef: 'main' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockRevparse).not.toHaveBeenCalled();
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -332,11 +436,61 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
       const res = await request(app)
-        .post('/api/sessions/nonexistent/comments')
+        .post(`/api/sessions/${COMMIT_SHA}/comments`)
         .send({ file: 'src/foo.ts', line: 1, body: 'comment', author: 'reviewer' });
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });
+    });
+
+    it('returns 400 for an invalid commitSha in the URL', async () => {
+      const res = await request(app)
+        .post('/api/sessions/nonexistent/comments')
+        .send({ file: 'src/foo.ts', line: 1, body: 'comment', author: 'reviewer' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when file is missing', async () => {
+      const res = await request(app)
+        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .send({ line: 1, body: 'comment', author: 'reviewer' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when line is not a positive integer', async () => {
+      const res = await request(app)
+        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .send({ file: 'src/foo.ts', line: -1, body: 'comment', author: 'reviewer' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when body is missing', async () => {
+      const res = await request(app)
+        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .send({ file: 'src/foo.ts', line: 1, author: 'reviewer' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when side is an invalid value', async () => {
+      const res = await request(app)
+        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .send({ file: 'src/foo.ts', line: 1, body: 'comment', side: 'center', author: 'reviewer' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
     });
 
     it('returns 500 when writeReviewNote throws during comment creation', async () => {
@@ -411,6 +565,36 @@ describe('review API routes — integration', () => {
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
     });
+
+    it('returns 400 for an invalid commitSha in the URL', async () => {
+      const res = await request(app)
+        .patch(`/api/sessions/nonexistent/comments/${sampleComment.id}`)
+        .send({ resolved: true });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when resolved is not a boolean', async () => {
+      const res = await request(app)
+        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .send({ resolved: 'yes' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when resolved is missing from the body', async () => {
+      const res = await request(app)
+        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -434,11 +618,39 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
       const res = await request(app)
-        .patch('/api/sessions/nonexistent')
+        .patch(`/api/sessions/${COMMIT_SHA.slice(0, 8)}`)
         .send({ status: 'approved' });
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });
+    });
+
+    it('returns 400 for an invalid commitSha in the URL', async () => {
+      const res = await request(app)
+        .patch('/api/sessions/nonexistent')
+        .send({ status: 'approved' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when status is an invalid value', async () => {
+      const res = await request(app)
+        .patch(`/api/sessions/${COMMIT_SHA}`)
+        .send({ status: 'merged' });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when status is missing from the body', async () => {
+      const res = await request(app).patch(`/api/sessions/${COMMIT_SHA}`).send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
     });
 
     it('returns 500 when writeReviewNote throws during status update', async () => {
@@ -451,6 +663,59 @@ describe('review API routes — integration', () => {
 
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // DELETE /api/sessions/:commitSha
+  // ---------------------------------------------------------------------------
+  describe('DELETE /api/sessions/:commitSha', () => {
+    it('returns 204 when the session exists and is successfully removed', async () => {
+      mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
+
+      const res = await request(app).delete(`/api/sessions/${COMMIT_SHA}`);
+
+      expect(res.status).toBe(204);
+      expect(res.body).toEqual({});
+      expect(mockReadReviewNote).toHaveBeenCalledWith(mockGit, COMMIT_SHA);
+      expect(mockRemoveReviewNote).toHaveBeenCalledWith(mockGit, COMMIT_SHA);
+    });
+
+    it('returns 404 when the session does not exist', async () => {
+      mockReadReviewNote.mockResolvedValueOnce(null);
+
+      const res = await request(app).delete(`/api/sessions/${COMMIT_SHA}`);
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Review session not found' });
+      expect(mockRemoveReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 500 when removeReviewNote throws', async () => {
+      mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
+      mockRemoveReviewNote.mockRejectedValueOnce(new Error('git notes remove failed'));
+
+      const res = await request(app).delete(`/api/sessions/${COMMIT_SHA}`);
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
+
+    it('returns 500 when readReviewNote throws', async () => {
+      mockReadReviewNote.mockRejectedValueOnce(new Error('git notes show failed'));
+
+      const res = await request(app).delete(`/api/sessions/${COMMIT_SHA}`);
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
+
+    it('returns 400 for an invalid commitSha in the URL', async () => {
+      const res = await request(app).delete('/api/sessions/nonexistent');
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
     });
   });
 });

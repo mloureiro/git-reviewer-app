@@ -85,17 +85,6 @@ export function postComment(
   return apiPost<CreateCommentResponse>(`/api/sessions/${commitSha}/comments`, data);
 }
 
-/**
- * @deprecated Use `postComment` instead.
- * @TODO remove after 30-04-2026 @mloureiro
- */
-export function createComment(
-  commitSha: string,
-  data: CreateCommentRequest,
-): Promise<CreateCommentResponse> {
-  return postComment(commitSha, data);
-}
-
 /** PATCH /api/sessions/:commitSha/comments/:commentId — Resolve or unresolve a comment. */
 export function patchComment(
   commitSha: string,
@@ -103,18 +92,6 @@ export function patchComment(
   data: UpdateCommentRequest,
 ): Promise<UpdateCommentResponse> {
   return apiPatch<UpdateCommentResponse>(`/api/sessions/${commitSha}/comments/${commentId}`, data);
-}
-
-/**
- * @deprecated Use `patchComment` instead.
- * @TODO remove after 30-04-2026 @mloureiro
- */
-export function updateComment(
-  commitSha: string,
-  commentId: string,
-  data: UpdateCommentRequest,
-): Promise<UpdateCommentResponse> {
-  return patchComment(commitSha, commentId, data);
 }
 
 /** PATCH /api/sessions/:commitSha — Update the status of a review session. */

@@ -119,31 +119,31 @@ This is a pnpm monorepo with two packages:
 
 ### Phase 1 — MVP: Read-Only Diff Viewer
 
-- [ ] CLI that starts a local server (`git-reviewer serve`)
-- [ ] Server reads target repo and generates diffs
-- [ ] React UI renders diff with diff2html (file tree + inline view)
-- [ ] Support reviewing `branch..branch`, `commit..commit`, or uncommitted changes
+- [x] CLI that starts a local server (`git-reviewer serve`)
+- [x] Server reads target repo and generates diffs
+- [x] React UI renders diff with diff2html (file tree + inline view)
+- [x] Support reviewing `branch..branch`, `commit..commit`, or uncommitted changes
 
 ### Phase 2 — Inline Comments
 
-- [ ] Click a diff line to add a comment
-- [ ] Comments persisted to git-notes as JSON
-- [ ] Display existing comments on page load
-- [ ] Resolve/unresolve threads
+- [x] Click a diff line to add a comment
+- [x] Comments persisted to git-notes as JSON
+- [x] Display existing comments on page load
+- [x] Resolve/unresolve threads
 
 ### Phase 3 — Review Sessions
 
-- [ ] Create named review sessions (like PRs)
-- [ ] List all sessions with status (pending, approved, changes requested)
-- [ ] Session-level approve/reject actions
+- [x] Create named review sessions (like PRs)
+- [x] List all sessions with status (pending, approved, changes requested)
+- [x] Session-level approve/reject actions
 
 ### Phase 4 — Polish
 
-- [ ] Keyboard shortcuts (n/p for next/prev file, c for comment)
-- [ ] File tree with changed file indicators
-- [ ] Side-by-side diff view toggle
-- [ ] Syntax highlighting in diffs
-- [ ] Dark/light theme
+- [x] Keyboard shortcuts (n/p for next/prev file, c for comment)
+- [x] File tree with changed file indicators
+- [x] Side-by-side diff view toggle
+- [x] Syntax highlighting in diffs
+- [x] Dark/light theme
 
 ### Future Ideas
 

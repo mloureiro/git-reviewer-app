@@ -137,9 +137,9 @@ describe('InlineCommentForm', () => {
   });
 
   it('submits via Cmd+Enter keyboard shortcut (Mac)', () => {
-    // Simulate Mac platform so the component uses metaKey
-    Object.defineProperty(navigator, 'platform', {
-      value: 'MacIntel',
+    // Simulate Mac userAgent so the component uses metaKey
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
       configurable: true,
     });
 
@@ -155,9 +155,9 @@ describe('InlineCommentForm', () => {
   });
 
   it('submits via Ctrl+Enter keyboard shortcut (non-Mac)', () => {
-    // Simulate non-Mac platform so the component uses ctrlKey
-    Object.defineProperty(navigator, 'platform', {
-      value: 'Win32',
+    // Simulate non-Mac userAgent so the component uses ctrlKey
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
       configurable: true,
     });
 
@@ -173,8 +173,8 @@ describe('InlineCommentForm', () => {
   });
 
   it('does not submit via Cmd+Enter when text is empty', () => {
-    Object.defineProperty(navigator, 'platform', {
-      value: 'MacIntel',
+    Object.defineProperty(navigator, 'userAgent', {
+      value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
       configurable: true,
     });
 

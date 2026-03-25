@@ -50,7 +50,7 @@ export function InlineCommentForm({
       return;
     }
 
-    const isMac = navigator.platform.toUpperCase().startsWith('MAC');
+    const isMac = navigator.userAgent.includes('Mac');
     const modKey = isMac ? event.metaKey : event.ctrlKey;
 
     if (modKey && event.key === 'Enter') {

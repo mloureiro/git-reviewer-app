@@ -8,8 +8,8 @@ vi.mock('../api/reviews');
 
 const mockFetchSession = vi.mocked(reviewsApi.fetchSession);
 const mockUpdateSessionStatus = vi.mocked(reviewsApi.updateSessionStatus);
-const mockCreateComment = vi.mocked(reviewsApi.createComment);
-const mockUpdateComment = vi.mocked(reviewsApi.updateComment);
+const mockPostComment = vi.mocked(reviewsApi.postComment);
+const mockPatchComment = vi.mocked(reviewsApi.patchComment);
 
 const baseSession: ReviewData = {
   version: 1,
@@ -115,7 +115,7 @@ describe('useReviewSession', () => {
 
   it('addComment appends new comment to session state', async () => {
     mockFetchSession.mockResolvedValue(baseSession);
-    mockCreateComment.mockResolvedValue(baseComment);
+    mockPostComment.mockResolvedValue(baseComment);
 
     const { result } = renderHook(() => useReviewSession('def456'));
     await waitFor(() => expect(result.current.session).toEqual(baseSession));
@@ -141,7 +141,7 @@ describe('useReviewSession', () => {
     const resolvedComment: ReviewComment = { ...baseComment, resolved: true };
 
     mockFetchSession.mockResolvedValue(sessionWithComment);
-    mockUpdateComment.mockResolvedValue(resolvedComment);
+    mockPatchComment.mockResolvedValue(resolvedComment);
 
     const { result } = renderHook(() => useReviewSession('def456'));
     await waitFor(() => expect(result.current.session).toEqual(sessionWithComment));
@@ -151,7 +151,7 @@ describe('useReviewSession', () => {
     });
 
     expect(result.current.session?.comments[0]?.resolved).toBe(true);
-    expect(mockUpdateComment).toHaveBeenCalledWith('def456', 'comment-1', { resolved: true });
+    expect(mockPatchComment).toHaveBeenCalledWith('def456', 'comment-1', { resolved: true });
   });
 
   it('handles non-Error rejections gracefully', async () => {

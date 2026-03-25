@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchSession, updateSessionStatus, createComment, updateComment } from '../api/reviews';
+import { fetchSession, updateSessionStatus, postComment, patchComment } from '../api/reviews';
 import type {
   ReviewData,
   ReviewStatus,
@@ -66,7 +66,7 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
 
   const handleAddComment = useCallback(
     async (data: CreateCommentRequest): Promise<ReviewComment> => {
-      const comment = await createComment(commitSha, data);
+      const comment = await postComment(commitSha, data);
       setSession((prev) => {
         if (prev === null) return prev;
         return { ...prev, comments: [...prev.comments, comment] };
@@ -78,7 +78,7 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
 
   const handleResolveComment = useCallback(
     async (commentId: string, resolved: boolean): Promise<void> => {
-      const updatedComment = await updateComment(commitSha, commentId, { resolved });
+      const updatedComment = await patchComment(commitSha, commentId, { resolved });
       setSession((prev) => {
         if (prev === null) return prev;
         const comments = prev.comments.map((c) => (c.id === commentId ? updatedComment : c));
