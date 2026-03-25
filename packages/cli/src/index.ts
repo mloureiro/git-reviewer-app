@@ -1,5 +1,9 @@
 #!/usr/bin/env node
+import { existsSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Command } from 'commander';
+import { createApp } from '@git-reviewer/server';
 
 const program = new Command();
 
@@ -17,16 +21,36 @@ program
   .option('--repo <path>', 'Path to the git repository to review', process.cwd())
   .option('--port <number>', 'Port to listen on', '3847')
   .action(
-    (_options: {
+    (options: {
       base?: string;
       head?: string;
       uncommitted: boolean;
       repo: string;
       port: string;
     }) => {
-      // TODO: implement in 7.4
-      console.log('serve command — not yet implemented');
-      process.exit(0);
+      const repoPath = path.resolve(options.repo);
+      const port = parseInt(options.port, 10);
+
+      // Resolve the built client assets relative to this file.
+      // In production: packages/cli/dist/index.js -> ../../client/dist
+      const thisDir = path.dirname(fileURLToPath(import.meta.url));
+      const candidateStaticDir = path.resolve(thisDir, '../../client/dist');
+      const staticDir = existsSync(candidateStaticDir) ? candidateStaticDir : undefined;
+
+      // --base and --head will be used in 7.5 for auto-session creation
+      void options.base;
+      void options.head;
+      void options.uncommitted;
+
+      const app = createApp({ repoPath, staticDir });
+
+      app.listen(port, () => {
+        console.log(`git-reviewer running at http://localhost:${port}`);
+        console.log(`Reviewing repo: ${repoPath}`);
+        if (staticDir) {
+          console.log(`Serving client from: ${staticDir}`);
+        }
+      });
     },
   );
 
