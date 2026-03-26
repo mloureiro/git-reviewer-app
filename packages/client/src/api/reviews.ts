@@ -1,5 +1,6 @@
-import { apiGet, apiPost, apiPatch, apiDelete } from './client';
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from './client';
 import type {
+  AutoMarkRule,
   FilesQueryParams,
   FilesResponse,
   DiffQueryParams,
@@ -15,6 +16,8 @@ import type {
   UpdateSessionStatusRequest,
   UpdateSessionStatusResponse,
   ViewedFile,
+  AutoMarkRulesResponse,
+  AutoMarkApplyResponse,
 } from '../types/review';
 
 /** GET /api/files — Fetch the list of changed files for the given base/head/uncommitted params. */
@@ -111,4 +114,17 @@ export function updateSessionStatus(
   data: UpdateSessionStatusRequest,
 ): Promise<UpdateSessionStatusResponse> {
   return apiPatch<UpdateSessionStatusResponse>(`/api/sessions/${commitSha}`, data);
+}
+
+/** PUT /api/sessions/:commitSha/auto-mark-rules — Update auto-mark rules and apply them. */
+export function updateAutoMarkRules(
+  commitSha: string,
+  rules: AutoMarkRule[],
+): Promise<AutoMarkRulesResponse> {
+  return apiPut<AutoMarkRulesResponse>(`/api/sessions/${commitSha}/auto-mark-rules`, { rules });
+}
+
+/** POST /api/sessions/:commitSha/auto-mark-apply — Re-apply existing auto-mark rules. */
+export function applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse> {
+  return apiPost<AutoMarkApplyResponse>(`/api/sessions/${commitSha}/auto-mark-apply`, {});
 }

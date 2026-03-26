@@ -1,6 +1,7 @@
 import type { ReviewComment, ReviewStatus, ReviewData, DiffFile } from '@git-reviewer/shared';
 
 export type {
+  AutoMarkRule,
   ReviewComment,
   ReviewStatus,
   ReviewSession,
@@ -86,6 +87,17 @@ export interface UpdateSessionStatusRequest {
 
 /** Response for PATCH /api/sessions/:commitSha */
 export type UpdateSessionStatusResponse = ReviewData['session'];
+
+// PUT /api/sessions/:commitSha/auto-mark-rules
+export interface AutoMarkRulesResponse {
+  rules: AutoMarkRule[];
+  autoMarked: ViewedFile[];
+}
+
+// POST /api/sessions/:commitSha/auto-mark-apply
+export interface AutoMarkApplyResponse {
+  autoMarked: ViewedFile[];
+}
 
 // Client-only UI types (not API types)
 

@@ -1,5 +1,13 @@
 import { useState, useCallback } from 'react';
-import type { DiffFile } from '../types/review';
+import type { AutoMarkRule, DiffFile } from '../types/review';
+
+const AUTO_MARK_LABELS: Record<AutoMarkRule, string> = {
+  'rename-only': 'Rename only',
+  'import-only': 'Import only',
+  'whitespace-only': 'Whitespace only',
+  lockfile: 'Lock file',
+  generated: 'Generated',
+};
 
 interface FileTreeProps {
   files: DiffFile[];
@@ -9,6 +17,7 @@ interface FileTreeProps {
   viewedFiles?: Set<string>;
   changedSinceViewed?: Set<string>;
   onToggleViewed?: (filePath: string, isViewed: boolean) => void;
+  autoMarkedBy?: Record<string, AutoMarkRule>;
 }
 
 interface TreeNode {
@@ -114,6 +123,7 @@ interface TreeNodeRowProps {
   viewedFiles?: Set<string>;
   changedSinceViewed?: Set<string>;
   onToggleViewed?: (filePath: string, isViewed: boolean) => void;
+  autoMarkedBy?: Record<string, AutoMarkRule>;
 }
 
 function TreeNodeRow({
@@ -127,6 +137,7 @@ function TreeNodeRow({
   viewedFiles,
   changedSinceViewed,
   onToggleViewed,
+  autoMarkedBy,
 }: TreeNodeRowProps) {
   const indent = depth * 12;
 
@@ -164,6 +175,7 @@ function TreeNodeRow({
               viewedFiles={viewedFiles}
               changedSinceViewed={changedSinceViewed}
               onToggleViewed={onToggleViewed}
+              autoMarkedBy={autoMarkedBy}
             />
           ))}
       </>
@@ -177,6 +189,8 @@ function TreeNodeRow({
   const unresolvedCount = unresolvedCounts != null ? (unresolvedCounts[file.path] ?? 0) : 0;
   const isViewed = viewedFiles != null && viewedFiles.has(file.path);
   const isChangedSinceViewed = changedSinceViewed != null && changedSinceViewed.has(file.path);
+  const autoMarkRule = autoMarkedBy != null ? autoMarkedBy[file.path] : undefined;
+  const isAutoMarked = autoMarkRule != null;
 
   const itemClass = [
     'file-tree__item',
@@ -185,6 +199,14 @@ function TreeNodeRow({
   ]
     .filter(Boolean)
     .join(' ');
+
+  const viewedTitle = isChangedSinceViewed
+    ? 'Changed since last viewed'
+    : isAutoMarked
+      ? `Auto-marked: ${AUTO_MARK_LABELS[autoMarkRule]}`
+      : isViewed
+        ? 'Viewed'
+        : 'Mark as viewed';
 
   return (
     <li>
@@ -198,23 +220,23 @@ function TreeNodeRow({
       >
         {onToggleViewed != null && (
           <span
-            className={`file-tree__viewed-toggle${isViewed ? ' file-tree__viewed-toggle--viewed' : ''}${isChangedSinceViewed ? ' file-tree__viewed-toggle--changed' : ''}`}
+            className={`file-tree__viewed-toggle${isViewed ? ' file-tree__viewed-toggle--viewed' : ''}${isChangedSinceViewed ? ' file-tree__viewed-toggle--changed' : ''}${isAutoMarked && !isChangedSinceViewed ? ' file-tree__viewed-toggle--auto' : ''}`}
             role="checkbox"
             aria-checked={isViewed}
-            aria-label={isViewed ? 'Viewed' : 'Mark as viewed'}
-            title={
-              isChangedSinceViewed
-                ? 'Changed since last viewed'
-                : isViewed
-                  ? 'Viewed'
-                  : 'Mark as viewed'
-            }
+            aria-label={viewedTitle}
+            title={viewedTitle}
             onClick={(e) => {
               e.stopPropagation();
               onToggleViewed(file.path, isViewed);
             }}
           >
-            {isChangedSinceViewed ? '\u25CF' : isViewed ? '\u2713' : '\u25CB'}
+            {isChangedSinceViewed
+              ? '\u25CF'
+              : isAutoMarked
+                ? '\u2731'
+                : isViewed
+                  ? '\u2713'
+                  : '\u25CB'}
           </span>
         )}
         <StatusDot status={file.status} />
@@ -245,6 +267,7 @@ export function FileTree({
   viewedFiles,
   changedSinceViewed,
   onToggleViewed,
+  autoMarkedBy,
 }: FileTreeProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
@@ -286,6 +309,7 @@ export function FileTree({
             viewedFiles={viewedFiles}
             changedSinceViewed={changedSinceViewed}
             onToggleViewed={onToggleViewed}
+            autoMarkedBy={autoMarkedBy}
           />
         ))}
       </ul>

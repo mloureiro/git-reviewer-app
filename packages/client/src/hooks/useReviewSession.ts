@@ -6,8 +6,11 @@ import {
   patchComment,
   markFileViewed,
   unmarkFileViewed,
+  updateAutoMarkRules,
+  applyAutoMarkRules,
 } from '../api/reviews';
 import type {
+  AutoMarkRule,
   ReviewData,
   ReviewStatus,
   ReviewComment,
@@ -24,6 +27,8 @@ export interface UseReviewSessionResult {
   resolveComment: (commentId: string, resolved: boolean) => Promise<void>;
   markViewed: (path: string) => Promise<void>;
   unmarkViewed: (path: string) => Promise<void>;
+  setAutoMarkRules: (rules: AutoMarkRule[]) => Promise<void>;
+  reapplyAutoMarkRules: () => Promise<void>;
 }
 
 /**
@@ -148,6 +153,40 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     [commitSha],
   );
 
+  const handleSetAutoMarkRules = useCallback(
+    async (rules: AutoMarkRule[]): Promise<void> => {
+      const response = await updateAutoMarkRules(commitSha, rules);
+      // Re-fetch the full session to get the merged viewedFiles state
+      setSession((prev) => {
+        if (prev === null) return prev;
+        // Merge: keep manually-marked files, remove stale auto-marked, add new auto-marked
+        const manuallyViewed = (prev.viewedFiles ?? []).filter((vf) => vf.autoMarkedBy == null);
+        const autoMarkedPaths = new Set(response.autoMarked.map((vf) => vf.path));
+        const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
+        return {
+          ...prev,
+          autoMarkRules: response.rules,
+          viewedFiles: [...kept, ...response.autoMarked],
+        };
+      });
+    },
+    [commitSha],
+  );
+
+  const handleReapplyAutoMarkRules = useCallback(async (): Promise<void> => {
+    const response = await applyAutoMarkRules(commitSha);
+    setSession((prev) => {
+      if (prev === null) return prev;
+      const manuallyViewed = (prev.viewedFiles ?? []).filter((vf) => vf.autoMarkedBy == null);
+      const autoMarkedPaths = new Set(response.autoMarked.map((vf) => vf.path));
+      const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
+      return {
+        ...prev,
+        viewedFiles: [...kept, ...response.autoMarked],
+      };
+    });
+  }, [commitSha]);
+
   return {
     session,
     loading,
@@ -157,5 +196,7 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     resolveComment: handleResolveComment,
     markViewed: handleMarkViewed,
     unmarkViewed: handleUnmarkViewed,
+    setAutoMarkRules: handleSetAutoMarkRules,
+    reapplyAutoMarkRules: handleReapplyAutoMarkRules,
   };
 }

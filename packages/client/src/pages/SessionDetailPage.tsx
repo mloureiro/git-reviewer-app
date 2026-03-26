@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { AutoMarkSettings } from '../components/AutoMarkSettings';
 import { CommentThread } from '../components/CommentThread';
 import { ColorSchemeType } from 'diff2html/lib-esm/types';
 import { DiffView, filePathToId } from '../components/DiffView';
@@ -22,6 +23,7 @@ import { useReviewSession } from '../hooks/useReviewSession';
 import { useTheme } from '../hooks/useTheme';
 import { extractFocusableLines } from '../utils/diffLines';
 import type {
+  AutoMarkRule,
   CommentFormData,
   DiffLineData,
   DiffViewMode,
@@ -96,6 +98,8 @@ export function SessionDetailPage() {
     resolveComment,
     markViewed,
     unmarkViewed,
+    setAutoMarkRules,
+    reapplyAutoMarkRules,
   } = useReviewSession(commitSha ?? '');
 
   const filesParams =
@@ -334,6 +338,29 @@ export function SessionDetailPage() {
     [markViewed, unmarkViewed],
   );
 
+  // Auto-mark rule management
+  const handleAutoMarkRulesChange = useCallback(
+    (rules: AutoMarkRule[]): void => {
+      void setAutoMarkRules(rules);
+    },
+    [setAutoMarkRules],
+  );
+
+  const handleAutoMarkApply = useCallback((): void => {
+    void reapplyAutoMarkRules();
+  }, [reapplyAutoMarkRules]);
+
+  // Map of file path -> auto-mark rule for display in FileTree
+  const autoMarkedByMap = useMemo(() => {
+    const map: Record<string, AutoMarkRule> = {};
+    for (const vf of reviewData?.viewedFiles ?? []) {
+      if (vf.autoMarkedBy != null) {
+        map[vf.path] = vf.autoMarkedBy;
+      }
+    }
+    return map;
+  }, [reviewData?.viewedFiles]);
+
   const renderAfterLine = useCallback(
     (lineData: DiffLineData, colSpan?: number): React.ReactNode => {
       const key = commentKey(lineData.file, lineData.line);
@@ -430,6 +457,11 @@ export function SessionDetailPage() {
             disabled={statusUpdating}
           />
           <DiffViewToggle mode={activeDiffViewMode} onChange={handleDiffViewModeChange} />
+          <AutoMarkSettings
+            activeRules={reviewData.autoMarkRules ?? []}
+            onRulesChange={handleAutoMarkRulesChange}
+            onApplyNow={handleAutoMarkApply}
+          />
         </div>
       </div>
 
@@ -444,6 +476,7 @@ export function SessionDetailPage() {
               viewedFiles={viewedFilesSet}
               changedSinceViewed={changedSinceViewedSet}
               onToggleViewed={handleToggleViewed}
+              autoMarkedBy={autoMarkedByMap}
             />
           </aside>
         )}

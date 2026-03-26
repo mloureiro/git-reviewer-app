@@ -14,7 +14,14 @@ import {
   removeReviewNote,
   writeReviewNote,
 } from '../git/notes.js';
-import type { ReviewComment, ReviewData, ReviewStatus, ViewedFile } from '@git-reviewer/shared';
+import { evaluateAutoMarkRules } from '../git/auto-mark.js';
+import type {
+  AutoMarkRule,
+  ReviewComment,
+  ReviewData,
+  ReviewStatus,
+  ViewedFile,
+} from '@git-reviewer/shared';
 
 // Matches a valid git commit SHA (4–40 lowercase hex characters)
 const COMMIT_SHA_RE = /^[a-f0-9]{4,40}$/;
@@ -23,6 +30,14 @@ const COMMIT_SHA_RE = /^[a-f0-9]{4,40}$/;
 const SHELL_DANGEROUS_RE = /[;&|`$()<>\r\n\0 ]|\.\./;
 
 const VALID_STATUSES: ReadonlyArray<ReviewStatus> = ['pending', 'approved', 'changes_requested'];
+
+const VALID_AUTO_MARK_RULES: ReadonlyArray<AutoMarkRule> = [
+  'rename-only',
+  'import-only',
+  'whitespace-only',
+  'lockfile',
+  'generated',
+];
 
 function isValidRef(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && !SHELL_DANGEROUS_RE.test(value);
@@ -350,6 +365,104 @@ export function createReviewRouter(git: SimpleGit): Router {
       await writeReviewNote(git, req.params.commitSha, data);
 
       res.status(204).send();
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Update auto-mark rules and immediately apply them
+  router.put('/sessions/:commitSha/auto-mark-rules', async (req, res) => {
+    try {
+      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
+        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
+        return;
+      }
+
+      const { rules } = req.body as { rules: AutoMarkRule[] };
+      if (!Array.isArray(rules) || !rules.every((r) => VALID_AUTO_MARK_RULES.includes(r))) {
+        res.status(400).json({
+          error: `Invalid body: rules must be an array of valid rule types (${VALID_AUTO_MARK_RULES.join(', ')})`,
+        });
+        return;
+      }
+
+      const data = await readReviewNote(git, req.params.commitSha);
+      if (!data) {
+        res.status(404).json({ error: 'Review session not found' });
+        return;
+      }
+
+      data.autoMarkRules = rules;
+
+      // Evaluate rules against current files
+      const files = await getChangedFiles(git, data.session.baseRef, data.session.headRef);
+      const diffText = await getDiffText(git, data.session.baseRef, data.session.headRef);
+      const diffHashes = getFileDiffHashes(diffText);
+      const matches = evaluateAutoMarkRules(files, diffText, rules);
+
+      // Build new auto-marked ViewedFile entries
+      const now = new Date().toISOString();
+      const autoMarked: ViewedFile[] = matches.map((m) => ({
+        path: m.path,
+        viewedAt: now,
+        diffHash: diffHashes[m.path] ?? '',
+        autoMarkedBy: m.rule,
+      }));
+
+      // Merge: keep manually-marked files, remove stale auto-marked, add new auto-marked
+      const viewedFiles = data.viewedFiles ?? [];
+      const manuallyViewed = viewedFiles.filter((vf) => vf.autoMarkedBy == null);
+      const autoMarkedPaths = new Set(autoMarked.map((vf) => vf.path));
+      // Keep manual entries that don't overlap with new auto-marked entries
+      const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
+      data.viewedFiles = [...kept, ...autoMarked];
+      data.session.updatedAt = now;
+      await writeReviewNote(git, req.params.commitSha, data);
+
+      res.json({ rules, autoMarked });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Re-apply existing auto-mark rules against current files
+  router.post('/sessions/:commitSha/auto-mark-apply', async (req, res) => {
+    try {
+      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
+        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
+        return;
+      }
+
+      const data = await readReviewNote(git, req.params.commitSha);
+      if (!data) {
+        res.status(404).json({ error: 'Review session not found' });
+        return;
+      }
+
+      const rules = data.autoMarkRules ?? [];
+      const files = await getChangedFiles(git, data.session.baseRef, data.session.headRef);
+      const diffText = await getDiffText(git, data.session.baseRef, data.session.headRef);
+      const diffHashes = getFileDiffHashes(diffText);
+      const matches = evaluateAutoMarkRules(files, diffText, rules);
+
+      const now = new Date().toISOString();
+      const autoMarked: ViewedFile[] = matches.map((m) => ({
+        path: m.path,
+        viewedAt: now,
+        diffHash: diffHashes[m.path] ?? '',
+        autoMarkedBy: m.rule,
+      }));
+
+      // Merge: keep manually-marked, replace auto-marked
+      const viewedFiles = data.viewedFiles ?? [];
+      const manuallyViewed = viewedFiles.filter((vf) => vf.autoMarkedBy == null);
+      const autoMarkedPaths = new Set(autoMarked.map((vf) => vf.path));
+      const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
+      data.viewedFiles = [...kept, ...autoMarked];
+      data.session.updatedAt = now;
+      await writeReviewNote(git, req.params.commitSha, data);
+
+      res.json({ autoMarked });
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }

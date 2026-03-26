@@ -1637,3 +1637,133 @@ body {
 .diff-file-section__viewed-btn--changed:hover {
   background-color: var(--color-warning-bg-muted);
 }
+
+/* ── Auto-mark file indicator (file tree) ──────────────────────────────── */
+
+.file-tree__viewed-toggle--auto {
+  color: var(--color-accent);
+}
+
+.file-tree__viewed-toggle--auto:hover {
+  color: var(--color-accent);
+  background-color: var(--color-accent-bg-subtle);
+}
+
+/* ── Auto-mark Settings Panel ──────────────────────────────────────────── */
+
+.auto-mark-settings {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.auto-mark-settings__trigger--active {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.auto-mark-settings__panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 100;
+  min-width: 320px;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  box-shadow:
+    0 8px 24px var(--color-shadow-strong),
+    0 0 0 1px var(--color-shadow-highlight);
+  overflow: hidden;
+}
+
+.auto-mark-settings__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.auto-mark-settings__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.auto-mark-settings__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  background-color: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.auto-mark-settings__close:hover {
+  background-color: var(--color-neutral-hover);
+  color: var(--color-text-primary);
+}
+
+.auto-mark-settings__body {
+  padding: 8px 0;
+}
+
+.auto-mark-settings__rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.auto-mark-settings__rule:hover {
+  background-color: var(--color-neutral-hover);
+}
+
+.auto-mark-settings__checkbox {
+  flex-shrink: 0;
+  margin-top: 2px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.auto-mark-settings__rule-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.auto-mark-settings__rule-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.auto-mark-settings__rule-desc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.4;
+}
+
+.auto-mark-settings__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 14px;
+  border-top: 1px solid var(--color-border-default);
+}
+
+.auto-mark-settings__apply-btn {
+  font-size: 12px;
+  padding: 4px 12px;
+}

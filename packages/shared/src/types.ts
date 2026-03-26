@@ -28,12 +28,21 @@ export interface ReviewData {
   session: ReviewSession;
   comments: ReviewComment[];
   viewedFiles?: ViewedFile[];
+  autoMarkRules?: AutoMarkRule[];
 }
+
+export type AutoMarkRule =
+  | 'rename-only'
+  | 'import-only'
+  | 'whitespace-only'
+  | 'lockfile'
+  | 'generated';
 
 export interface ViewedFile {
   path: string;
   viewedAt: string;
   diffHash: string;
+  autoMarkedBy?: AutoMarkRule;
 }
 
 export interface DiffFile {

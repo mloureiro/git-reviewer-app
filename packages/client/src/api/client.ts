@@ -48,6 +48,15 @@ export function apiPost<T>(url: string, body: unknown): Promise<T> {
   });
 }
 
+/** Perform a PUT request with a JSON body and return the parsed response body. */
+export function apiPut<T>(url: string, body: unknown): Promise<T> {
+  return request<T>(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 /** Perform a PATCH request with a JSON body and return the parsed response body. */
 export function apiPatch<T>(url: string, body: unknown): Promise<T> {
   return request<T>(url, {
