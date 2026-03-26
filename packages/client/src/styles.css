@@ -351,6 +351,9 @@ body {
   text-align: right;
   overflow: visible;
   text-overflow: clip;
+  float: none;
+  padding: 0;
+  box-sizing: content-box;
 }
 
 /* ── Hover "+" affordance ──────────────────────────────────────────────── */
