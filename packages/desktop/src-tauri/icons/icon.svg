@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded square background -->
+  <rect width="512" height="512" rx="100" ry="100" fill="url(#bg)"/>
+  <!-- Diff lines container -->
+  <g transform="translate(80, 100)">
+    <!-- Deletion line (red) -->
+    <rect x="0" y="0" width="352" height="52" rx="10" fill="#ff6b6b" opacity="0.9"/>
+    <text x="20" y="37" font-family="monospace" font-size="36" font-weight="bold" fill="#1a1a2e">-  old code</text>
+    <!-- Context line (dim) -->
+    <rect x="0" y="68" width="352" height="52" rx="10" fill="#ffffff" opacity="0.1"/>
+    <text x="20" y="105" font-family="monospace" font-size="36" fill="#ffffff" opacity="0.4">   context</text>
+    <!-- Addition line (green) -->
+    <rect x="0" y="136" width="352" height="52" rx="10" fill="#51cf66" opacity="0.9"/>
+    <text x="20" y="173" font-family="monospace" font-size="36" font-weight="bold" fill="#1a1a2e">+  new code</text>
+    <!-- Addition line 2 (green) -->
+    <rect x="0" y="204" width="352" height="52" rx="10" fill="#51cf66" opacity="0.9"/>
+    <text x="20" y="241" font-family="monospace" font-size="36" font-weight="bold" fill="#1a1a2e">+  improved</text>
+  </g>
+  <!-- Magnifying glass overlay (bottom-right) -->
+  <g transform="translate(320, 310)">
+    <circle cx="60" cy="60" r="55" fill="none" stroke="#ffffff" stroke-width="12" opacity="0.9"/>
+    <line x1="100" y1="100" x2="145" y2="145" stroke="#ffffff" stroke-width="14" stroke-linecap="round" opacity="0.9"/>
+    <!-- Checkmark inside magnifying glass -->
+    <polyline points="35,62 52,78 82,42" fill="none" stroke="#51cf66" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
