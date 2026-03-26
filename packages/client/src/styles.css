@@ -957,6 +957,55 @@ body {
   color: var(--color-danger);
 }
 
+/* ── File Tree Folder Rows ─────────────────────────────────────────────── */
+
+.file-tree__folder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  transition: background-color 0.1s ease;
+  min-width: 0;
+}
+
+.file-tree__folder:hover {
+  background-color: var(--color-neutral-hover);
+  color: var(--color-text-primary);
+}
+
+.file-tree__chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 12px;
+  font-size: 8px;
+  color: var(--color-text-secondary);
+  transition: transform 0.1s ease;
+}
+
+.file-tree__chevron--collapsed {
+  transform: rotate(0deg);
+}
+
+.file-tree__folder-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
 /* ── Unresolved comment count badge ────────────────────────────────────── */
 
 .file-tree__unresolved-badge {

@@ -21,15 +21,17 @@ describe('FileTree', () => {
 
     expect(screen.getByText('Files changed')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
-    expect(screen.getByText('src/foo.ts')).toBeInTheDocument();
-    expect(screen.getByText('src/bar.ts')).toBeInTheDocument();
-    expect(screen.getByText('src/old.ts')).toBeInTheDocument();
+    // Files are shown by filename only inside the tree; full paths appear as title attributes
+    expect(screen.getByText('foo.ts')).toBeInTheDocument();
+    expect(screen.getByText('bar.ts')).toBeInTheDocument();
+    expect(screen.getByText('old.ts')).toBeInTheDocument();
   });
 
   it('shows renamed file as "oldPath → newPath"', () => {
     render(<FileTree files={files} onFileClick={vi.fn()} />);
 
-    expect(screen.getByText('src/orig.ts → src/new.ts')).toBeInTheDocument();
+    // Tree shows filenames only; renamed files with different names show "old → new"
+    expect(screen.getByText('orig.ts → new.ts')).toBeInTheDocument();
   });
 
   it('calls onFileClick with the file path when a file button is clicked', () => {
