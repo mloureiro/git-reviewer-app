@@ -1,8 +1,32 @@
 export type {
+  AutoMarkRule,
   CommitInfo,
   ReviewComment,
   ReviewStatus,
   ReviewSession,
   ReviewData,
   DiffFile,
+  ViewedFile,
 } from './types.js';
+
+export {
+  validateDiffFile,
+  validateCommitInfo,
+  validateReviewComment,
+  validateReviewSession,
+  validateViewedFile,
+  validateReviewData,
+  validateFilesResponse,
+  validateDiffResponse,
+  validateSessionListResponse,
+  validateSessionResponse,
+  validateCreateCommentResponse,
+  validateUpdateCommentResponse,
+  validateUpdateSessionStatusResponse,
+  validateViewedFileResponse,
+  validateAutoMarkRulesResponse,
+  validateAutoMarkApplyResponse,
+  validateCommitsResponse,
+  validateCommitDiffResponse,
+  validateCommitFilesResponse,
+} from './schemas.js';
