@@ -1,9 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
-import { fetchSession, updateSessionStatus, postComment, patchComment } from '../api/reviews';
+import {
+  fetchSession,
+  updateSessionStatus,
+  postComment,
+  patchComment,
+  markFileViewed,
+  unmarkFileViewed,
+} from '../api/reviews';
 import type {
   ReviewData,
   ReviewStatus,
   ReviewComment,
+  ViewedFile,
   CreateCommentRequest,
 } from '../types/review';
 
@@ -14,6 +22,8 @@ export interface UseReviewSessionResult {
   updateStatus: (status: ReviewStatus) => Promise<void>;
   addComment: (data: CreateCommentRequest) => Promise<ReviewComment>;
   resolveComment: (commentId: string, resolved: boolean) => Promise<void>;
+  markViewed: (path: string) => Promise<void>;
+  unmarkViewed: (path: string) => Promise<void>;
 }
 
 /**
@@ -88,6 +98,56 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     [commitSha],
   );
 
+  const handleMarkViewed = useCallback(
+    async (path: string): Promise<void> => {
+      // Optimistic update
+      setSession((prev) => {
+        if (prev === null) return prev;
+        const viewedFiles = prev.viewedFiles ?? [];
+        const optimistic: ViewedFile = {
+          path,
+          viewedAt: new Date().toISOString(),
+          diffHash: '',
+        };
+        const existing = viewedFiles.findIndex((vf) => vf.path === path);
+        const next = [...viewedFiles];
+        if (existing >= 0) {
+          next[existing] = optimistic;
+        } else {
+          next.push(optimistic);
+        }
+        return { ...prev, viewedFiles: next };
+      });
+
+      const viewedFile = await markFileViewed(commitSha, path);
+      // Update with server response (has correct diffHash)
+      setSession((prev) => {
+        if (prev === null) return prev;
+        const viewedFiles = (prev.viewedFiles ?? []).map((vf) =>
+          vf.path === path ? viewedFile : vf,
+        );
+        return { ...prev, viewedFiles };
+      });
+    },
+    [commitSha],
+  );
+
+  const handleUnmarkViewed = useCallback(
+    async (path: string): Promise<void> => {
+      // Optimistic update
+      setSession((prev) => {
+        if (prev === null) return prev;
+        return {
+          ...prev,
+          viewedFiles: (prev.viewedFiles ?? []).filter((vf) => vf.path !== path),
+        };
+      });
+
+      await unmarkFileViewed(commitSha, path);
+    },
+    [commitSha],
+  );
+
   return {
     session,
     loading,
@@ -95,5 +155,7 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     updateStatus: handleUpdateStatus,
     addComment: handleAddComment,
     resolveComment: handleResolveComment,
+    markViewed: handleMarkViewed,
+    unmarkViewed: handleUnmarkViewed,
   };
 }

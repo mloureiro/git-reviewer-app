@@ -94,6 +94,8 @@ export function SessionDetailPage() {
     updateStatus,
     addComment,
     resolveComment,
+    markViewed,
+    unmarkViewed,
   } = useReviewSession(commitSha ?? '');
 
   const filesParams =
@@ -103,7 +105,7 @@ export function SessionDetailPage() {
 
   const diffParams = filesParams;
 
-  const { files } = useFiles(filesParams);
+  const { files, diffHashes } = useFiles(filesParams);
   const { diff, loading: diffLoading, error: diffError } = useDiff(diffParams);
 
   const filePaths = files.map((f) => f.path);
@@ -301,6 +303,37 @@ export function SessionDetailPage() {
   const totalUnresolved = comments.filter((c) => !c.resolved).length;
   const summaryStats = { total: comments.length, unresolved: totalUnresolved };
 
+  // Viewed files sets
+  const viewedFilesSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const vf of reviewData?.viewedFiles ?? []) {
+      set.add(vf.path);
+    }
+    return set;
+  }, [reviewData?.viewedFiles]);
+
+  const changedSinceViewedSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const vf of reviewData?.viewedFiles ?? []) {
+      const currentHash = diffHashes[vf.path];
+      if (currentHash != null && vf.diffHash !== '' && currentHash !== vf.diffHash) {
+        set.add(vf.path);
+      }
+    }
+    return set;
+  }, [reviewData?.viewedFiles, diffHashes]);
+
+  const handleToggleViewed = useCallback(
+    (filePath: string, isCurrentlyViewed: boolean): void => {
+      if (isCurrentlyViewed) {
+        void unmarkViewed(filePath);
+      } else {
+        void markViewed(filePath);
+      }
+    },
+    [markViewed, unmarkViewed],
+  );
+
   const renderAfterLine = useCallback(
     (lineData: DiffLineData, colSpan?: number): React.ReactNode => {
       const key = commentKey(lineData.file, lineData.line);
@@ -408,6 +441,9 @@ export function SessionDetailPage() {
               onFileClick={handleFileClick}
               activeFile={activeFile}
               unresolvedCounts={unresolvedCounts}
+              viewedFiles={viewedFilesSet}
+              changedSinceViewed={changedSinceViewedSet}
+              onToggleViewed={handleToggleViewed}
             />
           </aside>
         )}
@@ -425,6 +461,9 @@ export function SessionDetailPage() {
               onLineClick={handleLineClick}
               renderAfterLine={renderAfterLine}
               hasCommentOnLine={hasCommentOnLine}
+              viewedFiles={viewedFilesSet}
+              changedSinceViewed={changedSinceViewedSet}
+              onToggleViewed={handleToggleViewed}
             />
           )}
           {!diffLoading && !diffError && diff == null && (

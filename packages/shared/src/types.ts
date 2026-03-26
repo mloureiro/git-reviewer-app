@@ -27,6 +27,13 @@ export interface ReviewData {
   version: 1;
   session: ReviewSession;
   comments: ReviewComment[];
+  viewedFiles?: ViewedFile[];
+}
+
+export interface ViewedFile {
+  path: string;
+  viewedAt: string;
+  diffHash: string;
 }
 
 export interface DiffFile {

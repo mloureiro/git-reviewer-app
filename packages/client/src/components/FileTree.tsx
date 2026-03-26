@@ -6,6 +6,9 @@ interface FileTreeProps {
   onFileClick: (filePath: string) => void;
   activeFile?: string;
   unresolvedCounts?: Record<string, number>;
+  viewedFiles?: Set<string>;
+  changedSinceViewed?: Set<string>;
+  onToggleViewed?: (filePath: string, isViewed: boolean) => void;
 }
 
 interface TreeNode {
@@ -108,6 +111,9 @@ interface TreeNodeRowProps {
   onFileClick: (filePath: string) => void;
   activeFile?: string;
   unresolvedCounts?: Record<string, number>;
+  viewedFiles?: Set<string>;
+  changedSinceViewed?: Set<string>;
+  onToggleViewed?: (filePath: string, isViewed: boolean) => void;
 }
 
 function TreeNodeRow({
@@ -118,6 +124,9 @@ function TreeNodeRow({
   onFileClick,
   activeFile,
   unresolvedCounts,
+  viewedFiles,
+  changedSinceViewed,
+  onToggleViewed,
 }: TreeNodeRowProps) {
   const indent = depth * 12;
 
@@ -152,6 +161,9 @@ function TreeNodeRow({
               onFileClick={onFileClick}
               activeFile={activeFile}
               unresolvedCounts={unresolvedCounts}
+              viewedFiles={viewedFiles}
+              changedSinceViewed={changedSinceViewed}
+              onToggleViewed={onToggleViewed}
             />
           ))}
       </>
@@ -163,17 +175,48 @@ function TreeNodeRow({
   const isActive = file.path === activeFile;
   const label = formatFileName(file);
   const unresolvedCount = unresolvedCounts != null ? (unresolvedCounts[file.path] ?? 0) : 0;
+  const isViewed = viewedFiles != null && viewedFiles.has(file.path);
+  const isChangedSinceViewed = changedSinceViewed != null && changedSinceViewed.has(file.path);
+
+  const itemClass = [
+    'file-tree__item',
+    isActive ? 'file-tree__item--active' : '',
+    isViewed ? 'file-tree__item--viewed' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
     <li>
       <button
         type="button"
-        className={`file-tree__item${isActive ? ' file-tree__item--active' : ''}`}
+        className={itemClass}
         onClick={() => onFileClick(file.path)}
         aria-current={isActive ? 'true' : undefined}
         title={file.path}
         style={{ paddingLeft: `${indent + 12}px` }}
       >
+        {onToggleViewed != null && (
+          <span
+            className={`file-tree__viewed-toggle${isViewed ? ' file-tree__viewed-toggle--viewed' : ''}${isChangedSinceViewed ? ' file-tree__viewed-toggle--changed' : ''}`}
+            role="checkbox"
+            aria-checked={isViewed}
+            aria-label={isViewed ? 'Viewed' : 'Mark as viewed'}
+            title={
+              isChangedSinceViewed
+                ? 'Changed since last viewed'
+                : isViewed
+                  ? 'Viewed'
+                  : 'Mark as viewed'
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleViewed(file.path, isViewed);
+            }}
+          >
+            {isChangedSinceViewed ? '\u25CF' : isViewed ? '\u2713' : '\u25CB'}
+          </span>
+        )}
         <StatusDot status={file.status} />
         <span className="file-tree__path">{label}</span>
         <span className="file-tree__stats">
@@ -194,7 +237,15 @@ function TreeNodeRow({
   );
 }
 
-export function FileTree({ files, onFileClick, activeFile, unresolvedCounts }: FileTreeProps) {
+export function FileTree({
+  files,
+  onFileClick,
+  activeFile,
+  unresolvedCounts,
+  viewedFiles,
+  changedSinceViewed,
+  onToggleViewed,
+}: FileTreeProps) {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const handleToggle = useCallback((path: string) => {
@@ -232,6 +283,9 @@ export function FileTree({ files, onFileClick, activeFile, unresolvedCounts }: F
             onFileClick={onFileClick}
             activeFile={activeFile}
             unresolvedCounts={unresolvedCounts}
+            viewedFiles={viewedFiles}
+            changedSinceViewed={changedSinceViewed}
+            onToggleViewed={onToggleViewed}
           />
         ))}
       </ul>

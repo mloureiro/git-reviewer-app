@@ -4,6 +4,7 @@ import type { DiffFile, FilesQueryParams } from '../types/review';
 
 export interface UseFilesResult {
   files: DiffFile[];
+  diffHashes: Record<string, string>;
   loading: boolean;
   error: string | null;
 }
@@ -15,6 +16,7 @@ export interface UseFilesResult {
  */
 export function useFiles(params: FilesQueryParams | null): UseFilesResult {
   const [files, setFiles] = useState<DiffFile[]>([]);
+  const [diffHashes, setDiffHashes] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,6 +29,7 @@ export function useFiles(params: FilesQueryParams | null): UseFilesResult {
 
     if (parsedParams === null) {
       setFiles([]);
+      setDiffHashes({});
       setLoading(false);
       setError(null);
       return;
@@ -43,6 +46,7 @@ export function useFiles(params: FilesQueryParams | null): UseFilesResult {
       .then((response) => {
         if (!cancelled) {
           setFiles(response.files);
+          setDiffHashes(response.diffHashes ?? {});
         }
       })
       .catch((err: unknown) => {
@@ -61,5 +65,5 @@ export function useFiles(params: FilesQueryParams | null): UseFilesResult {
     };
   }, [paramsKey]);
 
-  return { files, loading, error };
+  return { files, diffHashes, loading, error };
 }

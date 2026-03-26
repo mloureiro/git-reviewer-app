@@ -6,6 +6,7 @@ import {
   getUncommittedDiffText,
   getChangedFiles,
   getUncommittedChangedFiles,
+  getFileDiffHashes,
 } from '../git/diff.js';
 import {
   listReviewNotes,
@@ -13,7 +14,7 @@ import {
   removeReviewNote,
   writeReviewNote,
 } from '../git/notes.js';
-import type { ReviewComment, ReviewData, ReviewStatus } from '@git-reviewer/shared';
+import type { ReviewComment, ReviewData, ReviewStatus, ViewedFile } from '@git-reviewer/shared';
 
 // Matches a valid git commit SHA (4–40 lowercase hex characters)
 const COMMIT_SHA_RE = /^[a-f0-9]{4,40}$/;
@@ -77,12 +78,18 @@ export function createReviewRouter(git: SimpleGit): Router {
         }
       }
 
-      const files =
-        uncommitted === 'true'
-          ? await getUncommittedChangedFiles(git)
-          : await getChangedFiles(git, String(base ?? 'main'), String(head ?? 'HEAD'));
+      const isUncommitted = uncommitted === 'true';
+      const files = isUncommitted
+        ? await getUncommittedChangedFiles(git)
+        : await getChangedFiles(git, String(base ?? 'main'), String(head ?? 'HEAD'));
 
-      res.json({ files });
+      const diffText = isUncommitted
+        ? await getUncommittedDiffText(git)
+        : await getDiffText(git, String(base ?? 'main'), String(head ?? 'HEAD'));
+
+      const diffHashes = getFileDiffHashes(diffText);
+
+      res.json({ files, diffHashes });
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }
@@ -267,6 +274,82 @@ export function createReviewRouter(git: SimpleGit): Router {
       await writeReviewNote(git, req.params.commitSha, data);
 
       res.json(comment);
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Mark a file as viewed
+  router.post('/sessions/:commitSha/viewed-files', async (req, res) => {
+    try {
+      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
+        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
+        return;
+      }
+
+      const { path } = req.body as { path: string };
+      if (typeof path !== 'string' || path.trim().length === 0) {
+        res.status(400).json({ error: 'Invalid body: path must be a non-empty string' });
+        return;
+      }
+
+      const data = await readReviewNote(git, req.params.commitSha);
+      if (!data) {
+        res.status(404).json({ error: 'Review session not found' });
+        return;
+      }
+
+      // Compute the current diff hash for this file
+      const diffText = await getDiffText(git, data.session.baseRef, data.session.headRef);
+      const diffHashes = getFileDiffHashes(diffText);
+      const diffHash = diffHashes[path] ?? '';
+
+      const viewedFile: ViewedFile = {
+        path,
+        viewedAt: new Date().toISOString(),
+        diffHash,
+      };
+
+      // Replace existing entry for this path or add new
+      const viewedFiles = data.viewedFiles ?? [];
+      const existingIndex = viewedFiles.findIndex((vf) => vf.path === path);
+      if (existingIndex >= 0) {
+        viewedFiles[existingIndex] = viewedFile;
+      } else {
+        viewedFiles.push(viewedFile);
+      }
+      data.viewedFiles = viewedFiles;
+      data.session.updatedAt = new Date().toISOString();
+      await writeReviewNote(git, req.params.commitSha, data);
+
+      res.status(201).json(viewedFile);
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Unmark a file as viewed
+  router.delete('/sessions/:commitSha/viewed-files/:filePath', async (req, res) => {
+    try {
+      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
+        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
+        return;
+      }
+
+      const filePath = decodeURIComponent(req.params.filePath);
+
+      const data = await readReviewNote(git, req.params.commitSha);
+      if (!data) {
+        res.status(404).json({ error: 'Review session not found' });
+        return;
+      }
+
+      const viewedFiles = data.viewedFiles ?? [];
+      data.viewedFiles = viewedFiles.filter((vf) => vf.path !== filePath);
+      data.session.updatedAt = new Date().toISOString();
+      await writeReviewNote(git, req.params.commitSha, data);
+
+      res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }

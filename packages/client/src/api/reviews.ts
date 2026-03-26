@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPatch } from './client';
+import { apiGet, apiPost, apiPatch, apiDelete } from './client';
 import type {
   FilesQueryParams,
   FilesResponse,
@@ -14,6 +14,7 @@ import type {
   UpdateCommentResponse,
   UpdateSessionStatusRequest,
   UpdateSessionStatusResponse,
+  ViewedFile,
 } from '../types/review';
 
 /** GET /api/files — Fetch the list of changed files for the given base/head/uncommitted params. */
@@ -92,6 +93,16 @@ export function patchComment(
   data: UpdateCommentRequest,
 ): Promise<UpdateCommentResponse> {
   return apiPatch<UpdateCommentResponse>(`/api/sessions/${commitSha}/comments/${commentId}`, data);
+}
+
+/** POST /api/sessions/:commitSha/viewed-files — Mark a file as viewed. */
+export function markFileViewed(commitSha: string, path: string): Promise<ViewedFile> {
+  return apiPost<ViewedFile>(`/api/sessions/${commitSha}/viewed-files`, { path });
+}
+
+/** DELETE /api/sessions/:commitSha/viewed-files/:filePath — Unmark a file as viewed. */
+export function unmarkFileViewed(commitSha: string, path: string): Promise<void> {
+  return apiDelete(`/api/sessions/${commitSha}/viewed-files/${encodeURIComponent(path)}`);
 }
 
 /** PATCH /api/sessions/:commitSha — Update the status of a review session. */

@@ -6,6 +6,7 @@ export type {
   ReviewSession,
   ReviewData,
   DiffFile,
+  ViewedFile,
 } from '@git-reviewer/shared';
 
 // Generic API response envelopes
@@ -29,6 +30,7 @@ export interface FilesQueryParams {
 
 export interface FilesResponse {
   files: DiffFile[];
+  diffHashes?: Record<string, string>;
 }
 
 // GET /api/diff

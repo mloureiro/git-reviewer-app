@@ -56,3 +56,13 @@ export function apiPatch<T>(url: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
 }
+
+/** Perform a DELETE request and return the parsed response body (or void for 204). */
+export async function apiDelete(url: string): Promise<void> {
+  const response = await fetch(url, { method: 'DELETE' });
+
+  if (!response.ok) {
+    const body = (await response.json()) as ApiErrorResponse;
+    throw new ApiError(response.status, body);
+  }
+}

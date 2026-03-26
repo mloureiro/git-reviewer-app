@@ -227,6 +227,9 @@ interface DiffFileProps {
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
+  isViewed?: boolean;
+  isChangedSinceViewed?: boolean;
+  onToggleViewed?: (filePath: string, isViewed: boolean) => void;
 }
 
 interface DiffViewProps {
@@ -240,6 +243,9 @@ interface DiffViewProps {
   onLineClick?: (data: DiffLineData) => void;
   renderAfterLine?: (lineData: DiffLineData, colSpan?: number) => React.ReactNode;
   hasCommentOnLine?: (lineData: DiffLineData) => boolean;
+  viewedFiles?: Set<string>;
+  changedSinceViewed?: Set<string>;
+  onToggleViewed?: (filePath: string, isViewed: boolean) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -618,6 +624,9 @@ export function DiffFileComponent({
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
+  isViewed = false,
+  isChangedSinceViewed = false,
+  onToggleViewed,
 }: DiffFileProps) {
   const filePath = file.isRename === true ? file.newName : file.newName || file.oldName;
   const sectionId = filePathToId(filePath);
@@ -639,6 +648,22 @@ export function DiffFileComponent({
             <span className="diff-file-section__deletions">-{file.deletedLines}</span>
           )}
         </span>
+        {onToggleViewed != null && (
+          <button
+            type="button"
+            className={`diff-file-section__viewed-btn${isViewed ? ' diff-file-section__viewed-btn--viewed' : ''}${isChangedSinceViewed ? ' diff-file-section__viewed-btn--changed' : ''}`}
+            onClick={() => onToggleViewed(filePath, isViewed)}
+            title={
+              isChangedSinceViewed
+                ? 'Changed since last viewed'
+                : isViewed
+                  ? 'Marked as viewed'
+                  : 'Mark as viewed'
+            }
+          >
+            {isChangedSinceViewed ? 'Changed since viewed' : isViewed ? 'Viewed' : 'Mark as viewed'}
+          </button>
+        )}
       </div>
 
       <div
@@ -677,6 +702,9 @@ export function DiffView({
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
+  viewedFiles,
+  changedSinceViewed,
+  onToggleViewed,
 }: DiffViewProps) {
   const diffFiles = parse(diffText);
 
@@ -701,6 +729,9 @@ export function DiffView({
             onLineClick={onLineClick}
             renderAfterLine={renderAfterLine}
             hasCommentOnLine={hasCommentOnLine}
+            isViewed={viewedFiles != null && viewedFiles.has(filePath)}
+            isChangedSinceViewed={changedSinceViewed != null && changedSinceViewed.has(filePath)}
+            onToggleViewed={onToggleViewed}
           />
         );
       })}

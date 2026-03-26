@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import simpleGit, { type SimpleGit } from 'simple-git';
 import type { DiffFile } from '@git-reviewer/shared';
 
@@ -112,4 +113,30 @@ export async function getUncommittedChangedFiles(git: SimpleGit): Promise<DiffFi
   }
 
   return merged;
+}
+
+/**
+ * Splits a unified diff by file and hashes each file's diff section with SHA-256.
+ * Returns a map of filePath -> hash.
+ */
+export function getFileDiffHashes(diffText: string): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  if (!diffText.trim()) return result;
+
+  // Split on "diff --git" boundaries, keeping the delimiter with the section
+  const sections = diffText.split(/^(?=diff --git )/m).filter(Boolean);
+
+  for (const section of sections) {
+    // Extract file path from the diff header: "diff --git a/path b/path"
+    const headerMatch = section.match(/^diff --git a\/(.+?) b\/(.+)/m);
+    if (headerMatch == null) continue;
+
+    // Use the "b/" path (the new name, handles renames)
+    const filePath = headerMatch[2] as string;
+    const hash = createHash('sha256').update(section).digest('hex');
+    result[filePath] = hash;
+  }
+
+  return result;
 }
