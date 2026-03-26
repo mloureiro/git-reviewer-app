@@ -113,6 +113,7 @@ export function SessionListPage() {
         <button className="btn btn--primary" onClick={selectRepo}>
           Open Repository
         </button>
+        <InstallCliButton />
       </div>
     );
   }
@@ -132,6 +133,7 @@ export function SessionListPage() {
         <Link to="/new" className="btn btn--primary">
           Create your first review
         </Link>
+        <InstallCliButton />
       </div>
     );
   }
