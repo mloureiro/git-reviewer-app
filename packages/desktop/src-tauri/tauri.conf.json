@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.git-reviewer.app",
   "build": {
-    "frontendDist": "../../client/dist",
+    "frontendDist": "../../server/public",
     "devUrl": "http://localhost:5173",
     "beforeDevCommand": "",
     "beforeBuildCommand": ""

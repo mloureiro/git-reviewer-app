@@ -77,7 +77,7 @@ program
       // Resolve the built client assets relative to this file.
       // In production: packages/cli/dist/index.js -> ../../client/dist
       const thisDir = path.dirname(fileURLToPath(import.meta.url));
-      const candidateStaticDir = path.resolve(thisDir, '../../client/dist');
+      const candidateStaticDir = path.resolve(thisDir, '../../server/public');
       const staticDir = existsSync(candidateStaticDir) ? candidateStaticDir : undefined;
 
       const app = createApp({ repoPath, staticDir });
