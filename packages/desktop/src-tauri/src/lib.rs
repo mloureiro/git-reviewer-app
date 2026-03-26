@@ -85,6 +85,7 @@ pub fn run() {
             commands::fetch_commit_diff,
             commands::fetch_commit_files,
             commands::get_initial_session,
+            commands::install_cli,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

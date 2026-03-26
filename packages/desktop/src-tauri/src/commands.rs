@@ -439,6 +439,67 @@ pub fn fetch_commit_files(commit_hash: String) -> Result<FilesResponse, String> 
 }
 
 // ---------------------------------------------------------------------------
+// Install CLI
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn install_cli() -> Result<String, String> {
+    let bin_dir = dirs::home_dir()
+        .ok_or_else(|| "Could not determine home directory".to_string())?
+        .join(".local")
+        .join("bin");
+
+    std::fs::create_dir_all(&bin_dir)
+        .map_err(|e| format!("Failed to create {}: {}", bin_dir.display(), e))?;
+
+    let target_path = bin_dir.join("git-reviewer");
+
+    // Determine the app binary path.
+    // In a bundled macOS .app, current_exe() points to Contents/MacOS/<binary>.
+    // We use the actual running binary so it works both in dev and production.
+    let exe_path = std::env::current_exe()
+        .map_err(|e| format!("Failed to determine executable path: {}", e))?
+        .canonicalize()
+        .map_err(|e| format!("Failed to canonicalize executable path: {}", e))?;
+
+    let script_content = if cfg!(windows) {
+        format!("@echo off\r\n\"{}\" %*\r\n", exe_path.display())
+    } else {
+        format!(
+            "#!/bin/sh\nexec \"{}\" \"$@\"\n",
+            exe_path.display()
+        )
+    };
+
+    let target_file = if cfg!(windows) {
+        target_path.with_extension("cmd")
+    } else {
+        target_path.clone()
+    };
+
+    // Remove existing file/symlink if present
+    if target_file.exists() || target_file.is_symlink() {
+        std::fs::remove_file(&target_file)
+            .map_err(|e| format!("Failed to remove existing {}: {}", target_file.display(), e))?;
+    }
+
+    std::fs::write(&target_file, &script_content)
+        .map_err(|e| format!("Failed to write {}: {}", target_file.display(), e))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&target_file, std::fs::Permissions::from_mode(0o755))
+            .map_err(|e| format!("Failed to set permissions on {}: {}", target_file.display(), e))?;
+    }
+
+    Ok(format!(
+        "CLI installed at {}",
+        target_file.display()
+    ))
+}
+
+// ---------------------------------------------------------------------------
 // CLI support
 // ---------------------------------------------------------------------------
 

@@ -475,11 +475,41 @@ body {
   color: var(--color-text-primary);
 }
 
+.session-list__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .session-list__items {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* ── Install CLI ──────────────────────────────────────────────────────── */
+
+.install-cli {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.install-cli__message {
+  font-size: 12px;
+  max-width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.install-cli__message--success {
+  color: var(--color-success-text);
+}
+
+.install-cli__message--error {
+  color: var(--color-danger-text);
 }
 
 /* ── Session Card ──────────────────────────────────────────────────────── */
@@ -648,6 +678,11 @@ body {
 .btn--secondary:hover {
   background-color: var(--color-neutral-hover);
   border-color: var(--color-text-secondary);
+}
+
+.btn--sm {
+  padding: 4px 10px;
+  font-size: 12px;
 }
 
 /* ── Session Detail Page ───────────────────────────────────────────────── */
