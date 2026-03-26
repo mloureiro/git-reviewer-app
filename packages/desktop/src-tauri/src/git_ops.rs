@@ -12,6 +12,16 @@ pub fn open_repo() -> Result<Repository, String> {
     Repository::discover(&cwd).map_err(|e| format!("Failed to open git repository: {}", e))
 }
 
+/// Get the current branch short name (e.g. "feature/auth"), or None if detached.
+pub fn current_branch_name(repo: &Repository) -> Option<String> {
+    let head = repo.head().ok()?;
+    if head.is_branch() {
+        head.shorthand().map(|s| s.to_string())
+    } else {
+        None
+    }
+}
+
 /// Resolve a ref name (branch, tag, SHA, HEAD, etc.) to its full commit SHA.
 pub fn resolve_ref(repo: &Repository, ref_name: &str) -> Result<String, String> {
     let obj = repo

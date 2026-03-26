@@ -462,11 +462,32 @@ pub fn install_cli() -> Result<String, String> {
         .canonicalize()
         .map_err(|e| format!("Failed to canonicalize executable path: {}", e))?;
 
+    // On macOS, if inside a .app bundle, use `open` to launch (forks automatically).
+    // Otherwise run the binary directly in background.
     let script_content = if cfg!(windows) {
-        format!("@echo off\r\n\"{}\" %*\r\n", exe_path.display())
+        format!("@echo off\r\nstart \"\" \"{}\" %*\r\n", exe_path.display())
+    } else if cfg!(target_os = "macos") {
+        // Walk up from Contents/MacOS/<binary> to find the .app bundle
+        let app_bundle = exe_path
+            .parent() // MacOS/
+            .and_then(|p| p.parent()) // Contents/
+            .and_then(|p| p.parent()) // *.app/
+            .filter(|p| p.extension().is_some_and(|ext| ext == "app"));
+
+        if let Some(app_path) = app_bundle {
+            format!(
+                "#!/bin/sh\nopen -a \"{}\" --args \"$@\"\n",
+                app_path.display()
+            )
+        } else {
+            format!(
+                "#!/bin/sh\n\"{}\" \"$@\" &\ndisown\n",
+                exe_path.display()
+            )
+        }
     } else {
         format!(
-            "#!/bin/sh\nexec \"{}\" \"$@\"\n",
+            "#!/bin/sh\n\"{}\" \"$@\" &\ndisown\n",
             exe_path.display()
         )
     };
@@ -510,7 +531,18 @@ pub fn create_session_from_cli(base_ref: &str, head_ref: &str) -> Result<String,
     let base_commit = git_ops::resolve_ref(&repo, base_ref)?;
     let head_commit = git_ops::resolve_ref(&repo, head_ref)?;
 
-    let title = format!("{} -> {}", base_ref, head_ref);
+    // Resolve human-friendly names: replace "HEAD" with the current branch name
+    let display_head = if head_ref.eq_ignore_ascii_case("HEAD") {
+        git_ops::current_branch_name(&repo).unwrap_or_else(|| "HEAD".to_string())
+    } else {
+        head_ref.to_string()
+    };
+    let display_base = if base_ref.eq_ignore_ascii_case("HEAD") {
+        git_ops::current_branch_name(&repo).unwrap_or_else(|| "HEAD".to_string())
+    } else {
+        base_ref.to_string()
+    };
+    let title = format!("Review {}..{}", display_base, display_head);
     let now = now_iso();
 
     let data = ReviewData {

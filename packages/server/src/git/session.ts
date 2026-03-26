@@ -87,7 +87,18 @@ export async function createAutoSession(
 
   const baseRef = uncommitted ? headCommit : (base ?? 'HEAD');
   const headRef = uncommitted ? 'working tree' : (head ?? 'HEAD');
-  const title = uncommitted ? 'Uncommitted changes' : `Review ${baseRef}..${headRef}`;
+
+  // Resolve human-friendly display names: replace "HEAD" with branch name
+  let displayBase = baseRef;
+  let displayHead = headRef;
+  if (!uncommitted) {
+    const branch = (await git.revparse(['--abbrev-ref', 'HEAD']).catch(() => '')).trim();
+    if (branch && branch !== 'HEAD') {
+      if (baseRef === 'HEAD') displayBase = branch;
+      if (headRef === 'HEAD') displayHead = branch;
+    }
+  }
+  const title = uncommitted ? 'Uncommitted changes' : `Review ${displayBase}..${displayHead}`;
 
   const now = new Date().toISOString();
 
