@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SessionDetailPage } from './SessionDetailPage';
 import type { ReviewData, DiffFile } from '../types/review';
+import type { ShortcutDescriptor } from '../hooks/useKeyboardShortcuts';
 
 // ---------------------------------------------------------------------------
 // Hook mocks
@@ -19,6 +20,16 @@ vi.mock('../hooks/useFileFocus');
 vi.mock('../hooks/useLineFocus');
 vi.mock('../hooks/useTheme');
 vi.mock('../hooks/useLocalStorage');
+
+function getShortcutCall(index = 0) {
+  const call = mockUseKeyboardShortcuts.mock.calls[index] ?? [];
+  return call as [ShortcutDescriptor[], boolean | undefined];
+}
+
+function getLastShortcutCall() {
+  const calls = mockUseKeyboardShortcuts.mock.calls;
+  return getShortcutCall(calls.length - 1);
+}
 
 // Mock DiffView to a minimal stub that calls renderAfterLine for every line in
 // a predictable way so tests can verify CommentThread and InlineCommentForm
@@ -133,10 +144,7 @@ const mockClearLineFocus = vi.fn();
 function setupDefaultMocks() {
   mockUseTheme.mockReturnValue({ theme: 'light' as const, toggleTheme: vi.fn() });
 
-  mockUseLocalStorage.mockReturnValue(['line-by-line', vi.fn()] as unknown as [
-    'line-by-line',
-    (value: string) => void,
-  ]);
+  mockUseLocalStorage.mockReturnValue(['line-by-line', vi.fn()]);
 
   mockUseResponsiveDiffMode.mockReturnValue(undefined);
 
@@ -565,7 +573,7 @@ describe('SessionDetailPage', () => {
     it('passes the registered shortcut descriptors to useKeyboardShortcuts', () => {
       renderPage();
 
-      const [shortcuts] = mockUseKeyboardShortcuts.mock.calls[0];
+      const [shortcuts] = getShortcutCall();
       const keys = shortcuts.map((s) => s.key);
 
       expect(keys).toContain('n');
@@ -580,7 +588,7 @@ describe('SessionDetailPage', () => {
     it('enables shortcuts when the help modal is closed', () => {
       renderPage();
 
-      const [, enabled] = mockUseKeyboardShortcuts.mock.calls[0];
+      const [, enabled] = getShortcutCall();
       expect(enabled).toBe(true);
     });
 
@@ -588,7 +596,7 @@ describe('SessionDetailPage', () => {
       renderPage();
 
       // Invoke the '?' handler directly (the hook is mocked so no real keydown listener exists).
-      const shortcuts = mockUseKeyboardShortcuts.mock.calls[0][0];
+      const [shortcuts] = getShortcutCall();
       const helpShortcut = shortcuts.find((s) => s.key === '?');
       act(() => {
         helpShortcut?.handler();
@@ -596,15 +604,14 @@ describe('SessionDetailPage', () => {
 
       // After opening the modal, the component re-renders and calls useKeyboardShortcuts
       // with enabled=false so that keys pressed while reading the modal are suppressed.
-      const calls = mockUseKeyboardShortcuts.mock.calls;
-      const lastCall = calls[calls.length - 1];
-      expect(lastCall[1]).toBe(false);
+      const [, lastEnabled] = getLastShortcutCall();
+      expect(lastEnabled).toBe(false);
     });
 
     it('the "?" shortcut handler opens the shortcuts help modal', () => {
       renderPage();
 
-      const shortcuts = mockUseKeyboardShortcuts.mock.calls[0][0];
+      const [shortcuts] = getShortcutCall();
       const helpShortcut = shortcuts.find((s) => s.key === '?');
       expect(helpShortcut).toBeDefined();
 
@@ -870,7 +877,7 @@ describe('SessionDetailPage', () => {
     it('renders the help modal when handleToggleHelp is invoked via the "?" shortcut', () => {
       renderPage();
 
-      const shortcuts = mockUseKeyboardShortcuts.mock.calls[0][0];
+      const shortcuts = getShortcutCall()[0];
       const helpShortcut = shortcuts.find((s) => s.key === '?');
       act(() => {
         helpShortcut?.handler();
@@ -882,7 +889,7 @@ describe('SessionDetailPage', () => {
     it('renders shortcut descriptions inside the help modal', () => {
       renderPage();
 
-      const shortcuts = mockUseKeyboardShortcuts.mock.calls[0][0];
+      const shortcuts = getShortcutCall()[0];
       const helpShortcut = shortcuts.find((s) => s.key === '?');
       act(() => {
         helpShortcut?.handler();

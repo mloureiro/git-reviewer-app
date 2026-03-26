@@ -49,10 +49,10 @@ function buildTree(files: DiffFile[]): TreeNode[] {
 
     // Navigate/create folder nodes for each directory segment
     for (let i = 0; i < parts.length - 1; i += 1) {
-      const folderName = parts[i];
+      const folderName = parts[i] as string;
       const folderPath = parts.slice(0, i + 1).join('/');
       let child = current.children.find((c) => c.type === 'folder' && c.name === folderName);
-      if (!child) {
+      if (child == null) {
         child = { name: folderName, path: folderPath, type: 'folder', children: [] };
         current.children.push(child);
       }
@@ -60,7 +60,7 @@ function buildTree(files: DiffFile[]): TreeNode[] {
     }
 
     // Add the file node
-    const fileName = parts[parts.length - 1];
+    const fileName = parts[parts.length - 1] as string;
     current.children.push({
       name: fileName,
       path: file.path,
@@ -84,11 +84,12 @@ function compactAndSort(node: TreeNode): void {
 
   // Compact: if a folder has exactly one child and that child is a folder, merge them
   if (node.type === 'folder') {
-    while (node.children.length === 1 && node.children[0].type === 'folder') {
-      const onlyChild = node.children[0];
-      node.name = node.name ? `${node.name}/${onlyChild.name}` : onlyChild.name;
-      node.path = onlyChild.path;
-      node.children = onlyChild.children;
+    let first = node.children[0];
+    while (node.children.length === 1 && first != null && first.type === 'folder') {
+      node.name = node.name ? `${node.name}/${first.name}` : first.name;
+      node.path = first.path;
+      node.children = first.children;
+      first = node.children[0];
     }
   }
 
