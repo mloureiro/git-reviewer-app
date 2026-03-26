@@ -134,6 +134,20 @@ index 1234567..abcdefg 100644
 const mockUpdateStatus = vi.fn();
 const mockAddComment = vi.fn();
 const mockResolveComment = vi.fn();
+const mockMarkViewed = vi.fn();
+const mockUnmarkViewed = vi.fn();
+const mockSetAutoMarkRules = vi.fn();
+const mockReapplyAutoMarkRules = vi.fn();
+
+const sessionMockBase = {
+  updateStatus: mockUpdateStatus,
+  addComment: mockAddComment,
+  resolveComment: mockResolveComment,
+  markViewed: mockMarkViewed,
+  unmarkViewed: mockUnmarkViewed,
+  setAutoMarkRules: mockSetAutoMarkRules,
+  reapplyAutoMarkRules: mockReapplyAutoMarkRules,
+};
 const mockFocusNext = vi.fn();
 const mockFocusPrev = vi.fn();
 const mockClearFocus = vi.fn();
@@ -152,15 +166,14 @@ function setupDefaultMocks() {
     session: SAMPLE_SESSION,
     loading: false,
     error: null,
-    updateStatus: mockUpdateStatus,
-    addComment: mockAddComment,
-    resolveComment: mockResolveComment,
+    ...sessionMockBase,
   });
 
   mockUseFiles.mockReturnValue({
     files: SAMPLE_FILES,
     loading: false,
     error: null,
+    diffHashes: {},
   });
 
   mockUseDiff.mockReturnValue({
@@ -228,9 +241,7 @@ describe('SessionDetailPage', () => {
         session: null,
         loading: true,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -243,9 +254,7 @@ describe('SessionDetailPage', () => {
         session: null,
         loading: true,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -264,9 +273,7 @@ describe('SessionDetailPage', () => {
         session: null,
         loading: false,
         error: 'Network error',
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -279,9 +286,7 @@ describe('SessionDetailPage', () => {
         session: null,
         loading: false,
         error: 'Not found',
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -300,9 +305,7 @@ describe('SessionDetailPage', () => {
         session: null,
         loading: false,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -315,9 +318,7 @@ describe('SessionDetailPage', () => {
         session: null,
         loading: false,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -407,7 +408,7 @@ describe('SessionDetailPage', () => {
     });
 
     it('does not render the sidebar when no files are available', () => {
-      mockUseFiles.mockReturnValue({ files: [], loading: false, error: null });
+      mockUseFiles.mockReturnValue({ files: [], loading: false, error: null, diffHashes: {} });
 
       renderPage();
 
@@ -494,9 +495,7 @@ describe('SessionDetailPage', () => {
         },
         loading: false,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -513,9 +512,7 @@ describe('SessionDetailPage', () => {
         },
         loading: false,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -663,9 +660,7 @@ describe('SessionDetailPage', () => {
         },
         loading: false,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -700,9 +695,7 @@ describe('SessionDetailPage', () => {
         },
         loading: false,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -738,9 +731,7 @@ describe('SessionDetailPage', () => {
         },
         loading: false,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();
@@ -846,9 +837,7 @@ describe('SessionDetailPage', () => {
         session: null,
         loading: false,
         error: null,
-        updateStatus: mockUpdateStatus,
-        addComment: mockAddComment,
-        resolveComment: mockResolveComment,
+        ...sessionMockBase,
       });
 
       renderPage();

@@ -1,4 +1,12 @@
-import type { ReviewComment, ReviewStatus, ReviewData, DiffFile } from '@git-reviewer/shared';
+import type {
+  ReviewComment,
+  ReviewStatus,
+  ReviewData,
+  DiffFile,
+  AutoMarkRule,
+  ViewedFile,
+  CommitInfo,
+} from '@git-reviewer/shared';
 
 export type {
   AutoMarkRule,

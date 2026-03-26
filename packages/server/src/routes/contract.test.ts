@@ -294,13 +294,14 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   describe('PATCH /api/sessions/:commitSha/comments/:commentId — UpdateCommentResponse', () => {
     it('matches the shared UpdateCommentResponse schema', async () => {
+      const comment = sampleSession.comments[0] as (typeof sampleSession.comments)[number];
       mockReadReviewNote.mockResolvedValueOnce({
         ...sampleSession,
-        comments: [{ ...sampleSession.comments[0] }],
+        comments: [{ ...comment }],
       });
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleSession.comments[0].id}`)
+        .patch(`/api/sessions/${COMMIT_SHA}/comments/${comment.id}`)
         .send({ resolved: true });
 
       expect(res.status).toBe(200);

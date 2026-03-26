@@ -4,6 +4,7 @@ mod git_ops;
 mod types;
 
 use std::sync::Mutex;
+use tauri::Manager;
 
 /// Holds the optional initial session commit SHA created from CLI args.
 pub struct InitialSession(pub Mutex<Option<String>>);
@@ -16,6 +17,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_cli::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(InitialSession(Mutex::new(None)))
         .manage(RepoPath(Mutex::new(None)))
         .setup(|app| {
@@ -86,6 +88,8 @@ pub fn run() {
             commands::fetch_commit_files,
             commands::get_initial_session,
             commands::install_cli,
+            commands::get_current_repo,
+            commands::select_repository,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
