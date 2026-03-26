@@ -18,6 +18,9 @@ import type {
   ViewedFile,
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
+  CommitsResponse,
+  CommitDiffResponse,
+  CommitFilesResponse,
 } from '../types/review';
 
 /** GET /api/files — Fetch the list of changed files for the given base/head/uncommitted params. */
@@ -127,4 +130,19 @@ export function updateAutoMarkRules(
 /** POST /api/sessions/:commitSha/auto-mark-apply — Re-apply existing auto-mark rules. */
 export function applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse> {
   return apiPost<AutoMarkApplyResponse>(`/api/sessions/${commitSha}/auto-mark-apply`, {});
+}
+
+/** GET /api/sessions/:commitSha/commits — Fetch the commit list for a session's base..head range. */
+export function fetchCommits(commitSha: string): Promise<CommitsResponse> {
+  return apiGet<CommitsResponse>(`/api/sessions/${commitSha}/commits`);
+}
+
+/** GET /api/commits/:commitHash/diff — Fetch the diff for a single commit. */
+export function fetchCommitDiff(commitHash: string): Promise<CommitDiffResponse> {
+  return apiGet<CommitDiffResponse>(`/api/commits/${commitHash}/diff`);
+}
+
+/** GET /api/commits/:commitHash/files — Fetch the changed files for a single commit. */
+export function fetchCommitFiles(commitHash: string): Promise<CommitFilesResponse> {
+  return apiGet<CommitFilesResponse>(`/api/commits/${commitHash}/files`);
 }

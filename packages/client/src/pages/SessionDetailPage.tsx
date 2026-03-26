@@ -10,8 +10,10 @@ import { InlineCommentForm } from '../components/InlineCommentForm';
 import { ReviewActions } from '../components/ReviewActions';
 import { ReviewSummaryBar } from '../components/ReviewSummaryBar';
 import { ShortcutsHelpModal } from '../components/ShortcutsHelpModal';
+import { CommitSelector } from '../components/CommitSelector';
 import { StatusBadge } from '../components/StatusBadge';
 import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
+import { useCommits } from '../hooks/useCommits';
 import { useDiff } from '../hooks/useDiff';
 import { useFileFocus } from '../hooks/useFileFocus';
 import { useFiles } from '../hooks/useFiles';
@@ -102,6 +104,13 @@ export function SessionDetailPage() {
     reapplyAutoMarkRules,
   } = useReviewSession(commitSha ?? '');
 
+  // Commit-by-commit navigation state
+  const { commits } = useCommits(commitSha ?? null);
+  const [selectedCommitIndex, setSelectedCommitIndex] = useState<number | null>(null);
+
+  const selectedCommitHash =
+    selectedCommitIndex !== null ? (commits[selectedCommitIndex]?.hash ?? null) : null;
+
   const filesParams =
     reviewData != null
       ? { base: reviewData.session.baseRef, head: reviewData.session.headRef }
@@ -109,8 +118,15 @@ export function SessionDetailPage() {
 
   const diffParams = filesParams;
 
-  const { files, diffHashes } = useFiles(filesParams);
-  const { diff, loading: diffLoading, error: diffError } = useDiff(diffParams);
+  const { files, diffHashes } = useFiles(
+    selectedCommitHash != null ? null : filesParams,
+    selectedCommitHash,
+  );
+  const {
+    diff,
+    loading: diffLoading,
+    error: diffError,
+  } = useDiff(selectedCommitHash != null ? null : diffParams, selectedCommitHash);
 
   const filePaths = files.map((f) => f.path);
 
@@ -200,6 +216,25 @@ export function SessionDetailPage() {
     }
   }, [activeLine, focusedLine, focusedFilePath, clearLineFocus, clearFocus]);
 
+  const handlePrevCommit = useCallback((): void => {
+    if (commits.length === 0) return;
+    setSelectedCommitIndex((prev) => {
+      if (prev === null) return commits.length - 1;
+      if (prev > 0) return prev - 1;
+      return prev;
+    });
+  }, [commits.length]);
+
+  const handleNextCommit = useCallback((): void => {
+    if (commits.length === 0) return;
+    setSelectedCommitIndex((prev) => {
+      if (prev === null) return 0;
+      if (prev < commits.length - 1) return prev + 1;
+      // Past last commit, go back to "all changes"
+      return null;
+    });
+  }, [commits.length]);
+
   const handleToggleHelp = useCallback((): void => {
     setIsHelpOpen((prev) => !prev);
   }, []);
@@ -218,6 +253,8 @@ export function SessionDetailPage() {
       { key: 'j', description: 'Focus next diff line', handler: focusLineNext },
       { key: 'k', description: 'Focus previous diff line', handler: focusLinePrev },
       { key: 'c', description: 'Comment on focused line', handler: handleOpenCommentOnFocusedLine },
+      { key: '[', description: 'Previous commit', handler: handlePrevCommit },
+      { key: ']', description: 'Next commit', handler: handleNextCommit },
       { key: 'Escape', description: 'Dismiss / clear focus', handler: handleEscape },
       { key: '?', description: 'Show keyboard shortcuts', handler: handleToggleHelp },
     ],
@@ -464,6 +501,14 @@ export function SessionDetailPage() {
           />
         </div>
       </div>
+
+      {commits.length > 0 && (
+        <CommitSelector
+          commits={commits}
+          selectedIndex={selectedCommitIndex}
+          onSelect={setSelectedCommitIndex}
+        />
+      )}
 
       <div className="review-layout">
         {files.length > 0 && (

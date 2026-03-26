@@ -8,6 +8,7 @@ import {
   getUncommittedChangedFiles,
   getFileDiffHashes,
 } from '../git/diff.js';
+import { getCommitList, getCommitDiffText, getCommitChangedFiles } from '../git/commits.js';
 import {
   listReviewNotes,
   readReviewNote,
@@ -143,6 +144,64 @@ export function createReviewRouter(git: SimpleGit): Router {
         return;
       }
       res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Get commits for a session's base..head range
+  router.get('/sessions/:commitSha/commits', async (req, res) => {
+    try {
+      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
+        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
+        return;
+      }
+
+      const data = await readReviewNote(git, req.params.commitSha);
+      if (!data) {
+        res.status(404).json({ error: 'Review session not found' });
+        return;
+      }
+
+      const commits = await getCommitList(git, data.session.baseCommit, data.session.headCommit);
+      res.json({ commits });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Get diff for a single commit
+  router.get('/commits/:commitHash/diff', async (req, res) => {
+    try {
+      if (!COMMIT_SHA_RE.test(req.params.commitHash)) {
+        res
+          .status(400)
+          .json({ error: 'Invalid commitHash: must be 4–40 lowercase hex characters' });
+        return;
+      }
+
+      const diff = await getCommitDiffText(git, req.params.commitHash);
+      res.json({ diff });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Get changed files for a single commit
+  router.get('/commits/:commitHash/files', async (req, res) => {
+    try {
+      if (!COMMIT_SHA_RE.test(req.params.commitHash)) {
+        res
+          .status(400)
+          .json({ error: 'Invalid commitHash: must be 4–40 lowercase hex characters' });
+        return;
+      }
+
+      const files = await getCommitChangedFiles(git, req.params.commitHash);
+      const diffText = await getCommitDiffText(git, req.params.commitHash);
+      const diffHashes = getFileDiffHashes(diffText);
+
+      res.json({ files, diffHashes });
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }

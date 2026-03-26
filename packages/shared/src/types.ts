@@ -52,3 +52,11 @@ export interface DiffFile {
   deletions: number;
   oldPath?: string;
 }
+
+export interface CommitInfo {
+  hash: string;
+  shortHash: string;
+  message: string;
+  author: string;
+  date: string;
+}

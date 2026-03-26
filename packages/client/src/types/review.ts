@@ -2,6 +2,7 @@ import type { ReviewComment, ReviewStatus, ReviewData, DiffFile } from '@git-rev
 
 export type {
   AutoMarkRule,
+  CommitInfo,
   ReviewComment,
   ReviewStatus,
   ReviewSession,
@@ -98,6 +99,17 @@ export interface AutoMarkRulesResponse {
 export interface AutoMarkApplyResponse {
   autoMarked: ViewedFile[];
 }
+
+// GET /api/sessions/:commitSha/commits
+export interface CommitsResponse {
+  commits: CommitInfo[];
+}
+
+// GET /api/commits/:commitHash/diff
+export type CommitDiffResponse = DiffResponse;
+
+// GET /api/commits/:commitHash/files
+export type CommitFilesResponse = FilesResponse;
 
 // Client-only UI types (not API types)
 
