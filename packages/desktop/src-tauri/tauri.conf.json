@@ -5,7 +5,7 @@
   "identifier": "com.git-reviewer.app",
   "build": {
     "frontendDist": "../../client/dist",
-    "devUrl": "http://localhost:3847",
+    "devUrl": "http://localhost:5173",
     "beforeDevCommand": "",
     "beforeBuildCommand": ""
   },

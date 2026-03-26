@@ -19,5 +19,9 @@ packages/client/dist/
 packages/server/dist/
 packages/server/public/
 
+# Tauri / Rust
+packages/desktop/src-tauri/target/
+packages/desktop/src-tauri/gen/
+
 # Ephemeral task planning docs
 wiki/
