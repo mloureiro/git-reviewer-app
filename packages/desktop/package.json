@@ -1,0 +1,14 @@
+{
+  "name": "@git-reviewer/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @git-reviewer/server dev & sleep 2 && cargo tauri dev",
+    "build": "pnpm --filter @git-reviewer/client build && cargo tauri build",
+    "tauri": "cargo tauri"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

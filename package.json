@@ -14,6 +14,8 @@
     "format": "prettier --write \"packages/*/src/**/*.{ts,tsx,json,css}\"",
     "format:check": "prettier --check \"packages/*/src/**/*.{ts,tsx,json,css}\"",
     "typecheck": "tsc --build",
+    "desktop:dev": "pnpm --filter @git-reviewer/desktop dev",
+    "desktop:build": "pnpm build && pnpm --filter @git-reviewer/desktop build",
     "prepare": "husky"
   },
   "engines": {
