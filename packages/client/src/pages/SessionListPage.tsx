@@ -1,10 +1,52 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '../components/StatusBadge';
 import { useSessions } from '../hooks/useSessions';
 
 function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+}
+
+function useRepoCheck() {
+  const [repoPath, setRepoPath] = useState<string | null>(null);
+  const [checking, setChecking] = useState(isTauri());
+  const [needsRepo, setNeedsRepo] = useState(false);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    (async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const result = (await invoke('get_current_repo')) as string | null;
+        if (result) {
+          setRepoPath(result);
+        } else {
+          setNeedsRepo(true);
+        }
+      } catch {
+        setNeedsRepo(true);
+      } finally {
+        setChecking(false);
+      }
+    })();
+  }, []);
+
+  const selectRepo = useCallback(async () => {
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog');
+      const selected = await open({ directory: true, title: 'Select a Git Repository' });
+      if (!selected) return;
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('select_repository', { path: selected });
+      setRepoPath(selected);
+      setNeedsRepo(false);
+      window.location.reload();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+    }
+  }, []);
+
+  return { repoPath, checking, needsRepo, selectRepo };
 }
 
 function formatDate(iso: string): string {
@@ -56,7 +98,24 @@ function InstallCliButton() {
 }
 
 export function SessionListPage() {
+  const { checking, needsRepo, selectRepo } = useRepoCheck();
   const { sessions, loading, error } = useSessions();
+
+  if (checking) {
+    return <div className="loading">Checking repository...</div>;
+  }
+
+  if (needsRepo) {
+    return (
+      <div className="session-list-empty">
+        <p className="session-list-empty__message">No git repository selected.</p>
+        <p>Open a git repository to start reviewing code.</p>
+        <button className="btn btn--primary" onClick={selectRepo}>
+          Open Repository
+        </button>
+      </div>
+    );
+  }
 
   if (loading) {
     return <div className="loading">Loading sessions...</div>;

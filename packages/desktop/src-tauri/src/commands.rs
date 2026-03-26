@@ -546,3 +546,37 @@ pub fn get_initial_session(
         .map_err(|e| format!("Failed to read initial session state: {}", e))?;
     Ok(guard.clone())
 }
+
+// ---------------------------------------------------------------------------
+// Repository selection
+// ---------------------------------------------------------------------------
+
+/// Check if the current working directory is inside a git repository.
+#[tauri::command]
+pub fn get_current_repo() -> Result<Option<String>, String> {
+    match git_ops::open_repo() {
+        Ok(repo) => {
+            let path = repo
+                .workdir()
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_default();
+            Ok(Some(path))
+        }
+        Err(_) => Ok(None),
+    }
+}
+
+/// Set the working directory to the given path (must be a git repository).
+#[tauri::command]
+pub fn select_repository(path: String) -> Result<String, String> {
+    let p = std::path::Path::new(&path);
+    if !p.exists() || !p.is_dir() {
+        return Err(format!("Path does not exist or is not a directory: {}", path));
+    }
+    // Verify it's a git repo
+    git2::Repository::discover(p)
+        .map_err(|e| format!("Not a git repository: {}", e))?;
+    std::env::set_current_dir(p)
+        .map_err(|e| format!("Failed to set working directory: {}", e))?;
+    Ok(path)
+}
