@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use crate::auto_mark::evaluate_auto_mark_rules;
 use crate::git_ops;
 use crate::types::*;
+use crate::InitialSession;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -435,4 +436,52 @@ pub fn fetch_commit_files(commit_hash: String) -> Result<FilesResponse, String> 
         files,
         diff_hashes: Some(diff_hashes),
     })
+}
+
+// ---------------------------------------------------------------------------
+// CLI support
+// ---------------------------------------------------------------------------
+
+/// Create a review session from CLI arguments (called during app setup, not a Tauri command).
+pub fn create_session_from_cli(base_ref: &str, head_ref: &str) -> Result<String, String> {
+    let repo = git_ops::open_repo()?;
+
+    let base_commit = git_ops::resolve_ref(&repo, base_ref)?;
+    let head_commit = git_ops::resolve_ref(&repo, head_ref)?;
+
+    let title = format!("{} -> {}", base_ref, head_ref);
+    let now = now_iso();
+
+    let data = ReviewData {
+        version: 1,
+        session: ReviewSession {
+            id: uuid::Uuid::new_v4().to_string(),
+            title,
+            base_ref: base_ref.to_string(),
+            head_ref: head_ref.to_string(),
+            base_commit,
+            head_commit: head_commit.clone(),
+            status: ReviewStatus::Pending,
+            created_at: now.clone(),
+            updated_at: now,
+        },
+        comments: Vec::new(),
+        viewed_files: None,
+        auto_mark_rules: None,
+    };
+
+    git_ops::write_review_note(&repo, &head_commit, &data)?;
+    Ok(head_commit)
+}
+
+/// Returns the commit SHA of the session auto-created from CLI args, if any.
+#[tauri::command]
+pub fn get_initial_session(
+    state: tauri::State<'_, InitialSession>,
+) -> Result<Option<String>, String> {
+    let guard = state
+        .0
+        .lock()
+        .map_err(|e| format!("Failed to read initial session state: {}", e))?;
+    Ok(guard.clone())
 }

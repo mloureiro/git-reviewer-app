@@ -23,6 +23,31 @@
       "csp": null
     }
   },
+  "plugins": {
+    "cli": {
+      "description": "Local git code review tool",
+      "args": [
+        {
+          "name": "base",
+          "short": "b",
+          "description": "Base ref (branch, tag, or commit)",
+          "takesValue": true
+        },
+        {
+          "name": "head",
+          "short": "H",
+          "description": "Head ref (branch, tag, or commit)",
+          "takesValue": true
+        },
+        {
+          "name": "repo",
+          "short": "r",
+          "description": "Path to git repository",
+          "takesValue": true
+        }
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",

@@ -155,4 +155,9 @@ export class TauriBackend implements Backend {
     const invoke = await getInvoke();
     return invoke('fetch_commit_files', { commitHash }) as Promise<CommitFilesResponse>;
   }
+
+  async getInitialSession(): Promise<string | null> {
+    const invoke = await getInvoke();
+    return invoke('get_initial_session') as Promise<string | null>;
+  }
 }

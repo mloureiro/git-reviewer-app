@@ -3,8 +3,11 @@ import { Layout } from './components/Layout';
 import { SessionListPage } from './pages/SessionListPage';
 import { SessionCreatePage } from './pages/SessionCreatePage';
 import { SessionDetailPage } from './pages/SessionDetailPage';
+import { useInitialSession } from './hooks/useInitialSession';
 
 export function App() {
+  useInitialSession();
+
   return (
     <Routes>
       <Route element={<Layout />}>
