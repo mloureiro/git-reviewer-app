@@ -349,6 +349,8 @@ body {
   display: inline-block;
   width: 32px;
   text-align: right;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 /* ── Hover "+" affordance ──────────────────────────────────────────────── */
