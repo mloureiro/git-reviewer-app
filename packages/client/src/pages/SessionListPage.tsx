@@ -8,7 +8,7 @@ function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 }
 
-function useRepoCheck() {
+function useRepoCheck(onRepoAdded?: () => void) {
   const [repoPath, setRepoPath] = useState<string | null>(null);
   const [checking, setChecking] = useState(isTauri());
   const [needsRepo, setNeedsRepo] = useState(false);
@@ -38,14 +38,14 @@ function useRepoCheck() {
       const selected = await open({ directory: true, title: 'Select a Git Repository' });
       if (!selected) return;
       const { invoke } = await import('@tauri-apps/api/core');
-      await invoke('select_repository', { path: selected });
+      await invoke('register_repo', { path: selected });
       setRepoPath(selected);
       setNeedsRepo(false);
-      window.location.reload();
+      onRepoAdded?.();
     } catch (err) {
       alert(err instanceof Error ? err.message : String(err));
     }
-  }, []);
+  }, [onRepoAdded]);
 
   return { repoPath, checking, needsRepo, selectRepo };
 }
@@ -165,8 +165,8 @@ function SessionGroups({ sessions }: { sessions: ReviewData[] }) {
 }
 
 export function SessionListPage() {
-  const { checking, needsRepo, selectRepo } = useRepoCheck();
-  const { sessions, loading, error } = useSessions();
+  const { sessions, loading, error, refetch } = useSessions();
+  const { checking, needsRepo, selectRepo } = useRepoCheck(refetch);
 
   if (checking) {
     return <div className="loading">Checking repository...</div>;
@@ -211,6 +211,11 @@ export function SessionListPage() {
         <h1 className="session-list__title">Review Sessions</h1>
         <div className="session-list__actions">
           <InstallCliButton />
+          {isTauri() && (
+            <button className="btn btn--secondary" onClick={selectRepo}>
+              Add Repository
+            </button>
+          )}
           <Link to="/new" className="btn btn--primary">
             New Review
           </Link>

@@ -41,7 +41,12 @@ describe('App', () => {
   });
 
   it('shows a loading indicator while sessions are being fetched', () => {
-    mockUseSessions.mockReturnValue({ sessions: null, loading: true, error: null });
+    mockUseSessions.mockReturnValue({
+      sessions: null,
+      loading: true,
+      error: null,
+      refetch: vi.fn(),
+    });
 
     renderApp();
 
@@ -53,6 +58,7 @@ describe('App', () => {
       sessions: null,
       loading: false,
       error: 'Network error',
+      refetch: vi.fn(),
     });
 
     renderApp();
@@ -61,7 +67,12 @@ describe('App', () => {
   });
 
   it('shows an empty state message when there are no sessions', () => {
-    mockUseSessions.mockReturnValue({ sessions: [], loading: false, error: null });
+    mockUseSessions.mockReturnValue({
+      sessions: [],
+      loading: false,
+      error: null,
+      refetch: vi.fn(),
+    });
 
     renderApp();
 
@@ -74,6 +85,7 @@ describe('App', () => {
       sessions: [sampleSession],
       loading: false,
       error: null,
+      refetch: vi.fn(),
     });
 
     renderApp();
