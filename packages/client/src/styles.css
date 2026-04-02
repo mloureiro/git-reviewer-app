@@ -2017,6 +2017,40 @@ body {
   color: var(--color-text-muted);
 }
 
+/* ── Refresh Banner ────────────────────────────────────────────────────── */
+
+.refresh-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  background-color: var(--color-warning-bg-subtle);
+  border: 1px solid var(--color-warning-bg-muted);
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.refresh-banner__message {
+  flex: 1;
+  font-size: 0.8125rem;
+  color: var(--color-text-primary);
+}
+
+.refresh-banner__message code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.75rem;
+  background-color: var(--color-neutral-bg-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.refresh-banner__dismiss {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-default);
+}
+
 /* ── Search Bar ────────────────────────────────────────────────────────── */
 
 .search-bar {

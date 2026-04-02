@@ -9,11 +9,13 @@ import { FileTree } from '../components/FileTree';
 import { InlineCommentForm } from '../components/InlineCommentForm';
 import { ReviewActions } from '../components/ReviewActions';
 import { ReviewSummaryBar } from '../components/ReviewSummaryBar';
+import { RefreshBanner } from '../components/RefreshBanner';
 import { SearchBar } from '../components/SearchBar';
 import { ShortcutsHelpModal } from '../components/ShortcutsHelpModal';
 import { CommitSelector } from '../components/CommitSelector';
 import { StatusBadge } from '../components/StatusBadge';
 import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
+import { useChangeDetection } from '../hooks/useChangeDetection';
 import { useCommits } from '../hooks/useCommits';
 import { useDiff } from '../hooks/useDiff';
 import { useDiffSearch } from '../hooks/useDiffSearch';
@@ -113,6 +115,22 @@ export function SessionDetailPage() {
   const selectedCommitHash =
     selectedCommitIndex !== null ? (commits[selectedCommitIndex]?.hash ?? null) : null;
 
+  const isCommittedMode = reviewData != null && reviewData.session.headRef !== 'working tree';
+
+  const {
+    hasChanges: hasNewCommits,
+    changedRefs,
+    revision,
+    refresh: refreshData,
+    dismiss: dismissBanner,
+  } = useChangeDetection({
+    baseRef: reviewData?.session.baseRef ?? '',
+    headRef: reviewData?.session.headRef ?? '',
+    baseCommit: reviewData?.session.baseCommit ?? '',
+    headCommit: reviewData?.session.headCommit ?? '',
+    enabled: isCommittedMode,
+  });
+
   const filesParams =
     reviewData != null
       ? { base: reviewData.session.baseRef, head: reviewData.session.headRef }
@@ -123,12 +141,13 @@ export function SessionDetailPage() {
   const { files, diffHashes } = useFiles(
     selectedCommitHash != null ? null : filesParams,
     selectedCommitHash,
+    revision,
   );
   const {
     diff,
     loading: diffLoading,
     error: diffError,
-  } = useDiff(selectedCommitHash != null ? null : diffParams, selectedCommitHash);
+  } = useDiff(selectedCommitHash != null ? null : diffParams, selectedCommitHash, revision);
 
   const filePaths = files.map((f) => f.path);
 
@@ -583,6 +602,14 @@ export function SessionDetailPage() {
           />
         </div>
       </div>
+
+      {hasNewCommits && (
+        <RefreshBanner
+          changedRefs={changedRefs}
+          onRefresh={refreshData}
+          onDismiss={dismissBanner}
+        />
+      )}
 
       {commits.length > 0 && (
         <CommitSelector
