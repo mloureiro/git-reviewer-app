@@ -31,8 +31,11 @@
   --color-success-bg-subtle: rgba(35, 134, 54, 0.15);
   --color-success-bg-muted: rgba(35, 134, 54, 0.2);
   --color-success-border: rgba(35, 134, 54, 0.4);
-  /* diff2html uses a slightly different green rgb for insertion rows */
-  --color-diff-ins-bg: rgba(46, 160, 67, 0.15);
+  /* Diff — insertion (green) and deletion (blue-violet for color-blind accessibility) */
+  --color-diff-ins-bg: rgba(46, 160, 67, 0.2);
+  --color-diff-ins-prefix: #3fb950;
+  --color-diff-del-bg: rgba(120, 130, 255, 0.12);
+  --color-diff-del-prefix: #8b8fff;
 
   /* Danger — red */
   --color-danger: #f85149;
@@ -100,8 +103,11 @@
   --color-success-bg-subtle: rgba(31, 136, 61, 0.1);
   --color-success-bg-muted: rgba(31, 136, 61, 0.15);
   --color-success-border: rgba(31, 136, 61, 0.35);
-  /* diff2html uses a slightly different green rgb for insertion rows */
-  --color-diff-ins-bg: rgba(31, 136, 61, 0.1);
+  /* Diff — insertion (green) and deletion (blue-violet for color-blind accessibility) */
+  --color-diff-ins-bg: rgba(31, 136, 61, 0.14);
+  --color-diff-ins-prefix: #1a7f37;
+  --color-diff-del-bg: rgba(100, 100, 220, 0.08);
+  --color-diff-del-prefix: #5555cc;
 
   /* Danger — red */
   --color-danger: #cf222e;
@@ -424,7 +430,7 @@ body {
   white-space: pre;
 }
 
-/* Row type backgrounds (dark theme) */
+/* Row type backgrounds — uses blue-violet for deletions (color-blind friendly) */
 .diff-file-section .d2h-ins,
 .diff-file-section .d2h-auto-color-scheme .d2h-ins,
 .diff-file-section .d2h-dark-color-scheme .d2h-ins {
@@ -432,17 +438,17 @@ body {
 }
 
 .diff-file-section .d2h-ins .d2h-code-line-prefix {
-  color: var(--color-success);
+  color: var(--color-diff-ins-prefix);
 }
 
 .diff-file-section .d2h-del,
 .diff-file-section .d2h-auto-color-scheme .d2h-del,
 .diff-file-section .d2h-dark-color-scheme .d2h-del {
-  background-color: var(--color-danger-bg-faint);
+  background-color: var(--color-diff-del-bg);
 }
 
 .diff-file-section .d2h-del .d2h-code-line-prefix {
-  color: var(--color-danger);
+  color: var(--color-diff-del-prefix);
 }
 
 .diff-file-section .d2h-info {
