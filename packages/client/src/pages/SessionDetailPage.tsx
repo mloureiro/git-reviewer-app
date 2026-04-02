@@ -257,7 +257,6 @@ export function SessionDetailPage() {
     isSearchOpen,
     openSearch,
     closeSearch,
-    query: searchQuery,
     setQuery: setSearchQuery,
     matchCount: searchMatchCount,
     currentMatchIndex: searchCurrentIndex,
@@ -664,7 +663,6 @@ export function SessionDetailPage() {
 
       <SearchBar
         isOpen={isSearchOpen}
-        query={searchQuery}
         onQueryChange={setSearchQuery}
         matchCount={searchMatchCount}
         currentMatchIndex={searchCurrentIndex}

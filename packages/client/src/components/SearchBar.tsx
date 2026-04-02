@@ -1,8 +1,9 @@
-import { useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+
+const DEBOUNCE_MS = 150;
 
 interface SearchBarProps {
   isOpen: boolean;
-  query: string;
   onQueryChange: (q: string) => void;
   matchCount: number;
   currentMatchIndex: number;
@@ -13,7 +14,6 @@ interface SearchBarProps {
 
 export function SearchBar({
   isOpen,
-  query,
   onQueryChange,
   matchCount,
   currentMatchIndex,
@@ -22,14 +22,33 @@ export function SearchBar({
   onClose,
 }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [localValue, setLocalValue] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // Autofocus input when opened
   useEffect(() => {
     if (isOpen) {
-      // Short delay so the element is rendered before focusing
       requestAnimationFrame(() => inputRef.current?.focus());
+    } else {
+      setLocalValue('');
     }
   }, [isOpen]);
+
+  // Debounce: push query to parent after typing settles
+  const handleChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      setLocalValue(val); // instant local update
+      clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        onQueryChange(val);
+      }, DEBOUNCE_MS);
+    },
+    [onQueryChange],
+  );
+
+  // Cleanup debounce on unmount
+  useEffect(() => () => clearTimeout(debounceRef.current), []);
 
   if (!isOpen) return null;
 
@@ -42,6 +61,9 @@ export function SearchBar({
       onPrev();
     } else if (e.key === 'Enter') {
       e.preventDefault();
+      // Flush any pending debounce before navigating
+      clearTimeout(debounceRef.current);
+      onQueryChange(localValue);
       onNext();
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -53,7 +75,7 @@ export function SearchBar({
   }
 
   const countLabel =
-    query.length === 0
+    localValue.length === 0
       ? ''
       : matchCount === 0
         ? 'No results'
@@ -65,9 +87,9 @@ export function SearchBar({
         ref={inputRef}
         className="search-bar__input"
         type="text"
-        placeholder="Find in diff…"
-        value={query}
-        onChange={(e) => onQueryChange(e.target.value)}
+        placeholder="Find in diff\u2026"
+        value={localValue}
+        onChange={handleChange}
         onKeyDown={handleKeyDown}
         aria-label="Search diff content"
         spellCheck={false}

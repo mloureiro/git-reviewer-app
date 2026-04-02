@@ -32,7 +32,7 @@ export interface UseDiffSearchReturn {
   isSearchOpen: boolean;
   openSearch: () => void;
   closeSearch: () => void;
-  query: string;
+  /** Called by the SearchBar when the debounced query settles. */
   setQuery: (q: string) => void;
   matchCount: number;
   currentMatchIndex: number;
@@ -46,7 +46,6 @@ export interface UseDiffSearchReturn {
 
 const MAX_HITS = 1_000;
 const HIGHLIGHT_WINDOW = 100;
-const DEBOUNCE_MS = 100;
 const INDEX_CHUNK_SIZE = 500; // rows per chunk when building index
 
 // ---------------------------------------------------------------------------
@@ -247,7 +246,6 @@ export function useDiffSearch({
   const indexReadyRef = useRef(false);
   const cancelIndexRef = useRef<(() => void) | null>(null);
   const pendingScrollRef = useRef<string | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // ---------- Pre-build index eagerly when diff DOM changes ----------
   useEffect(() => {
@@ -321,11 +319,9 @@ export function useDiffSearch({
     // Only react to collapsedFiles changes (not query/isSearchOpen to avoid loops)
   }, [collapsedFiles, containerRef]);
 
-  // ---------- Debounced search on query change ----------
+  // ---------- Search on query change (already debounced by SearchBar) ----------
   useEffect(() => {
     if (!isSearchOpen) return;
-
-    clearTimeout(debounceRef.current);
 
     if (query.length === 0) {
       setHits([]);
@@ -335,15 +331,11 @@ export function useDiffSearch({
       return;
     }
 
-    debounceRef.current = setTimeout(() => {
-      if (!indexReadyRef.current) return;
-      const result = searchIndex(indexRef.current, query);
-      setHits(result.hits);
-      setTotalCount(result.totalCount);
-      setCurrentIndex(0);
-    }, DEBOUNCE_MS);
-
-    return () => clearTimeout(debounceRef.current);
+    if (!indexReadyRef.current) return;
+    const result = searchIndex(indexRef.current, query);
+    setHits(result.hits);
+    setTotalCount(result.totalCount);
+    setCurrentIndex(0);
   }, [query, isSearchOpen]);
 
   // ---------- Apply windowed highlights ----------
@@ -422,7 +414,6 @@ export function useDiffSearch({
     isSearchOpen,
     openSearch,
     closeSearch,
-    query,
     setQuery,
     matchCount: totalCount,
     currentMatchIndex: currentIndex,
