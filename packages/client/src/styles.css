@@ -358,7 +358,7 @@ body {
 }
 
 .diff-file-section__header:hover {
-  background-color: var(--color-neutral-hover);
+  background-color: var(--color-bg-primary);
 }
 
 .diff-file-section__collapse-toggle {
