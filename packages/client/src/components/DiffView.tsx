@@ -279,6 +279,10 @@ export function DiffLineRow({
   const isClickable = onLineClick != null;
 
   function handleClick(): void {
+    // Don't open comment form when the user is selecting text to copy
+    const selection = window.getSelection();
+    if (selection != null && selection.toString().length > 0) return;
+
     if (onLineClick != null) {
       onLineClick({ file: filePath, line: commentLine, side: commentSide, content: lineContent });
     }
@@ -375,6 +379,9 @@ function renderSideCell(
   const isClickable = onLineClick != null;
 
   function handleClick(): void {
+    const selection = window.getSelection();
+    if (selection != null && selection.toString().length > 0) return;
+
     if (onLineClick != null && lineNum != null) {
       onLineClick({ file: filePath, line: lineNum, side, content: lineContent });
     }
