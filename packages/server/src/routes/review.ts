@@ -102,6 +102,38 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
     }
   });
 
+  // Resolve ref names to commit hashes (lightweight poll endpoint)
+  router.get('/resolve-refs', async (req, res) => {
+    try {
+      const [git] = registry.resolve(req.query.repo);
+      const refsParam = req.query.refs;
+      if (typeof refsParam !== 'string' || refsParam.trim().length === 0) {
+        res.status(400).json({ error: 'Missing required query param: refs (comma-separated)' });
+        return;
+      }
+
+      const refNames = refsParam
+        .split(',')
+        .map((r) => r.trim())
+        .filter(Boolean);
+      const refs: Record<string, string> = {};
+
+      for (const refName of refNames) {
+        if (!isValidRef(refName)) continue;
+        try {
+          const resolved = await git.revparse([refName]);
+          refs[refName] = resolved.trim();
+        } catch {
+          // Skip unresolvable refs
+        }
+      }
+
+      res.json({ refs });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
   // Get diff between base and head
   router.get('/diff', async (req, res) => {
     try {
