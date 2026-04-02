@@ -16,6 +16,7 @@
     "typecheck": "tsc --build",
     "desktop:dev": "pnpm --filter @git-reviewer/desktop dev",
     "desktop:build": "pnpm build && pnpm --filter @git-reviewer/desktop build",
+    "desktop:deploy": "pnpm desktop:build && cp -r 'packages/desktop/src-tauri/target/release/bundle/macos/Git Reviewer.app' /Applications/",
     "prepare": "husky"
   },
   "engines": {
