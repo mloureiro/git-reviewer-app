@@ -266,6 +266,7 @@ export function SessionDetailPage() {
   } = useDiffSearch({
     containerRef: diffContainerRef,
     collapsedFiles,
+    diffKey: diff ?? null,
     onExpandFile: (filePath) => {
       setCollapsedFiles((prev) => {
         if (!prev.has(filePath)) return prev;

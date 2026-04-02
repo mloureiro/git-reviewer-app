@@ -55,9 +55,11 @@ export function SearchBar({
   const countLabel =
     query.length === 0
       ? ''
-      : matchCount === 0
-        ? 'No results'
-        : `${currentMatchIndex + 1} of ${matchCount}`;
+      : query.length < 2
+        ? 'Type 2+ chars'
+        : matchCount === 0
+          ? 'No results'
+          : `${currentMatchIndex + 1} of ${matchCount}`;
 
   return (
     <div className="search-bar" role="search">

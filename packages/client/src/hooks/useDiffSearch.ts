@@ -7,6 +7,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 /** Plain-data entry built from a single diff line's DOM row. No DOM refs. */
 interface IndexEntry {
   text: string;
+  lowerText: string;
   filePath: string;
   lineNumber: number;
   side: string;
@@ -23,6 +24,8 @@ interface UseDiffSearchOptions {
   containerRef: React.RefObject<HTMLElement | null>;
   collapsedFiles: Set<string>;
   onExpandFile: (filePath: string) => void;
+  /** Opaque key that changes when the diff DOM content changes (e.g. diff text hash). */
+  diffKey: string | null;
 }
 
 export interface UseDiffSearchReturn {
@@ -38,44 +41,90 @@ export interface UseDiffSearchReturn {
 }
 
 // ---------------------------------------------------------------------------
-// Phase 1 — Build index (pure data extraction from DOM, runs rarely)
+// Constants
 // ---------------------------------------------------------------------------
 
-function buildIndex(container: HTMLElement): IndexEntry[] {
-  const entries: IndexEntry[] = [];
+const MIN_QUERY_LENGTH = 2;
+const MAX_HITS = 5_000;
+const HIGHLIGHT_WINDOW = 100;
+const DEBOUNCE_MS = 100;
+const INDEX_CHUNK_SIZE = 500; // rows per chunk when building index
+
+// ---------------------------------------------------------------------------
+// Phase 1 — Build index (chunked to avoid blocking the main thread)
+// ---------------------------------------------------------------------------
+
+function buildIndexChunked(
+  container: HTMLElement,
+  onDone: (entries: IndexEntry[]) => void,
+): () => void {
   const rows = container.querySelectorAll<HTMLElement>('tr[data-file-path]');
-  for (const row of rows) {
-    const ctn = row.querySelector('.d2h-code-line-ctn');
-    if (!ctn) continue;
-    entries.push({
-      text: ctn.textContent ?? '',
-      filePath: row.getAttribute('data-file-path') ?? '',
-      lineNumber: Number(row.getAttribute('data-line-number') ?? 0),
-      side: row.getAttribute('data-line-side') ?? 'right',
-    });
+  const entries: IndexEntry[] = [];
+  let offset = 0;
+  let cancelled = false;
+
+  function processChunk(): void {
+    if (cancelled) return;
+    const end = Math.min(offset + INDEX_CHUNK_SIZE, rows.length);
+    for (let i = offset; i < end; i += 1) {
+      const row = rows[i];
+      if (!row) continue;
+      const ctn = row.querySelector('.d2h-code-line-ctn');
+      if (!ctn) continue;
+      const text = ctn.textContent ?? '';
+      entries.push({
+        text,
+        lowerText: text.toLowerCase(),
+        filePath: row.getAttribute('data-file-path') ?? '',
+        lineNumber: Number(row.getAttribute('data-line-number') ?? 0),
+        side: row.getAttribute('data-line-side') ?? 'right',
+      });
+    }
+    offset = end;
+    if (offset < rows.length) {
+      setTimeout(processChunk, 0); // yield to event loop
+    } else {
+      onDone(entries);
+    }
   }
-  return entries;
+
+  // Start after a microtask so the caller can store the cancel fn
+  setTimeout(processChunk, 0);
+
+  return () => {
+    cancelled = true;
+  };
 }
 
 // ---------------------------------------------------------------------------
-// Phase 2 — Search (pure string matching, no DOM)
+// Phase 2 — Search (pure string matching, no DOM, capped results)
 // ---------------------------------------------------------------------------
 
-function searchIndex(index: IndexEntry[], query: string): SearchHit[] {
-  if (query.length === 0) return [];
+interface SearchResult {
+  hits: SearchHit[];
+  totalCount: number;
+}
+
+function searchIndex(index: IndexEntry[], query: string): SearchResult {
+  if (query.length < MIN_QUERY_LENGTH) return { hits: [], totalCount: 0 };
   const lower = query.toLowerCase();
   const hits: SearchHit[] = [];
+  let totalCount = 0;
+
   for (let i = 0; i < index.length; i += 1) {
     const entry = index[i];
     if (!entry) continue;
-    const text = entry.text.toLowerCase();
+    const text = entry.lowerText;
     let pos = 0;
     while ((pos = text.indexOf(lower, pos)) !== -1) {
-      hits.push({ entryIndex: i, charOffset: pos, length: query.length });
+      totalCount += 1;
+      if (hits.length < MAX_HITS) {
+        hits.push({ entryIndex: i, charOffset: pos, length: query.length });
+      }
       pos += query.length; // non-overlapping
     }
   }
-  return hits;
+  return { hits, totalCount };
 }
 
 // ---------------------------------------------------------------------------
@@ -84,7 +133,6 @@ function searchIndex(index: IndexEntry[], query: string): SearchHit[] {
 
 const HIGHLIGHT_ALL = 'search-match';
 const HIGHLIGHT_CURRENT = 'search-match-current';
-const HIGHLIGHT_WINDOW = 100; // max highlights rendered at a time
 
 function supportsHighlightAPI(): boolean {
   return typeof CSS !== 'undefined' && 'highlights' in CSS;
@@ -96,20 +144,12 @@ function clearHighlights(): void {
   CSS.highlights.delete(HIGHLIGHT_CURRENT);
 }
 
-/**
- * Resolve a DOM row matching the given index entry.
- * Uses data attributes for a targeted querySelector instead of scanning all rows.
- */
 function resolveRow(container: HTMLElement, entry: IndexEntry): HTMLElement | null {
   return container.querySelector<HTMLElement>(
     `tr[data-file-path="${CSS.escape(entry.filePath)}"][data-line-number="${entry.lineNumber}"][data-line-side="${entry.side}"]`,
   );
 }
 
-/**
- * Given a text node tree within a `.d2h-code-line-ctn` span, find the text
- * node and local offset for a character offset in the concatenated textContent.
- */
 function resolveTextPosition(
   ctnSpan: Element,
   charOffset: number,
@@ -196,85 +236,118 @@ export function useDiffSearch({
   containerRef,
   collapsedFiles,
   onExpandFile,
+  diffKey,
 }: UseDiffSearchOptions): UseDiffSearchReturn {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [hits, setHits] = useState<SearchHit[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const indexRef = useRef<IndexEntry[]>([]);
+  const indexReadyRef = useRef(false);
+  const cancelIndexRef = useRef<(() => void) | null>(null);
   const pendingScrollRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Rebuild the text index from the DOM (runs on mount, diff change, collapse toggle)
-  const rebuildIndex = useCallback(() => {
-    const container = containerRef.current;
-    if (!container) {
-      indexRef.current = [];
-      return;
-    }
-    indexRef.current = buildIndex(container);
-  }, [containerRef]);
+  // ---------- Pre-build index eagerly when diff DOM changes ----------
+  useEffect(() => {
+    // Cancel any in-progress indexing
+    cancelIndexRef.current?.();
+    indexRef.current = [];
+    indexReadyRef.current = false;
 
-  // Run search against the index (pure string ops, very fast)
-  const runSearch = useCallback((q: string) => {
-    if (q.length === 0) {
+    const container = containerRef.current;
+    if (!container || diffKey == null) return;
+
+    // Delay slightly so React finishes rendering the diff DOM
+    const raf = requestAnimationFrame(() => {
+      cancelIndexRef.current = buildIndexChunked(container, (entries) => {
+        indexRef.current = entries;
+        indexReadyRef.current = true;
+        cancelIndexRef.current = null;
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      cancelIndexRef.current?.();
+    };
+  }, [containerRef, diffKey]);
+
+  // ---------- Rebuild index when collapsed files change ----------
+  useEffect(() => {
+    cancelIndexRef.current?.();
+    indexReadyRef.current = false;
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const raf = requestAnimationFrame(() => {
+      cancelIndexRef.current = buildIndexChunked(container, (entries) => {
+        indexRef.current = entries;
+        indexReadyRef.current = true;
+        cancelIndexRef.current = null;
+
+        // Re-run search with current query
+        if (isSearchOpen && query.length >= MIN_QUERY_LENGTH) {
+          const result = searchIndex(entries, query);
+          setHits(result.hits);
+          setTotalCount(result.totalCount);
+
+          // Handle pending scroll after file expansion
+          const pendingFile = pendingScrollRef.current;
+          if (pendingFile) {
+            pendingScrollRef.current = null;
+            const targetIdx = result.hits.findIndex(
+              (h) => entries[h.entryIndex]?.filePath === pendingFile,
+            );
+            if (targetIdx >= 0) {
+              setCurrentIndex(targetIdx);
+              return;
+            }
+          }
+
+          setCurrentIndex((prev) =>
+            result.hits.length === 0 ? 0 : Math.min(prev, result.hits.length - 1),
+          );
+        }
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      cancelIndexRef.current?.();
+    };
+    // Only react to collapsedFiles changes (not query/isSearchOpen to avoid loops)
+  }, [collapsedFiles, containerRef]);
+
+  // ---------- Debounced search on query change ----------
+  useEffect(() => {
+    if (!isSearchOpen) return;
+
+    clearTimeout(debounceRef.current);
+
+    if (query.length < MIN_QUERY_LENGTH) {
       setHits([]);
+      setTotalCount(0);
       setCurrentIndex(0);
       clearHighlights();
       return;
     }
-    const found = searchIndex(indexRef.current, q);
-    setHits(found);
-    setCurrentIndex((prev) => (found.length === 0 ? 0 : Math.min(prev, found.length - 1)));
-  }, []);
 
-  // Rebuild index when collapsed files change (DOM structure changed)
-  useEffect(() => {
-    if (!isSearchOpen) return;
-    const id = requestAnimationFrame(() => {
-      rebuildIndex();
-
-      // Re-run search with current query
-      if (query.length > 0) {
-        const found = searchIndex(indexRef.current, query);
-        setHits(found);
-
-        // Handle pending scroll after file expansion
-        const pendingFile = pendingScrollRef.current;
-        if (pendingFile) {
-          pendingScrollRef.current = null;
-          const entry = indexRef.current;
-          const targetIdx = found.findIndex((h) => entry[h.entryIndex]?.filePath === pendingFile);
-          if (targetIdx >= 0) {
-            setCurrentIndex(targetIdx);
-            return;
-          }
-        }
-
-        setCurrentIndex((prev) => (found.length === 0 ? 0 : Math.min(prev, found.length - 1)));
-      }
-    });
-    return () => cancelAnimationFrame(id);
-  }, [collapsedFiles, isSearchOpen, query, rebuildIndex]);
-
-  // Debounced search on query change
-  useEffect(() => {
-    if (!isSearchOpen) return;
-
-    // Rebuild index on first search or if it's empty
-    if (indexRef.current.length === 0) {
-      rebuildIndex();
-    }
-
-    clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      runSearch(query);
-    }, 100);
-    return () => clearTimeout(debounceRef.current);
-  }, [query, isSearchOpen, rebuildIndex, runSearch]);
+      if (!indexReadyRef.current) return;
+      const result = searchIndex(indexRef.current, query);
+      setHits(result.hits);
+      setTotalCount(result.totalCount);
+      setCurrentIndex(0);
+    }, DEBOUNCE_MS);
 
-  // Apply windowed highlights when hits or currentIndex change
+    return () => clearTimeout(debounceRef.current);
+  }, [query, isSearchOpen]);
+
+  // ---------- Apply windowed highlights ----------
   useEffect(() => {
     const container = containerRef.current;
     if (!container || hits.length === 0) {
@@ -284,7 +357,7 @@ export function useDiffSearch({
     applyWindowedHighlights(container, indexRef.current, hits, currentIndex);
   }, [containerRef, hits, currentIndex]);
 
-  // Scroll current match into view
+  // ---------- Scroll current match into view ----------
   useEffect(() => {
     const container = containerRef.current;
     if (!container || hits.length === 0) return;
@@ -302,6 +375,8 @@ export function useDiffSearch({
     }
   }, [containerRef, hits, currentIndex]);
 
+  // ---------- Public API ----------
+
   const openSearch = useCallback(() => {
     setIsSearchOpen(true);
   }, []);
@@ -310,6 +385,7 @@ export function useDiffSearch({
     setIsSearchOpen(false);
     setQuery('');
     setHits([]);
+    setTotalCount(0);
     setCurrentIndex(0);
     clearHighlights();
   }, []);
@@ -349,7 +425,7 @@ export function useDiffSearch({
     closeSearch,
     query,
     setQuery,
-    matchCount: hits.length,
+    matchCount: totalCount,
     currentMatchIndex: currentIndex,
     goToNext,
     goToPrev,
