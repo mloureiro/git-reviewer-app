@@ -65,7 +65,7 @@ export function SearchBar({
         ref={inputRef}
         className="search-bar__input"
         type="text"
-        placeholder="Find in diff\u2026"
+        placeholder="Find in diff…"
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         onKeyDown={handleKeyDown}
