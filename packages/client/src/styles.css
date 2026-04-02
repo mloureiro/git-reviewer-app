@@ -201,8 +201,59 @@ body {
   color: var(--color-text-primary);
 }
 
-.theme-toggle {
+.zoom-controls {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.zoom-controls__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 0.875rem;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+  cursor: pointer;
+}
+
+.zoom-controls__btn:hover {
+  background-color: var(--color-neutral-hover);
+  color: var(--color-text-primary);
+}
+
+.zoom-controls__level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  height: 28px;
+  padding: 0 4px;
+  font-size: 0.6875rem;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  background: transparent;
+  color: var(--color-text-muted);
+  border: none;
+  border-left: 1px solid var(--color-border-default);
+  border-right: 1px solid var(--color-border-default);
+  cursor: pointer;
+}
+
+.zoom-controls__level:hover {
+  background-color: var(--color-neutral-hover);
+  color: var(--color-text-primary);
+}
+
+.theme-toggle {
+  margin-left: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
