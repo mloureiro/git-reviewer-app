@@ -34,15 +34,15 @@ import type {
 } from '../types/review';
 
 /** Stable key for grouping comments by file + line. */
-function commentKey(file: string, line: number): string {
-  return `${file}:${line}`;
+function commentKey(file: string, line: number, side: 'left' | 'right'): string {
+  return `${file}:${line}:${side}`;
 }
 
-/** Build a map from `file:line` to the list of comments on that line. */
+/** Build a map from `file:line:side` to the list of comments on that line. */
 function groupCommentsByLine(comments: ReviewComment[]): Map<string, ReviewComment[]> {
   const map = new Map<string, ReviewComment[]>();
   for (const comment of comments) {
-    const key = commentKey(comment.file, comment.line);
+    const key = commentKey(comment.file, comment.line, comment.side);
     const existing = map.get(key);
     if (existing != null) {
       existing.push(comment);
@@ -343,7 +343,7 @@ export function SessionDetailPage() {
   /** Returns true if any comment exists on the given diff line. */
   const hasCommentOnLine = useCallback(
     (lineData: DiffLineData): boolean => {
-      const key = commentKey(lineData.file, lineData.line);
+      const key = commentKey(lineData.file, lineData.line, lineData.side);
       const lineComments = commentsByLine.get(key);
       return lineComments != null && lineComments.length > 0;
     },
@@ -440,7 +440,7 @@ export function SessionDetailPage() {
 
   const renderAfterLine = useCallback(
     (lineData: DiffLineData, colSpan?: number): React.ReactNode => {
-      const key = commentKey(lineData.file, lineData.line);
+      const key = commentKey(lineData.file, lineData.line, lineData.side);
       const lineComments = commentsByLine.get(key);
       const isActiveLine =
         activeLine != null &&
