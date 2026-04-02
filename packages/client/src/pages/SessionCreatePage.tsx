@@ -1,7 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createSession, fetchRefs } from '../api/reviews';
+import { createSession, fetchRefs, fetchRepos } from '../api/reviews';
 import { ApiError } from '../api/client';
+
+function repoDisplayName(repoPath: string): string {
+  if (!repoPath) return 'Unknown';
+  const segments = repoPath.replace(/\/+$/, '').split('/');
+  return segments[segments.length - 1] || repoPath;
+}
 
 export function SessionCreatePage() {
   const navigate = useNavigate();
@@ -11,12 +17,33 @@ export function SessionCreatePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [repos, setRepos] = useState<string[]>([]);
+  const [selectedRepo, setSelectedRepo] = useState('');
   const [branches, setBranches] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [currentBranch, setCurrentBranch] = useState('');
 
   useEffect(() => {
-    fetchRefs()
+    fetchRepos()
+      .then((data) => {
+        setRepos(data.repos);
+        if (data.repos.length > 0 && !selectedRepo) {
+          setSelectedRepo(data.repos[0] ?? '');
+        }
+      })
+      .catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!selectedRepo && repos.length === 0) return;
+
+    setBranches([]);
+    setTags([]);
+    setCurrentBranch('');
+    setBaseRef('');
+    setHeadRef('');
+
+    const repo = selectedRepo || undefined;
+    fetchRefs(repo)
       .then((data) => {
         setBranches(data.branches);
         setTags(data.tags);
@@ -28,15 +55,15 @@ export function SessionCreatePage() {
       .catch(() => {
         // Refs unavailable — user can still type manually
       });
-  }, []);
-
+  }, [selectedRepo]);
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
 
     try {
-      const reviewData = await createSession({ title, baseRef, headRef });
+      const repo = selectedRepo || undefined;
+      const reviewData = await createSession({ title, baseRef, headRef }, repo);
       navigate(`/session/${reviewData.session.headCommit}`);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -60,6 +87,27 @@ export function SessionCreatePage() {
       </div>
 
       <form className="session-create__form" onSubmit={handleSubmit}>
+        {repos.length > 1 && (
+          <div className="form-field">
+            <label className="form-field__label" htmlFor="repo">
+              Repository
+            </label>
+            <select
+              id="repo"
+              className="form-field__input"
+              value={selectedRepo}
+              onChange={(e) => setSelectedRepo(e.target.value)}
+              disabled={submitting}
+            >
+              {repos.map((r) => (
+                <option key={r} value={r} title={r}>
+                  {repoDisplayName(r)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="form-field">
           <label className="form-field__label" htmlFor="title">
             Title
