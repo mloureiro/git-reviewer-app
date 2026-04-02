@@ -230,6 +230,8 @@ interface DiffFileProps {
   isViewed?: boolean;
   isChangedSinceViewed?: boolean;
   onToggleViewed?: (filePath: string, isViewed: boolean) => void;
+  isCollapsed?: boolean;
+  onToggleCollapsed?: () => void;
 }
 
 interface DiffViewProps {
@@ -246,6 +248,8 @@ interface DiffViewProps {
   viewedFiles?: Set<string>;
   changedSinceViewed?: Set<string>;
   onToggleViewed?: (filePath: string, isViewed: boolean) => void;
+  collapsedFiles?: Set<string>;
+  onToggleCollapsed?: (filePath: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -627,6 +631,8 @@ export function DiffFileComponent({
   isViewed = false,
   isChangedSinceViewed = false,
   onToggleViewed,
+  isCollapsed = false,
+  onToggleCollapsed,
 }: DiffFileProps) {
   const filePath = file.isRename === true ? file.newName : file.newName || file.oldName;
   const sectionId = filePathToId(filePath);
@@ -638,7 +644,16 @@ export function DiffFileComponent({
 
   return (
     <section key={sectionId} id={sectionId} className={sectionClass}>
-      <div className="diff-file-section__header">
+      <div
+        className="diff-file-section__header"
+        onClick={onToggleCollapsed}
+        role={onToggleCollapsed ? 'button' : undefined}
+      >
+        {onToggleCollapsed && (
+          <span className="diff-file-section__collapse-toggle">
+            {isCollapsed ? '\u25B6' : '\u25BC'}
+          </span>
+        )}
         <span className="diff-file-section__filename">{filePath}</span>
         <span className="diff-file-section__stats">
           {file.addedLines > 0 && (
@@ -652,7 +667,10 @@ export function DiffFileComponent({
           <button
             type="button"
             className={`diff-file-section__viewed-btn${isViewed ? ' diff-file-section__viewed-btn--viewed' : ''}${isChangedSinceViewed ? ' diff-file-section__viewed-btn--changed' : ''}`}
-            onClick={() => onToggleViewed(filePath, isViewed)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleViewed(filePath, isViewed);
+            }}
             title={
               isChangedSinceViewed
                 ? 'Changed since last viewed'
@@ -666,25 +684,27 @@ export function DiffFileComponent({
         )}
       </div>
 
-      <div
-        className={`d2h-file-diff ${schemeClass}${viewMode === 'side-by-side' ? ' d2h-file-diff--sbs' : ''}`}
-      >
-        <table className="d2h-diff-table">
-          {file.blocks.map((block, idx) => (
-            <DiffBlockComponent
-              key={`block-${idx}`}
-              block={block}
-              filePath={filePath}
-              language={language}
-              viewMode={viewMode}
-              focusedLine={focusedLine}
-              onLineClick={onLineClick}
-              renderAfterLine={renderAfterLine}
-              hasCommentOnLine={hasCommentOnLine}
-            />
-          ))}
-        </table>
-      </div>
+      {!isCollapsed && (
+        <div
+          className={`d2h-file-diff ${schemeClass}${viewMode === 'side-by-side' ? ' d2h-file-diff--sbs' : ''}`}
+        >
+          <table className="d2h-diff-table">
+            {file.blocks.map((block, idx) => (
+              <DiffBlockComponent
+                key={`block-${idx}`}
+                block={block}
+                filePath={filePath}
+                language={language}
+                viewMode={viewMode}
+                focusedLine={focusedLine}
+                onLineClick={onLineClick}
+                renderAfterLine={renderAfterLine}
+                hasCommentOnLine={hasCommentOnLine}
+              />
+            ))}
+          </table>
+        </div>
+      )}
     </section>
   );
 }
@@ -705,6 +725,8 @@ export function DiffView({
   viewedFiles,
   changedSinceViewed,
   onToggleViewed,
+  collapsedFiles,
+  onToggleCollapsed,
 }: DiffViewProps) {
   const diffFiles = parse(diffText);
 
@@ -732,6 +754,8 @@ export function DiffView({
             isViewed={viewedFiles != null && viewedFiles.has(filePath)}
             isChangedSinceViewed={changedSinceViewed != null && changedSinceViewed.has(filePath)}
             onToggleViewed={onToggleViewed}
+            isCollapsed={collapsedFiles != null && collapsedFiles.has(filePath)}
+            onToggleCollapsed={onToggleCollapsed ? () => onToggleCollapsed(filePath) : undefined}
           />
         );
       })}

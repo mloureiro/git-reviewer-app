@@ -255,6 +255,15 @@ export function SessionDetailPage() {
       { key: 'c', description: 'Comment on focused line', handler: handleOpenCommentOnFocusedLine },
       { key: '[', description: 'Previous commit', handler: handlePrevCommit },
       { key: ']', description: 'Next commit', handler: handleNextCommit },
+      {
+        key: 'e',
+        description: 'Expand/collapse focused file',
+        handler: () => {
+          if (focusedFilePath != null) {
+            handleToggleCollapsed(focusedFilePath);
+          }
+        },
+      },
       { key: 'Escape', description: 'Dismiss / clear focus', handler: handleEscape },
       { key: '?', description: 'Show keyboard shortcuts', handler: handleToggleHelp },
     ],
@@ -265,6 +274,14 @@ export function SessionDetailPage() {
 
   function handleFileClick(filePath: string): void {
     setActiveFile(filePath);
+
+    // Expand the file if it's collapsed so the user can see its diff
+    setCollapsedFiles((prev) => {
+      if (!prev.has(filePath)) return prev;
+      const next = new Set(prev);
+      next.delete(filePath);
+      return next;
+    });
 
     // Suppress observer-driven updates while the smooth scroll is in flight.
     suppressScrollUpdateRef.current = true;
@@ -374,6 +391,29 @@ export function SessionDetailPage() {
     },
     [markViewed, unmarkViewed],
   );
+
+  // Collapse/expand file diffs — viewed files start collapsed
+  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
+  const collapsedInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!collapsedInitializedRef.current && viewedFilesSet.size > 0) {
+      collapsedInitializedRef.current = true;
+      setCollapsedFiles(new Set(viewedFilesSet));
+    }
+  }, [viewedFilesSet]);
+
+  const handleToggleCollapsed = useCallback((filePath: string) => {
+    setCollapsedFiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(filePath)) {
+        next.delete(filePath);
+      } else {
+        next.add(filePath);
+      }
+      return next;
+    });
+  }, []);
 
   // Auto-mark rule management
   const handleAutoMarkRulesChange = useCallback(
@@ -542,6 +582,8 @@ export function SessionDetailPage() {
               viewedFiles={viewedFilesSet}
               changedSinceViewed={changedSinceViewedSet}
               onToggleViewed={handleToggleViewed}
+              collapsedFiles={collapsedFiles}
+              onToggleCollapsed={handleToggleCollapsed}
             />
           )}
           {!diffLoading && !diffError && diff == null && (

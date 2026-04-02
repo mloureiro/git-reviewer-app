@@ -291,9 +291,24 @@ body {
   background-color: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border-default);
   border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  user-select: none;
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+.diff-file-section__header:hover {
+  background-color: var(--color-neutral-hover);
+}
+
+.diff-file-section__collapse-toggle {
+  margin-right: 8px;
+  font-size: 0.625rem;
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
 }
 
 .diff-file-section__filename {
