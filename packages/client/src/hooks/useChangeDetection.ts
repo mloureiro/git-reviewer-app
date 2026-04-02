@@ -9,6 +9,7 @@ interface UseChangeDetectionOptions {
   baseCommit: string;
   headCommit: string;
   enabled: boolean;
+  repo?: string;
 }
 
 export interface UseChangeDetectionReturn {
@@ -25,6 +26,7 @@ export function useChangeDetection({
   baseCommit,
   headCommit,
   enabled,
+  repo,
 }: UseChangeDetectionOptions): UseChangeDetectionReturn {
   const [hasChanges, setHasChanges] = useState(false);
   const [changedRefs, setChangedRefs] = useState<string[]>([]);
@@ -62,7 +64,7 @@ export function useChangeDetection({
           const uniqueRefs = [...new Set(refsToResolve)];
           if (uniqueRefs.length === 0) return;
 
-          const result = await resolveRefs(uniqueRefs);
+          const result = await resolveRefs(uniqueRefs, repo);
           const changed: string[] = [];
           const known = knownCommitsRef.current;
 
@@ -85,7 +87,7 @@ export function useChangeDetection({
 
     startPolling();
     return () => clearInterval(timer);
-  }, [enabled, baseRef, headRef, hasChanges]);
+  }, [enabled, baseRef, headRef, hasChanges, repo]);
 
   return {
     hasChanges: hasChanges && !dismissed,

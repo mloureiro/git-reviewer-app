@@ -68,39 +68,41 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     };
   }, [commitSha]);
 
+  const repo = session?.session.repoPath;
+
   const handleUpdateStatus = useCallback(
     async (status: ReviewStatus): Promise<void> => {
-      const updatedSessionMeta = await updateSessionStatus(commitSha, { status });
+      const updatedSessionMeta = await updateSessionStatus(commitSha, { status }, repo);
       setSession((prev) => {
         if (prev === null) return prev;
         return { ...prev, session: updatedSessionMeta };
       });
     },
-    [commitSha],
+    [commitSha, repo],
   );
 
   const handleAddComment = useCallback(
     async (data: CreateCommentRequest): Promise<ReviewComment> => {
-      const comment = await postComment(commitSha, data);
+      const comment = await postComment(commitSha, data, repo);
       setSession((prev) => {
         if (prev === null) return prev;
         return { ...prev, comments: [...prev.comments, comment] };
       });
       return comment;
     },
-    [commitSha],
+    [commitSha, repo],
   );
 
   const handleResolveComment = useCallback(
     async (commentId: string, resolved: boolean): Promise<void> => {
-      const updatedComment = await patchComment(commitSha, commentId, { resolved });
+      const updatedComment = await patchComment(commitSha, commentId, { resolved }, repo);
       setSession((prev) => {
         if (prev === null) return prev;
         const comments = prev.comments.map((c) => (c.id === commentId ? updatedComment : c));
         return { ...prev, comments };
       });
     },
-    [commitSha],
+    [commitSha, repo],
   );
 
   const handleMarkViewed = useCallback(
@@ -124,7 +126,7 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
         return { ...prev, viewedFiles: next };
       });
 
-      const viewedFile = await markFileViewed(commitSha, path);
+      const viewedFile = await markFileViewed(commitSha, path, repo);
       // Update with server response (has correct diffHash)
       setSession((prev) => {
         if (prev === null) return prev;
@@ -134,7 +136,7 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
         return { ...prev, viewedFiles };
       });
     },
-    [commitSha],
+    [commitSha, repo],
   );
 
   const handleUnmarkViewed = useCallback(
@@ -148,15 +150,15 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
         };
       });
 
-      await unmarkFileViewed(commitSha, path);
+      await unmarkFileViewed(commitSha, path, repo);
     },
-    [commitSha],
+    [commitSha, repo],
   );
 
   const handleSetAutoMarkRules = useCallback(
     async (rules: AutoMarkRule[]): Promise<void> => {
       try {
-        const response = await updateAutoMarkRules(commitSha, rules);
+        const response = await updateAutoMarkRules(commitSha, rules, repo);
         // Re-fetch the full session to get the merged viewedFiles state
         setSession((prev) => {
           if (prev === null) return prev;
@@ -174,12 +176,12 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
         console.error('Failed to set auto-mark rules:', err);
       }
     },
-    [commitSha],
+    [commitSha, repo],
   );
 
   const handleReapplyAutoMarkRules = useCallback(async (): Promise<void> => {
     try {
-      const response = await applyAutoMarkRules(commitSha);
+      const response = await applyAutoMarkRules(commitSha, repo);
       setSession((prev) => {
         if (prev === null) return prev;
         const manuallyViewed = (prev.viewedFiles ?? []).filter((vf) => vf.autoMarkedBy == null);
@@ -193,7 +195,7 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     } catch (err) {
       console.error('Failed to re-apply auto-mark rules:', err);
     }
-  }, [commitSha]);
+  }, [commitSha, repo]);
 
   return {
     session,

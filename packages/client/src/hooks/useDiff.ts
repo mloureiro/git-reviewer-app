@@ -20,6 +20,7 @@ export function useDiff(
   params: DiffQueryParams | null,
   commitHash?: string | null,
   revision = 0,
+  repo?: string,
 ): UseDiffResult {
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -47,7 +48,7 @@ export function useDiff(
 
     const promise =
       commitKey != null
-        ? fetchCommitDiff(commitKey).then((r) => r.diff)
+        ? fetchCommitDiff(commitKey, repo).then((r) => r.diff)
         : fetchDiff(parsedParams as DiffQueryParams).then((r) => r.diff);
 
     promise
@@ -70,7 +71,7 @@ export function useDiff(
     return () => {
       cancelled = true;
     };
-  }, [paramsKey, commitKey, revision]);
+  }, [paramsKey, commitKey, revision, repo]);
 
   return { diff, loading, error };
 }

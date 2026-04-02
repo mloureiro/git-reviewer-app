@@ -21,6 +21,7 @@ export function useFiles(
   params: FilesQueryParams | null,
   commitHash?: string | null,
   revision = 0,
+  repo?: string,
 ): UseFilesResult {
   const [files, setFiles] = useState<DiffFile[]>([]);
   const [diffHashes, setDiffHashes] = useState<Record<string, string>>({});
@@ -50,7 +51,7 @@ export function useFiles(
 
     const promise =
       commitKey != null
-        ? fetchCommitFiles(commitKey)
+        ? fetchCommitFiles(commitKey, repo)
         : fetchFiles(parsedParams as FilesQueryParams);
 
     promise
@@ -74,7 +75,7 @@ export function useFiles(
     return () => {
       cancelled = true;
     };
-  }, [paramsKey, commitKey, revision]);
+  }, [paramsKey, commitKey, revision, repo]);
 
   return { files, diffHashes, loading, error };
 }

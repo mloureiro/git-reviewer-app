@@ -12,7 +12,7 @@ export interface UseCommitsResult {
  * Fetches the list of commits for a session's base..head range.
  * Pass an empty string or `null` to skip fetching.
  */
-export function useCommits(commitSha: string | null): UseCommitsResult {
+export function useCommits(commitSha: string | null, repo?: string): UseCommitsResult {
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +30,7 @@ export function useCommits(commitSha: string | null): UseCommitsResult {
     setLoading(true);
     setError(null);
 
-    fetchCommits(commitSha)
+    fetchCommits(commitSha, repo)
       .then((response) => {
         if (!cancelled) {
           setCommits(response.commits);
@@ -50,7 +50,7 @@ export function useCommits(commitSha: string | null): UseCommitsResult {
     return () => {
       cancelled = true;
     };
-  }, [commitSha]);
+  }, [commitSha, repo]);
 
   return { commits, loading, error };
 }
