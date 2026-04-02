@@ -108,8 +108,10 @@ export function SessionDetailPage() {
     reapplyAutoMarkRules,
   } = useReviewSession(commitSha ?? '');
 
+  const repoPath = reviewData?.session.repoPath;
+
   // Commit-by-commit navigation state
-  const { commits } = useCommits(commitSha ?? null);
+  const { commits } = useCommits(commitSha ?? null, repoPath);
   const [selectedCommitIndex, setSelectedCommitIndex] = useState<number | null>(null);
 
   const selectedCommitHash =
@@ -129,11 +131,12 @@ export function SessionDetailPage() {
     baseCommit: reviewData?.session.baseCommit ?? '',
     headCommit: reviewData?.session.headCommit ?? '',
     enabled: isCommittedMode,
+    repo: repoPath,
   });
 
   const filesParams =
     reviewData != null
-      ? { base: reviewData.session.baseRef, head: reviewData.session.headRef }
+      ? { base: reviewData.session.baseRef, head: reviewData.session.headRef, repo: repoPath }
       : null;
 
   const diffParams = filesParams;
@@ -142,12 +145,18 @@ export function SessionDetailPage() {
     selectedCommitHash != null ? null : filesParams,
     selectedCommitHash,
     revision,
+    repoPath,
   );
   const {
     diff,
     loading: diffLoading,
     error: diffError,
-  } = useDiff(selectedCommitHash != null ? null : diffParams, selectedCommitHash, revision);
+  } = useDiff(
+    selectedCommitHash != null ? null : diffParams,
+    selectedCommitHash,
+    revision,
+    repoPath,
+  );
 
   const filePaths = files.map((f) => f.path);
 
