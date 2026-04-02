@@ -1397,7 +1397,7 @@ body {
      horizontal scroll rather than wrapping.
      800 px is the practical minimum for a readable two-column layout. */
   min-width: max(100%, 800px);
-  table-layout: fixed;
+  width: 100%;
 }
 
 /* Thin vertical divider between left and right panes */
@@ -1424,8 +1424,6 @@ body {
    horizontally which is handled by the scrollable wrapper above. */
 .diff-file-section .d2h-diff-tr--sbs .d2h-code-line {
   white-space: pre;
-  overflow: hidden;
-  text-overflow: clip;
 }
 
 /* Empty half-row cells (when one side has more lines than the other) */
