@@ -36,6 +36,7 @@ export interface FilesQueryParams {
   base?: string;
   head?: string;
   uncommitted?: 'true' | 'false';
+  repo?: string;
 }
 
 export interface FilesResponse {
@@ -48,6 +49,7 @@ export interface DiffQueryParams {
   base?: string;
   head?: string;
   uncommitted?: 'true' | 'false';
+  repo?: string;
 }
 
 export interface DiffResponse {
@@ -123,6 +125,11 @@ export interface RefsResponse {
 // GET /api/sessions/:commitSha/commits
 export interface CommitsResponse {
   commits: CommitInfo[];
+}
+
+// GET /api/repos
+export interface ReposResponse {
+  repos: string[];
 }
 
 // GET /api/commits/:commitHash/diff
