@@ -4,12 +4,19 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 // Types
 // ---------------------------------------------------------------------------
 
-interface SearchMatch {
-  textNode: Text;
-  startOffset: number;
-  length: number;
+/** Plain-data entry built from a single diff line's DOM row. No DOM refs. */
+interface IndexEntry {
+  text: string;
   filePath: string;
-  row: HTMLElement;
+  lineNumber: number;
+  side: string;
+}
+
+/** A search hit referencing an entry in the index — no DOM refs. */
+interface SearchHit {
+  entryIndex: number;
+  charOffset: number;
+  length: number;
 }
 
 interface UseDiffSearchOptions {
@@ -31,11 +38,53 @@ export interface UseDiffSearchReturn {
 }
 
 // ---------------------------------------------------------------------------
-// Highlight helpers (CSS Custom Highlight API)
+// Phase 1 — Build index (pure data extraction from DOM, runs rarely)
+// ---------------------------------------------------------------------------
+
+function buildIndex(container: HTMLElement): IndexEntry[] {
+  const entries: IndexEntry[] = [];
+  const rows = container.querySelectorAll<HTMLElement>('tr[data-file-path]');
+  for (const row of rows) {
+    const ctn = row.querySelector('.d2h-code-line-ctn');
+    if (!ctn) continue;
+    entries.push({
+      text: ctn.textContent ?? '',
+      filePath: row.getAttribute('data-file-path') ?? '',
+      lineNumber: Number(row.getAttribute('data-line-number') ?? 0),
+      side: row.getAttribute('data-line-side') ?? 'right',
+    });
+  }
+  return entries;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2 — Search (pure string matching, no DOM)
+// ---------------------------------------------------------------------------
+
+function searchIndex(index: IndexEntry[], query: string): SearchHit[] {
+  if (query.length === 0) return [];
+  const lower = query.toLowerCase();
+  const hits: SearchHit[] = [];
+  for (let i = 0; i < index.length; i += 1) {
+    const entry = index[i];
+    if (!entry) continue;
+    const text = entry.text.toLowerCase();
+    let pos = 0;
+    while ((pos = text.indexOf(lower, pos)) !== -1) {
+      hits.push({ entryIndex: i, charOffset: pos, length: query.length });
+      pos += query.length; // non-overlapping
+    }
+  }
+  return hits;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — Highlight (lazy, windowed around current match)
 // ---------------------------------------------------------------------------
 
 const HIGHLIGHT_ALL = 'search-match';
 const HIGHLIGHT_CURRENT = 'search-match-current';
+const HIGHLIGHT_WINDOW = 100; // max highlights rendered at a time
 
 function supportsHighlightAPI(): boolean {
   return typeof CSS !== 'undefined' && 'highlights' in CSS;
@@ -47,21 +96,81 @@ function clearHighlights(): void {
   CSS.highlights.delete(HIGHLIGHT_CURRENT);
 }
 
-function applyHighlights(matches: SearchMatch[], currentIndex: number): void {
-  if (!supportsHighlightAPI() || matches.length === 0) {
+/**
+ * Resolve a DOM row matching the given index entry.
+ * Uses data attributes for a targeted querySelector instead of scanning all rows.
+ */
+function resolveRow(container: HTMLElement, entry: IndexEntry): HTMLElement | null {
+  return container.querySelector<HTMLElement>(
+    `tr[data-file-path="${CSS.escape(entry.filePath)}"][data-line-number="${entry.lineNumber}"][data-line-side="${entry.side}"]`,
+  );
+}
+
+/**
+ * Given a text node tree within a `.d2h-code-line-ctn` span, find the text
+ * node and local offset for a character offset in the concatenated textContent.
+ */
+function resolveTextPosition(
+  ctnSpan: Element,
+  charOffset: number,
+): { node: Text; offset: number } | null {
+  const walker = document.createTreeWalker(ctnSpan, NodeFilter.SHOW_TEXT);
+  let accumulated = 0;
+  let textNode: Text | null;
+  while ((textNode = walker.nextNode() as Text | null)) {
+    const len = textNode.textContent?.length ?? 0;
+    if (accumulated + len > charOffset) {
+      return { node: textNode, offset: charOffset - accumulated };
+    }
+    accumulated += len;
+  }
+  return null;
+}
+
+function applyWindowedHighlights(
+  container: HTMLElement,
+  index: IndexEntry[],
+  hits: SearchHit[],
+  currentIndex: number,
+): void {
+  if (!supportsHighlightAPI() || hits.length === 0) {
     clearHighlights();
     return;
   }
 
+  const halfWindow = Math.floor(HIGHLIGHT_WINDOW / 2);
+  const start = Math.max(0, currentIndex - halfWindow);
+  const end = Math.min(hits.length, currentIndex + halfWindow);
+
   const allRanges: Range[] = [];
-  for (const m of matches) {
+  let currentRange: Range | null = null;
+
+  for (let i = start; i < end; i += 1) {
+    const hit = hits[i];
+    if (!hit) continue;
+    const entry = index[hit.entryIndex];
+    if (!entry) continue;
+
+    const row = resolveRow(container, entry);
+    if (!row) continue;
+
+    const ctn = row.querySelector('.d2h-code-line-ctn');
+    if (!ctn) continue;
+
+    const startPos = resolveTextPosition(ctn, hit.charOffset);
+    const endPos = resolveTextPosition(ctn, hit.charOffset + hit.length);
+    if (!startPos || !endPos) continue;
+
     try {
       const range = document.createRange();
-      range.setStart(m.textNode, m.startOffset);
-      range.setEnd(m.textNode, m.startOffset + m.length);
+      range.setStart(startPos.node, startPos.offset);
+      range.setEnd(endPos.node, endPos.offset);
       allRanges.push(range);
+      if (i === currentIndex) {
+        currentRange = range;
+      }
     } catch {
-      // Text node may have been removed by React re-render
+      // Node may have been removed by React
     }
   }
 
@@ -72,58 +181,11 @@ function applyHighlights(matches: SearchMatch[], currentIndex: number): void {
 
   CSS.highlights.set(HIGHLIGHT_ALL, new Highlight(...allRanges));
 
-  const currentRange = allRanges[currentIndex];
   if (currentRange) {
     CSS.highlights.set(HIGHLIGHT_CURRENT, new Highlight(currentRange));
   } else {
     CSS.highlights.delete(HIGHLIGHT_CURRENT);
   }
-}
-
-// ---------------------------------------------------------------------------
-// Search engine
-// ---------------------------------------------------------------------------
-
-function findMatches(container: HTMLElement, query: string): SearchMatch[] {
-  if (query.length === 0) return [];
-
-  const lowerQuery = query.toLowerCase();
-  const results: SearchMatch[] = [];
-
-  // Query all code line content spans
-  const codeSpans = container.querySelectorAll('.d2h-code-line-ctn');
-
-  for (const span of codeSpans) {
-    // Find the parent <tr> and extract file path
-    const row = span.closest('tr');
-    if (!row) continue;
-    const filePath = row.getAttribute('data-file-path') ?? '';
-
-    // Walk text nodes within this span
-    const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
-    let textNode: Text | null;
-    while ((textNode = walker.nextNode() as Text | null)) {
-      const text = textNode.textContent ?? '';
-      const lowerText = text.toLowerCase();
-      let searchFrom = 0;
-
-      while (searchFrom < lowerText.length) {
-        const idx = lowerText.indexOf(lowerQuery, searchFrom);
-        if (idx === -1) break;
-
-        results.push({
-          textNode,
-          startOffset: idx,
-          length: query.length,
-          filePath,
-          row: row as HTMLElement,
-        });
-        searchFrom = idx + 1;
-      }
-    }
-  }
-
-  return results;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,86 +199,108 @@ export function useDiffSearch({
 }: UseDiffSearchOptions): UseDiffSearchReturn {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [matches, setMatches] = useState<SearchMatch[]>([]);
+  const [hits, setHits] = useState<SearchHit[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // Track pending expansion so we can scroll after re-render
+  const indexRef = useRef<IndexEntry[]>([]);
   const pendingScrollRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  // Re-index matches when query, collapsed state, or container content changes
-  const reindex = useCallback(() => {
+  // Rebuild the text index from the DOM (runs on mount, diff change, collapse toggle)
+  const rebuildIndex = useCallback(() => {
     const container = containerRef.current;
-    if (!container || query.length === 0) {
-      setMatches([]);
+    if (!container) {
+      indexRef.current = [];
+      return;
+    }
+    indexRef.current = buildIndex(container);
+  }, [containerRef]);
+
+  // Run search against the index (pure string ops, very fast)
+  const runSearch = useCallback((q: string) => {
+    if (q.length === 0) {
+      setHits([]);
       setCurrentIndex(0);
       clearHighlights();
       return;
     }
-
-    const found = findMatches(container, query);
-    setMatches(found);
+    const found = searchIndex(indexRef.current, q);
+    setHits(found);
     setCurrentIndex((prev) => (found.length === 0 ? 0 : Math.min(prev, found.length - 1)));
-    applyHighlights(found, found.length === 0 ? -1 : Math.min(0, found.length - 1));
-  }, [containerRef, query]);
+  }, []);
 
-  // Debounced re-index on query change
+  // Rebuild index when collapsed files change (DOM structure changed)
   useEffect(() => {
     if (!isSearchOpen) return;
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      reindex();
-    }, 150);
-    return () => clearTimeout(debounceRef.current);
-  }, [query, isSearchOpen, reindex]);
-
-  // Re-index when collapsed files change (file was expanded/collapsed)
-  useEffect(() => {
-    if (!isSearchOpen || query.length === 0) return;
-    // Short delay for React to render the expanded content
     const id = requestAnimationFrame(() => {
-      const container = containerRef.current;
-      if (!container) return;
+      rebuildIndex();
 
-      const found = findMatches(container, query);
-      setMatches(found);
+      // Re-run search with current query
+      if (query.length > 0) {
+        const found = searchIndex(indexRef.current, query);
+        setHits(found);
 
-      // If we were waiting to scroll to a match in an expanded file
-      const pendingFile = pendingScrollRef.current;
-      if (pendingFile) {
-        pendingScrollRef.current = null;
-        const targetIdx = found.findIndex((m) => m.filePath === pendingFile);
-        const target = found[targetIdx];
-        if (targetIdx >= 0 && target) {
-          setCurrentIndex(targetIdx);
-          applyHighlights(found, targetIdx);
-          target.row.scrollIntoView({ block: 'center', behavior: 'smooth' });
-          return;
+        // Handle pending scroll after file expansion
+        const pendingFile = pendingScrollRef.current;
+        if (pendingFile) {
+          pendingScrollRef.current = null;
+          const entry = indexRef.current;
+          const targetIdx = found.findIndex((h) => entry[h.entryIndex]?.filePath === pendingFile);
+          if (targetIdx >= 0) {
+            setCurrentIndex(targetIdx);
+            return;
+          }
         }
-      }
 
-      const idx = found.length === 0 ? 0 : Math.min(currentIndex, found.length - 1);
-      setCurrentIndex(idx);
-      applyHighlights(found, idx);
+        setCurrentIndex((prev) => (found.length === 0 ? 0 : Math.min(prev, found.length - 1)));
+      }
     });
     return () => cancelAnimationFrame(id);
-  }, [collapsedFiles, isSearchOpen, query, containerRef, currentIndex]);
+  }, [collapsedFiles, isSearchOpen, query, rebuildIndex]);
 
-  // Update highlights whenever currentIndex changes
+  // Debounced search on query change
   useEffect(() => {
-    applyHighlights(matches, currentIndex);
-  }, [matches, currentIndex]);
+    if (!isSearchOpen) return;
+
+    // Rebuild index on first search or if it's empty
+    if (indexRef.current.length === 0) {
+      rebuildIndex();
+    }
+
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      runSearch(query);
+    }, 100);
+    return () => clearTimeout(debounceRef.current);
+  }, [query, isSearchOpen, rebuildIndex, runSearch]);
+
+  // Apply windowed highlights when hits or currentIndex change
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || hits.length === 0) {
+      clearHighlights();
+      return;
+    }
+    applyWindowedHighlights(container, indexRef.current, hits, currentIndex);
+  }, [containerRef, hits, currentIndex]);
 
   // Scroll current match into view
   useEffect(() => {
-    const match = matches[currentIndex];
-    if (!match) return;
-    // Only scroll if the row is not already in view
-    const rect = match.row.getBoundingClientRect();
+    const container = containerRef.current;
+    if (!container || hits.length === 0) return;
+    const hit = hits[currentIndex];
+    if (!hit) return;
+    const entry = indexRef.current[hit.entryIndex];
+    if (!entry) return;
+
+    const row = resolveRow(container, entry);
+    if (!row) return;
+
+    const rect = row.getBoundingClientRect();
     if (rect.top < 0 || rect.bottom > window.innerHeight) {
-      match.row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      row.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior });
     }
-  }, [matches, currentIndex]);
+  }, [containerRef, hits, currentIndex]);
 
   const openSearch = useCallback(() => {
     setIsSearchOpen(true);
@@ -225,38 +309,39 @@ export function useDiffSearch({
   const closeSearch = useCallback(() => {
     setIsSearchOpen(false);
     setQuery('');
-    setMatches([]);
+    setHits([]);
     setCurrentIndex(0);
     clearHighlights();
   }, []);
 
   const navigateTo = useCallback(
     (index: number) => {
-      const match = matches[index];
-      if (!match) return;
+      const hit = hits[index];
+      if (!hit) return;
+      const entry = indexRef.current[hit.entryIndex];
+      if (!entry) return;
 
-      // If the file is collapsed, expand it and defer the scroll
-      if (collapsedFiles.has(match.filePath)) {
-        pendingScrollRef.current = match.filePath;
-        onExpandFile(match.filePath);
+      if (collapsedFiles.has(entry.filePath)) {
+        pendingScrollRef.current = entry.filePath;
+        onExpandFile(entry.filePath);
         setCurrentIndex(index);
         return;
       }
 
       setCurrentIndex(index);
     },
-    [matches, collapsedFiles, onExpandFile],
+    [hits, collapsedFiles, onExpandFile],
   );
 
   const goToNext = useCallback(() => {
-    if (matches.length === 0) return;
-    navigateTo((currentIndex + 1) % matches.length);
-  }, [matches.length, currentIndex, navigateTo]);
+    if (hits.length === 0) return;
+    navigateTo((currentIndex + 1) % hits.length);
+  }, [hits.length, currentIndex, navigateTo]);
 
   const goToPrev = useCallback(() => {
-    if (matches.length === 0) return;
-    navigateTo((currentIndex - 1 + matches.length) % matches.length);
-  }, [matches.length, currentIndex, navigateTo]);
+    if (hits.length === 0) return;
+    navigateTo((currentIndex - 1 + hits.length) % hits.length);
+  }, [hits.length, currentIndex, navigateTo]);
 
   return {
     isSearchOpen,
@@ -264,7 +349,7 @@ export function useDiffSearch({
     closeSearch,
     query,
     setQuery,
-    matchCount: matches.length,
+    matchCount: hits.length,
     currentMatchIndex: currentIndex,
     goToNext,
     goToPrev,
