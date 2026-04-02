@@ -16,7 +16,11 @@ export interface UseDiffResult {
  * When `commitHash` is provided, fetches the diff for that single commit
  * instead of the base..head range.
  */
-export function useDiff(params: DiffQueryParams | null, commitHash?: string | null): UseDiffResult {
+export function useDiff(
+  params: DiffQueryParams | null,
+  commitHash?: string | null,
+  revision = 0,
+): UseDiffResult {
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +70,7 @@ export function useDiff(params: DiffQueryParams | null, commitHash?: string | nu
     return () => {
       cancelled = true;
     };
-  }, [paramsKey, commitKey]);
+  }, [paramsKey, commitKey, revision]);
 
   return { diff, loading, error };
 }

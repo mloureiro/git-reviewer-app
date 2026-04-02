@@ -19,6 +19,7 @@ import type {
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
   RefsResponse,
+  ResolveRefsResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -115,6 +116,11 @@ export function applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResp
 /** GET /api/refs — Fetch branches and tags for the repository. */
 export function fetchRefs(): Promise<RefsResponse> {
   return getBackend().fetchRefs();
+}
+
+/** GET /api/resolve-refs — Resolve ref names to commit hashes. */
+export function resolveRefs(refs: string[]): Promise<ResolveRefsResponse> {
+  return getBackend().resolveRefs(refs);
 }
 
 /** GET /api/sessions/:commitSha/commits — Fetch the commit list for a session's base..head range. */

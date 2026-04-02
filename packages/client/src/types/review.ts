@@ -108,6 +108,11 @@ export interface AutoMarkApplyResponse {
   autoMarked: ViewedFile[];
 }
 
+// GET /api/resolve-refs
+export interface ResolveRefsResponse {
+  refs: Record<string, string>;
+}
+
 // GET /api/refs
 export interface RefsResponse {
   branches: string[];

@@ -17,6 +17,7 @@ import type {
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
   RefsResponse,
+  ResolveRefsResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -59,6 +60,7 @@ export interface Backend {
 
   // Refs
   fetchRefs(): Promise<RefsResponse>;
+  resolveRefs(refs: string[]): Promise<ResolveRefsResponse>;
 
   // Commits
   fetchCommits(commitSha: string): Promise<CommitsResponse>;

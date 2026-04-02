@@ -18,6 +18,7 @@ import type {
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
   RefsResponse,
+  ResolveRefsResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -145,6 +146,11 @@ export class TauriBackend implements Backend {
   async fetchRefs(): Promise<RefsResponse> {
     const invoke = await getInvoke();
     return invoke('fetch_refs') as Promise<RefsResponse>;
+  }
+
+  async resolveRefs(refs: string[]): Promise<ResolveRefsResponse> {
+    const invoke = await getInvoke();
+    return invoke('resolve_refs', { refs }) as Promise<ResolveRefsResponse>;
   }
 
   // Commits

@@ -20,6 +20,7 @@ export interface UseFilesResult {
 export function useFiles(
   params: FilesQueryParams | null,
   commitHash?: string | null,
+  revision = 0,
 ): UseFilesResult {
   const [files, setFiles] = useState<DiffFile[]>([]);
   const [diffHashes, setDiffHashes] = useState<Record<string, string>>({});
@@ -73,7 +74,7 @@ export function useFiles(
     return () => {
       cancelled = true;
     };
-  }, [paramsKey, commitKey]);
+  }, [paramsKey, commitKey, revision]);
 
   return { files, diffHashes, loading, error };
 }
