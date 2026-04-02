@@ -37,6 +37,10 @@
   --color-diff-del-bg: rgba(120, 130, 255, 0.12);
   --color-diff-del-prefix: #8b8fff;
 
+  /* Search highlights */
+  --color-search-match: rgba(229, 187, 0, 0.3);
+  --color-search-match-current: rgba(229, 187, 0, 0.55);
+
   /* Danger — red */
   --color-danger: #f85149;
   --color-danger-bg-faint: rgba(248, 81, 73, 0.1);
@@ -108,6 +112,10 @@
   --color-diff-ins-prefix: #1a7f37;
   --color-diff-del-bg: rgba(100, 100, 220, 0.08);
   --color-diff-del-prefix: #5555cc;
+
+  /* Search highlights */
+  --color-search-match: rgba(255, 213, 0, 0.4);
+  --color-search-match-current: rgba(255, 213, 0, 0.65);
 
   /* Danger — red */
   --color-danger: #cf222e;
@@ -2007,4 +2015,95 @@ body {
 
 .commit-selector__author {
   color: var(--color-text-muted);
+}
+
+/* ── Search Bar ────────────────────────────────────────────────────────── */
+
+.search-bar {
+  position: fixed;
+  top: 56px;
+  right: 16px;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px var(--color-shadow-strong);
+}
+
+.search-bar__input {
+  width: 220px;
+  padding: 4px 8px;
+  font-size: 0.8125rem;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: 4px;
+  outline: none;
+}
+
+.search-bar__input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-focus-shadow);
+}
+
+.search-bar__input::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+.search-bar__count {
+  font-size: 0.6875rem;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  min-width: 60px;
+  text-align: center;
+}
+
+.search-bar__nav-btn,
+.search-bar__close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  font-size: 0.75rem;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.search-bar__nav-btn:hover,
+.search-bar__close-btn:hover {
+  background-color: var(--color-neutral-hover);
+  color: var(--color-text-primary);
+}
+
+.search-bar__nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.search-bar__nav-btn:disabled:hover {
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+
+/* ── CSS Custom Highlight API — search matches ──────────────────────── */
+
+::highlight(search-match) {
+  background-color: var(--color-search-match);
+  color: inherit;
+}
+
+::highlight(search-match-current) {
+  background-color: var(--color-search-match-current);
+  color: inherit;
 }

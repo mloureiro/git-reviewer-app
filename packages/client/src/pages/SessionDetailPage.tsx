@@ -9,12 +9,14 @@ import { FileTree } from '../components/FileTree';
 import { InlineCommentForm } from '../components/InlineCommentForm';
 import { ReviewActions } from '../components/ReviewActions';
 import { ReviewSummaryBar } from '../components/ReviewSummaryBar';
+import { SearchBar } from '../components/SearchBar';
 import { ShortcutsHelpModal } from '../components/ShortcutsHelpModal';
 import { CommitSelector } from '../components/CommitSelector';
 import { StatusBadge } from '../components/StatusBadge';
 import { useActiveFileOnScroll } from '../hooks/useActiveFileOnScroll';
 import { useCommits } from '../hooks/useCommits';
 import { useDiff } from '../hooks/useDiff';
+import { useDiffSearch } from '../hooks/useDiffSearch';
 import { useFileFocus } from '../hooks/useFileFocus';
 import { useFiles } from '../hooks/useFiles';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -186,6 +188,75 @@ export function SessionDetailPage() {
     });
   }, [focusedLine]);
 
+  // Viewed files sets
+  const viewedFilesSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const vf of reviewData?.viewedFiles ?? []) {
+      set.add(vf.path);
+    }
+    return set;
+  }, [reviewData?.viewedFiles]);
+
+  const changedSinceViewedSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const vf of reviewData?.viewedFiles ?? []) {
+      const currentHash = diffHashes[vf.path];
+      if (currentHash != null && vf.diffHash !== '' && currentHash !== vf.diffHash) {
+        set.add(vf.path);
+      }
+    }
+    return set;
+  }, [reviewData?.viewedFiles, diffHashes]);
+
+  // Collapse/expand file diffs — viewed files start collapsed
+  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
+  const collapsedInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!collapsedInitializedRef.current && viewedFilesSet.size > 0) {
+      collapsedInitializedRef.current = true;
+      setCollapsedFiles(new Set(viewedFilesSet));
+    }
+  }, [viewedFilesSet]);
+
+  const handleToggleCollapsed = useCallback((filePath: string) => {
+    setCollapsedFiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(filePath)) {
+        next.delete(filePath);
+      } else {
+        next.add(filePath);
+      }
+      return next;
+    });
+  }, []);
+
+  // Diff search (Cmd+F / /)
+  const diffContainerRef = useRef<HTMLDivElement>(null);
+
+  const {
+    isSearchOpen,
+    openSearch,
+    closeSearch,
+    query: searchQuery,
+    setQuery: setSearchQuery,
+    matchCount: searchMatchCount,
+    currentMatchIndex: searchCurrentIndex,
+    goToNext: searchNext,
+    goToPrev: searchPrev,
+  } = useDiffSearch({
+    containerRef: diffContainerRef,
+    collapsedFiles,
+    onExpandFile: (filePath) => {
+      setCollapsedFiles((prev) => {
+        if (!prev.has(filePath)) return prev;
+        const next = new Set(prev);
+        next.delete(filePath);
+        return next;
+      });
+    },
+  });
+
   /**
    * Hierarchical Escape handler:
    *   1. Close the help modal if it is open.
@@ -203,6 +274,10 @@ export function SessionDetailPage() {
    * the modal is open, so this handler only fires when the modal is closed.
    */
   const handleEscape = useCallback((): void => {
+    if (isSearchOpen) {
+      closeSearch();
+      return;
+    }
     if (activeLine != null) {
       setActiveLine(null);
       return;
@@ -214,7 +289,15 @@ export function SessionDetailPage() {
     if (focusedFilePath != null) {
       clearFocus();
     }
-  }, [activeLine, focusedLine, focusedFilePath, clearLineFocus, clearFocus]);
+  }, [
+    isSearchOpen,
+    closeSearch,
+    activeLine,
+    focusedLine,
+    focusedFilePath,
+    clearLineFocus,
+    clearFocus,
+  ]);
 
   const handlePrevCommit = useCallback((): void => {
     if (commits.length === 0) return;
@@ -264,10 +347,12 @@ export function SessionDetailPage() {
           }
         },
       },
+      { key: '/', description: 'Find in diff', handler: openSearch },
+      { key: 'f', meta: true, description: 'Find in diff', handler: openSearch },
       { key: 'Escape', description: 'Dismiss / clear focus', handler: handleEscape },
       { key: '?', description: 'Show keyboard shortcuts', handler: handleToggleHelp },
     ],
-    !isHelpOpen,
+    !isHelpOpen && !isSearchOpen,
   );
 
   useActiveFileOnScroll(filePaths, setActiveFile, suppressScrollUpdateRef);
@@ -361,26 +446,6 @@ export function SessionDetailPage() {
   const totalUnresolved = comments.filter((c) => !c.resolved).length;
   const summaryStats = { total: comments.length, unresolved: totalUnresolved };
 
-  // Viewed files sets
-  const viewedFilesSet = useMemo(() => {
-    const set = new Set<string>();
-    for (const vf of reviewData?.viewedFiles ?? []) {
-      set.add(vf.path);
-    }
-    return set;
-  }, [reviewData?.viewedFiles]);
-
-  const changedSinceViewedSet = useMemo(() => {
-    const set = new Set<string>();
-    for (const vf of reviewData?.viewedFiles ?? []) {
-      const currentHash = diffHashes[vf.path];
-      if (currentHash != null && vf.diffHash !== '' && currentHash !== vf.diffHash) {
-        set.add(vf.path);
-      }
-    }
-    return set;
-  }, [reviewData?.viewedFiles, diffHashes]);
-
   const handleToggleViewed = useCallback(
     (filePath: string, isCurrentlyViewed: boolean): void => {
       if (isCurrentlyViewed) {
@@ -391,29 +456,6 @@ export function SessionDetailPage() {
     },
     [markViewed, unmarkViewed],
   );
-
-  // Collapse/expand file diffs — viewed files start collapsed
-  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(new Set());
-  const collapsedInitializedRef = useRef(false);
-
-  useEffect(() => {
-    if (!collapsedInitializedRef.current && viewedFilesSet.size > 0) {
-      collapsedInitializedRef.current = true;
-      setCollapsedFiles(new Set(viewedFilesSet));
-    }
-  }, [viewedFilesSet]);
-
-  const handleToggleCollapsed = useCallback((filePath: string) => {
-    setCollapsedFiles((prev) => {
-      const next = new Set(prev);
-      if (next.has(filePath)) {
-        next.delete(filePath);
-      } else {
-        next.add(filePath);
-      }
-      return next;
-    });
-  }, []);
 
   // Auto-mark rule management
   const handleAutoMarkRulesChange = useCallback(
@@ -566,7 +608,7 @@ export function SessionDetailPage() {
           </aside>
         )}
 
-        <div className="review-layout__main">
+        <div className="review-layout__main" ref={diffContainerRef}>
           {diffLoading && <div className="loading">Loading diff...</div>}
           {diffError && <div className="error">Error loading diff: {diffError}</div>}
           {!diffLoading && !diffError && diff != null && (
@@ -591,6 +633,17 @@ export function SessionDetailPage() {
           )}
         </div>
       </div>
+
+      <SearchBar
+        isOpen={isSearchOpen}
+        query={searchQuery}
+        onQueryChange={setSearchQuery}
+        matchCount={searchMatchCount}
+        currentMatchIndex={searchCurrentIndex}
+        onNext={searchNext}
+        onPrev={searchPrev}
+        onClose={closeSearch}
+      />
 
       <ShortcutsHelpModal
         isOpen={isHelpOpen}
