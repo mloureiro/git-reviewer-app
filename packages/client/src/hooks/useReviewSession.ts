@@ -155,36 +155,44 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
 
   const handleSetAutoMarkRules = useCallback(
     async (rules: AutoMarkRule[]): Promise<void> => {
-      const response = await updateAutoMarkRules(commitSha, rules);
-      // Re-fetch the full session to get the merged viewedFiles state
-      setSession((prev) => {
-        if (prev === null) return prev;
-        // Merge: keep manually-marked files, remove stale auto-marked, add new auto-marked
-        const manuallyViewed = (prev.viewedFiles ?? []).filter((vf) => vf.autoMarkedBy == null);
-        const autoMarkedPaths = new Set(response.autoMarked.map((vf) => vf.path));
-        const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
-        return {
-          ...prev,
-          autoMarkRules: response.rules,
-          viewedFiles: [...kept, ...response.autoMarked],
-        };
-      });
+      try {
+        const response = await updateAutoMarkRules(commitSha, rules);
+        // Re-fetch the full session to get the merged viewedFiles state
+        setSession((prev) => {
+          if (prev === null) return prev;
+          // Merge: keep manually-marked files, remove stale auto-marked, add new auto-marked
+          const manuallyViewed = (prev.viewedFiles ?? []).filter((vf) => vf.autoMarkedBy == null);
+          const autoMarkedPaths = new Set(response.autoMarked.map((vf) => vf.path));
+          const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
+          return {
+            ...prev,
+            autoMarkRules: response.rules,
+            viewedFiles: [...kept, ...response.autoMarked],
+          };
+        });
+      } catch (err) {
+        console.error('Failed to set auto-mark rules:', err);
+      }
     },
     [commitSha],
   );
 
   const handleReapplyAutoMarkRules = useCallback(async (): Promise<void> => {
-    const response = await applyAutoMarkRules(commitSha);
-    setSession((prev) => {
-      if (prev === null) return prev;
-      const manuallyViewed = (prev.viewedFiles ?? []).filter((vf) => vf.autoMarkedBy == null);
-      const autoMarkedPaths = new Set(response.autoMarked.map((vf) => vf.path));
-      const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
-      return {
-        ...prev,
-        viewedFiles: [...kept, ...response.autoMarked],
-      };
-    });
+    try {
+      const response = await applyAutoMarkRules(commitSha);
+      setSession((prev) => {
+        if (prev === null) return prev;
+        const manuallyViewed = (prev.viewedFiles ?? []).filter((vf) => vf.autoMarkedBy == null);
+        const autoMarkedPaths = new Set(response.autoMarked.map((vf) => vf.path));
+        const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
+        return {
+          ...prev,
+          viewedFiles: [...kept, ...response.autoMarked],
+        };
+      });
+    } catch (err) {
+      console.error('Failed to re-apply auto-mark rules:', err);
+    }
   }, [commitSha]);
 
   return {
