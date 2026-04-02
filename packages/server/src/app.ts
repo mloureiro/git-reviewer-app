@@ -3,11 +3,13 @@ import express, { type Express, type Request, type Response } from 'express';
 import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createGitClient } from './git/diff.js';
-import { createReviewRouter } from './routes/review.js';
+import { createMultiRepoReviewRouter } from './routes/review.js';
+import { RepoRegistry } from './git/repo-registry.js';
 
 export { createGitClient } from './git/diff.js';
-export { validateRefs, createAutoSession } from './git/session.js';
+export { validateRefs, createAutoSession, resolveRefName } from './git/session.js';
+export { RepoRegistry } from './git/repo-registry.js';
+export { createReviewRouter, createMultiRepoReviewRouter } from './routes/review.js';
 export type {
   ValidateRefsOptions,
   ValidateRefsResult,
@@ -45,7 +47,9 @@ function resolveStaticDir(staticDir: string | undefined): string | undefined {
 }
 
 export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
-  const git = createGitClient(repoPath);
+  const registry = new RepoRegistry();
+  registry.registerRepo(repoPath);
+
   const app = express();
 
   const resolvedStaticDir = resolveStaticDir(staticDir);
@@ -59,7 +63,7 @@ export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
 
   app.use(express.json());
 
-  app.use('/api', createReviewRouter(git));
+  app.use('/api', createMultiRepoReviewRouter(registry));
 
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok' });

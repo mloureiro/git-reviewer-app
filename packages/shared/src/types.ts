@@ -21,6 +21,7 @@ export interface ReviewSession {
   status: ReviewStatus;
   createdAt: string;
   updatedAt: string;
+  repoPath?: string;
 }
 
 export interface ReviewData {

@@ -16,6 +16,7 @@ import {
   writeReviewNote,
 } from '../git/notes.js';
 import { evaluateAutoMarkRules } from '../git/auto-mark.js';
+import type { RepoRegistry } from '../git/repo-registry.js';
 import type {
   AutoMarkRule,
   ReviewComment,
@@ -44,13 +45,49 @@ function isValidRef(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && !SHELL_DANGEROUS_RE.test(value);
 }
 
+/**
+ * @deprecated Use createMultiRepoReviewRouter instead.
+ * @TODO remove after 07-05-2026 @mloureiro
+ */
 export function createReviewRouter(git: SimpleGit): Router {
+  // Wrap single git instance in a lightweight adapter matching the registry interface
+  const singleRepoRegistry = {
+    resolve: (): [SimpleGit, string] => [git, ''],
+    listPaths: () => [''],
+    registerRepo: () => git,
+    has: () => true,
+  } as unknown as RepoRegistry;
+  return createMultiRepoReviewRouter(singleRepoRegistry);
+}
+
+export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   const router = Router();
+
+  // List registered repos
+  router.get('/repos', (_req, res) => {
+    res.json({ repos: registry.listPaths() });
+  });
+
+  // Register a new repo
+  router.post('/repos', (req, res) => {
+    const { path: repoPath } = req.body as { path: string };
+    if (typeof repoPath !== 'string' || repoPath.trim().length === 0) {
+      res.status(400).json({ error: 'Invalid body: path must be a non-empty string' });
+      return;
+    }
+    try {
+      registry.registerRepo(repoPath);
+      res.status(201).json({ path: repoPath });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
 
   // Get diff between base and head
   router.get('/diff', async (req, res) => {
     try {
-      const { base, head, uncommitted } = req.query;
+      const { base, head, uncommitted, repo } = req.query;
+      const [git] = registry.resolve(repo);
 
       if (uncommitted !== 'true') {
         const resolvedBase = base ?? 'main';
@@ -79,7 +116,8 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Get changed files between base and head
   router.get('/files', async (req, res) => {
     try {
-      const { base, head, uncommitted } = req.query;
+      const { base, head, uncommitted, repo } = req.query;
+      const [git] = registry.resolve(repo);
 
       if (uncommitted !== 'true') {
         const resolvedBase = base ?? 'main';
@@ -111,16 +149,25 @@ export function createReviewRouter(git: SimpleGit): Router {
     }
   });
 
-  // List all review sessions
-  router.get('/sessions', async (_req, res) => {
+  // List all review sessions (aggregated across all registered repos)
+  router.get('/sessions', async (req, res) => {
     try {
-      const notes = await listReviewNotes(git);
       const sessions: ReviewData[] = [];
+      const repoPaths = registry.listPaths();
 
-      for (const { commitHash } of notes) {
-        const data = await readReviewNote(git, commitHash);
-        if (data) {
-          sessions.push(data);
+      for (const repoPath of repoPaths) {
+        const [git] = registry.resolve(repoPath);
+        const notes = await listReviewNotes(git);
+
+        for (const { commitHash } of notes) {
+          const data = await readReviewNote(git, commitHash);
+          if (data) {
+            // Ensure repoPath is set on the session for grouping
+            if (data.session.repoPath == null) {
+              data.session.repoPath = repoPath;
+            }
+            sessions.push(data);
+          }
         }
       }
 
@@ -133,6 +180,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Get a specific review session
   router.get('/sessions/:commitSha', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -152,6 +200,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Get commits for a session's base..head range
   router.get('/sessions/:commitSha/commits', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -173,6 +222,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Get diff for a single commit
   router.get('/commits/:commitHash/diff', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitHash)) {
         res
           .status(400)
@@ -190,6 +240,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Get changed files for a single commit
   router.get('/commits/:commitHash/files', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitHash)) {
         res
           .status(400)
@@ -210,6 +261,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Create a new review session
   router.post('/sessions', async (req, res) => {
     try {
+      const [git, repoPath] = registry.resolve(req.query.repo);
       const { title, baseRef, headRef } = req.body as {
         title: string;
         baseRef: string;
@@ -245,6 +297,7 @@ export function createReviewRouter(git: SimpleGit): Router {
           status: 'pending',
           createdAt: now,
           updatedAt: now,
+          repoPath,
         },
         comments: [],
       };
@@ -259,6 +312,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Add a comment to a session
   router.post('/sessions/:commitSha/comments', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -320,6 +374,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Resolve/unresolve a comment
   router.patch('/sessions/:commitSha/comments/:commentId', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -356,6 +411,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Mark a file as viewed
   router.post('/sessions/:commitSha/viewed-files', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -405,6 +461,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Unmark a file as viewed
   router.delete('/sessions/:commitSha/viewed-files/:filePath', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -432,6 +489,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Update auto-mark rules and immediately apply them
   router.put('/sessions/:commitSha/auto-mark-rules', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -487,6 +545,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Re-apply existing auto-mark rules against current files
   router.post('/sessions/:commitSha/auto-mark-apply', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -530,6 +589,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Delete a review session
   router.delete('/sessions/:commitSha', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;
@@ -551,6 +611,7 @@ export function createReviewRouter(git: SimpleGit): Router {
   // Update session status (approve / request changes)
   router.patch('/sessions/:commitSha', async (req, res) => {
     try {
+      const [git] = registry.resolve(req.query.repo);
       if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
         res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
         return;

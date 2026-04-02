@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import type { ReviewData } from '../types/review';
 import { StatusBadge } from '../components/StatusBadge';
 import { useSessions } from '../hooks/useSessions';
 
@@ -97,6 +98,72 @@ function InstallCliButton() {
   );
 }
 
+function repoDisplayName(repoPath: string): string {
+  if (!repoPath) return 'Unknown';
+  const segments = repoPath.replace(/\/+$/, '').split('/');
+  return segments[segments.length - 1] || repoPath;
+}
+
+function SessionCard({ reviewData }: { reviewData: ReviewData }) {
+  const { session } = reviewData;
+  return (
+    <li key={session.id} className="session-card">
+      <div className="session-card__main">
+        <Link to={`/session/${session.headCommit}`} className="session-card__title">
+          {session.title}
+        </Link>
+        <div className="session-card__meta">
+          <span className="session-card__refs">
+            <code>{session.baseRef}</code>
+            <span className="session-card__arrow">→</span>
+            <code>{session.headRef}</code>
+          </span>
+          <span className="session-card__date">Updated {formatDate(session.updatedAt)}</span>
+        </div>
+      </div>
+      <div className="session-card__aside">
+        <StatusBadge status={session.status} />
+      </div>
+    </li>
+  );
+}
+
+function SessionGroups({ sessions }: { sessions: ReviewData[] }) {
+  const grouped = useMemo(() => {
+    const groups = new Map<string, ReviewData[]>();
+    for (const rd of sessions) {
+      const key = rd.session.repoPath ?? '';
+      const list = groups.get(key) ?? [];
+      list.push(rd);
+      groups.set(key, list);
+    }
+    return groups;
+  }, [sessions]);
+
+  const groupEntries = [...grouped.entries()];
+  const hasManyGroups = groupEntries.length > 1;
+
+  return (
+    <div className="session-groups">
+      {groupEntries.map(([repoPath, groupSessions]) => (
+        <div key={repoPath || '__default'} className="session-group">
+          {hasManyGroups && (
+            <div className="session-group__header" title={repoPath || undefined}>
+              <span className="session-group__name">{repoDisplayName(repoPath)}</span>
+              <span className="session-group__path">{repoPath}</span>
+            </div>
+          )}
+          <ul className="session-list__items">
+            {groupSessions.map((rd) => (
+              <SessionCard key={rd.session.id} reviewData={rd} />
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SessionListPage() {
   const { checking, needsRepo, selectRepo } = useRepoCheck();
   const { sessions, loading, error } = useSessions();
@@ -150,33 +217,7 @@ export function SessionListPage() {
         </div>
       </div>
 
-      <ul className="session-list__items">
-        {sessions.map((reviewData) => {
-          const { session } = reviewData;
-          return (
-            <li key={session.id} className="session-card">
-              <div className="session-card__main">
-                <Link to={`/session/${session.headCommit}`} className="session-card__title">
-                  {session.title}
-                </Link>
-                <div className="session-card__meta">
-                  <span className="session-card__refs">
-                    <code>{session.baseRef}</code>
-                    <span className="session-card__arrow">→</span>
-                    <code>{session.headRef}</code>
-                  </span>
-                  <span className="session-card__date">
-                    Updated {formatDate(session.updatedAt)}
-                  </span>
-                </div>
-              </div>
-              <div className="session-card__aside">
-                <StatusBadge status={session.status} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <SessionGroups sessions={sessions} />
     </div>
   );
 }

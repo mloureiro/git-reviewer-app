@@ -95,6 +95,7 @@ export interface CreateAutoSessionOptions {
   uncommitted?: boolean;
   baseCommit: string;
   headCommit: string;
+  repoPath?: string;
 }
 
 /**
@@ -105,7 +106,7 @@ export async function createAutoSession(
   git: SimpleGit,
   options: CreateAutoSessionOptions,
 ): Promise<ReviewData> {
-  const { base, head, uncommitted, baseCommit, headCommit } = options;
+  const { base, head, uncommitted, baseCommit, headCommit, repoPath } = options;
 
   const baseRef = uncommitted ? headCommit : await resolveRefName(git, base, 'HEAD');
   const headRef = uncommitted ? 'working tree' : await resolveRefName(git, head, 'HEAD');
@@ -125,6 +126,7 @@ export async function createAutoSession(
       status: 'pending',
       createdAt: now,
       updatedAt: now,
+      repoPath,
     },
     comments: [],
   };
