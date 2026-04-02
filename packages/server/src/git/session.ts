@@ -3,6 +3,28 @@ import type { SimpleGit } from 'simple-git';
 import type { ReviewData } from '@git-reviewer/shared';
 import { writeReviewNote } from './notes.js';
 
+/**
+ * Resolves a ref to a human-friendly name.
+ * - If `ref` is provided and not literally `'HEAD'`, returns it as-is.
+ * - Otherwise resolves HEAD to the current branch name.
+ * - If detached (no branch), falls back to a 10-char short commit hash.
+ */
+export async function resolveRefName(
+  git: SimpleGit,
+  ref: string | undefined,
+  fallback: string,
+): Promise<string> {
+  const raw = ref ?? fallback;
+  if (raw !== 'HEAD') return raw;
+
+  const branch = (await git.revparse(['--abbrev-ref', 'HEAD']).catch(() => '')).trim();
+  if (branch && branch !== 'HEAD') return branch;
+
+  // Detached HEAD — use short commit hash
+  const short = (await git.revparse(['--short=10', 'HEAD']).catch(() => '')).trim();
+  return short || raw;
+}
+
 export interface ValidateRefsOptions {
   base?: string;
   head?: string;
@@ -85,20 +107,9 @@ export async function createAutoSession(
 ): Promise<ReviewData> {
   const { base, head, uncommitted, baseCommit, headCommit } = options;
 
-  const baseRef = uncommitted ? headCommit : (base ?? 'HEAD');
-  const headRef = uncommitted ? 'working tree' : (head ?? 'HEAD');
-
-  // Resolve human-friendly display names: replace "HEAD" with branch name
-  let displayBase = baseRef;
-  let displayHead = headRef;
-  if (!uncommitted) {
-    const branch = (await git.revparse(['--abbrev-ref', 'HEAD']).catch(() => '')).trim();
-    if (branch && branch !== 'HEAD') {
-      if (baseRef === 'HEAD') displayBase = branch;
-      if (headRef === 'HEAD') displayHead = branch;
-    }
-  }
-  const title = uncommitted ? 'Uncommitted changes' : `Review ${displayBase}..${displayHead}`;
+  const baseRef = uncommitted ? headCommit : await resolveRefName(git, base, 'HEAD');
+  const headRef = uncommitted ? 'working tree' : await resolveRefName(git, head, 'HEAD');
+  const title = uncommitted ? 'Uncommitted changes' : `Review ${baseRef}..${headRef}`;
 
   const now = new Date().toISOString();
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SimpleGit } from 'simple-git';
-import { validateRefs, createAutoSession } from './session.js';
+import { validateRefs, createAutoSession, resolveRefName } from './session.js';
 
 // Mock writeReviewNote so createAutoSession doesn't need real git-notes
 vi.mock('./notes.js', () => ({
@@ -206,6 +206,53 @@ describe('validateRefs', () => {
   });
 });
 
+describe('resolveRefName', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('returns the ref as-is when it is not HEAD', async () => {
+    const result = await resolveRefName(mockGit, 'my-branch', 'HEAD');
+    expect(result).toBe('my-branch');
+    expect(mockRevparse).not.toHaveBeenCalled();
+  });
+
+  it('uses fallback when ref is undefined', async () => {
+    mockRevparse.mockResolvedValue('main\n');
+    const result = await resolveRefName(mockGit, undefined, 'HEAD');
+    expect(result).toBe('main');
+  });
+
+  it('returns fallback as-is when it is not HEAD', async () => {
+    const result = await resolveRefName(mockGit, undefined, 'develop');
+    expect(result).toBe('develop');
+    expect(mockRevparse).not.toHaveBeenCalled();
+  });
+
+  it('resolves HEAD to branch name', async () => {
+    mockRevparse.mockResolvedValue('feature-branch\n');
+    const result = await resolveRefName(mockGit, 'HEAD', 'HEAD');
+    expect(result).toBe('feature-branch');
+    expect(mockRevparse).toHaveBeenCalledWith(['--abbrev-ref', 'HEAD']);
+  });
+
+  it('falls back to short hash on detached HEAD', async () => {
+    mockRevparse
+      .mockResolvedValueOnce('HEAD\n') // --abbrev-ref returns 'HEAD'
+      .mockResolvedValueOnce('deadbeef12\n'); // --short=10
+
+    const result = await resolveRefName(mockGit, undefined, 'HEAD');
+    expect(result).toBe('deadbeef12');
+    expect(mockRevparse).toHaveBeenCalledWith(['--short=10', 'HEAD']);
+  });
+
+  it('returns raw HEAD if all resolution fails', async () => {
+    mockRevparse.mockResolvedValue('\n');
+    const result = await resolveRefName(mockGit, undefined, 'HEAD');
+    expect(result).toBe('HEAD');
+  });
+});
+
 describe('createAutoSession', () => {
   beforeEach(() => {
     vi.resetAllMocks();
@@ -243,19 +290,43 @@ describe('createAutoSession', () => {
     expect(result.session.title).toBe('Uncommitted changes');
   });
 
-  it('defaults baseRef to HEAD and headRef to HEAD when neither base nor head is provided', async () => {
+  it('resolves HEAD to branch name when neither base nor head is provided', async () => {
+    mockRevparse.mockResolvedValue('my-branch\n');
+
     const result = await createAutoSession(mockGit, {
       baseCommit: BASE_SHA,
       headCommit: HEAD_SHA,
     });
 
-    expect(result.session.baseRef).toBe('HEAD');
-    expect(result.session.headRef).toBe('HEAD');
+    expect(result.session.baseRef).toBe('my-branch');
+    expect(result.session.headRef).toBe('my-branch');
+    expect(result.session.title).toBe('Review my-branch..my-branch');
+  });
+
+  it('resolves HEAD to short commit hash on detached HEAD', async () => {
+    // First call: --abbrev-ref returns 'HEAD' (detached)
+    // Second call: --short=10 returns short hash
+    mockRevparse
+      .mockResolvedValueOnce('HEAD\n') // base: --abbrev-ref
+      .mockResolvedValueOnce('deadbeef12\n') // base: --short=10
+      .mockResolvedValueOnce('HEAD\n') // head: --abbrev-ref
+      .mockResolvedValueOnce('deadbeef12\n'); // head: --short=10
+
+    const result = await createAutoSession(mockGit, {
+      baseCommit: BASE_SHA,
+      headCommit: HEAD_SHA,
+    });
+
+    expect(result.session.baseRef).toBe('deadbeef12');
+    expect(result.session.headRef).toBe('deadbeef12');
   });
 
   it('writes the session to git-notes via writeReviewNote', async () => {
     const { writeReviewNote } = await import('./notes.js');
     const mockWriteReviewNote = vi.mocked(writeReviewNote);
+
+    // head defaults to HEAD → resolveRefName calls revparse
+    mockRevparse.mockResolvedValue('feature-branch\n');
 
     await createAutoSession(mockGit, {
       base: 'main',
