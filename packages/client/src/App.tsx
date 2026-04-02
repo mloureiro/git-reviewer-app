@@ -3,6 +3,7 @@ import { Layout } from './components/Layout';
 import { SessionListPage } from './pages/SessionListPage';
 import { SessionCreatePage } from './pages/SessionCreatePage';
 import { SessionDetailPage } from './pages/SessionDetailPage';
+import { SettingsPage } from './pages/SettingsPage';
 import { useInitialSession } from './hooks/useInitialSession';
 
 export function App() {
@@ -14,6 +15,7 @@ export function App() {
         <Route index element={<SessionListPage />} />
         <Route path="new" element={<SessionCreatePage />} />
         <Route path="session/:commitSha" element={<SessionDetailPage />} />
+        <Route path="settings" element={<SettingsPage />} />
       </Route>
     </Routes>
   );

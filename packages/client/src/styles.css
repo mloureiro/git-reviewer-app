@@ -912,6 +912,165 @@ body {
   border-radius: 6px;
 }
 
+/* ── Settings Page ────────────────────────────────────────────────────── */
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  max-width: 800px;
+}
+
+.settings__header {
+  display: flex;
+  align-items: center;
+}
+
+.settings__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.settings__section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.settings__section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.settings__mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings__mode-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  min-width: 40px;
+}
+
+.settings__mode-buttons {
+  display: flex;
+  border: 1px solid var(--color-border-default);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.settings__mode-btn {
+  padding: 6px 16px;
+  font-size: 0.8125rem;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  transition:
+    background-color 0.15s,
+    color 0.15s;
+}
+
+.settings__mode-btn:hover {
+  background-color: var(--color-neutral-hover);
+}
+
+.settings__mode-btn--active {
+  background-color: var(--color-accent-bg-muted);
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.settings__schemes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+@media (max-width: 640px) {
+  .settings__schemes {
+    grid-template-columns: 1fr;
+  }
+}
+
+.settings__scheme-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings__scheme-group-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.settings__scheme-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Scheme Card ──────────────────────────────────────────────────────── */
+
+.scheme-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  background-color: var(--color-bg-surface);
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+  font-family: inherit;
+  text-align: left;
+  width: 100%;
+}
+
+.scheme-card:hover {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-bg-subtle);
+}
+
+.scheme-card--selected {
+  border-color: var(--color-accent);
+  background-color: var(--color-accent-bg-subtle);
+}
+
+.scheme-card__swatches {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.scheme-card__swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--color-border-subtle);
+}
+
+.scheme-card__name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  flex: 1;
+}
+
+.scheme-card__check {
+  font-size: 0.875rem;
+  color: var(--color-accent);
+  flex-shrink: 0;
+}
+
 /* ── Form Field ────────────────────────────────────────────────────────── */
 
 .form-field {

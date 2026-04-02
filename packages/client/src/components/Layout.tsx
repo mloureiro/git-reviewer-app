@@ -27,6 +27,12 @@ export function Layout() {
             >
               New Review
             </NavLink>
+            <NavLink
+              to="/settings"
+              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
+            >
+              Settings
+            </NavLink>
           </div>
           <div className="zoom-controls">
             <button
