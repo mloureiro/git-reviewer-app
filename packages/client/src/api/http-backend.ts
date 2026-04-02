@@ -23,6 +23,7 @@ import type {
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
+  ReposResponse,
 } from '../types/review';
 
 function buildQueryString(params: Record<string, string | undefined>): string {
@@ -48,6 +49,7 @@ export class HttpBackend implements Backend {
       base: params.base,
       head: params.head,
       uncommitted: params.uncommitted,
+      repo: params.repo,
     });
     return apiGet<FilesResponse>(`/api/files${qs}`);
   }
@@ -57,6 +59,7 @@ export class HttpBackend implements Backend {
       base: params.base,
       head: params.head,
       uncommitted: params.uncommitted,
+      repo: params.repo,
     });
     return apiGet<DiffResponse>(`/api/diff${qs}`);
   }
@@ -67,84 +70,116 @@ export class HttpBackend implements Backend {
     return apiGet<SessionListResponse>('/api/sessions');
   }
 
-  fetchSession(commitSha: string): Promise<SessionResponse> {
-    return apiGet<SessionResponse>(`/api/sessions/${commitSha}`);
+  fetchSession(commitSha: string, repo?: string): Promise<SessionResponse> {
+    const qs = buildQueryString({ repo });
+    return apiGet<SessionResponse>(`/api/sessions/${commitSha}${qs}`);
   }
 
-  createSession(data: CreateSessionRequest): Promise<SessionResponse> {
-    return apiPost<SessionResponse>('/api/sessions', data);
+  createSession(data: CreateSessionRequest, repo?: string): Promise<SessionResponse> {
+    const qs = buildQueryString({ repo });
+    return apiPost<SessionResponse>(`/api/sessions${qs}`, data);
   }
 
-  deleteSession(commitSha: string): Promise<void> {
-    return apiDelete(`/api/sessions/${commitSha}`);
+  deleteSession(commitSha: string, repo?: string): Promise<void> {
+    const qs = buildQueryString({ repo });
+    return apiDelete(`/api/sessions/${commitSha}${qs}`);
   }
 
   updateSessionStatus(
     commitSha: string,
     data: UpdateSessionStatusRequest,
+    repo?: string,
   ): Promise<UpdateSessionStatusResponse> {
-    return apiPatch<UpdateSessionStatusResponse>(`/api/sessions/${commitSha}`, data);
+    const qs = buildQueryString({ repo });
+    return apiPatch<UpdateSessionStatusResponse>(`/api/sessions/${commitSha}${qs}`, data);
   }
 
   // Comments
 
-  postComment(commitSha: string, data: CreateCommentRequest): Promise<CreateCommentResponse> {
-    return apiPost<CreateCommentResponse>(`/api/sessions/${commitSha}/comments`, data);
+  postComment(
+    commitSha: string,
+    data: CreateCommentRequest,
+    repo?: string,
+  ): Promise<CreateCommentResponse> {
+    const qs = buildQueryString({ repo });
+    return apiPost<CreateCommentResponse>(`/api/sessions/${commitSha}/comments${qs}`, data);
   }
 
   patchComment(
     commitSha: string,
     commentId: string,
     data: UpdateCommentRequest,
+    repo?: string,
   ): Promise<UpdateCommentResponse> {
+    const qs = buildQueryString({ repo });
     return apiPatch<UpdateCommentResponse>(
-      `/api/sessions/${commitSha}/comments/${commentId}`,
+      `/api/sessions/${commitSha}/comments/${commentId}${qs}`,
       data,
     );
   }
 
   // Viewed files
 
-  markFileViewed(commitSha: string, path: string): Promise<ViewedFile> {
-    return apiPost<ViewedFile>(`/api/sessions/${commitSha}/viewed-files`, { path });
+  markFileViewed(commitSha: string, path: string, repo?: string): Promise<ViewedFile> {
+    const qs = buildQueryString({ repo });
+    return apiPost<ViewedFile>(`/api/sessions/${commitSha}/viewed-files${qs}`, { path });
   }
 
-  unmarkFileViewed(commitSha: string, path: string): Promise<void> {
-    return apiDelete(`/api/sessions/${commitSha}/viewed-files/${encodeURIComponent(path)}`);
+  unmarkFileViewed(commitSha: string, path: string, repo?: string): Promise<void> {
+    const qs = buildQueryString({ repo });
+    return apiDelete(`/api/sessions/${commitSha}/viewed-files/${encodeURIComponent(path)}${qs}`);
   }
 
   // Auto-mark rules
 
-  updateAutoMarkRules(commitSha: string, rules: AutoMarkRule[]): Promise<AutoMarkRulesResponse> {
-    return apiPut<AutoMarkRulesResponse>(`/api/sessions/${commitSha}/auto-mark-rules`, { rules });
+  updateAutoMarkRules(
+    commitSha: string,
+    rules: AutoMarkRule[],
+    repo?: string,
+  ): Promise<AutoMarkRulesResponse> {
+    const qs = buildQueryString({ repo });
+    return apiPut<AutoMarkRulesResponse>(`/api/sessions/${commitSha}/auto-mark-rules${qs}`, {
+      rules,
+    });
   }
 
-  applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse> {
-    return apiPost<AutoMarkApplyResponse>(`/api/sessions/${commitSha}/auto-mark-apply`, {});
+  applyAutoMarkRules(commitSha: string, repo?: string): Promise<AutoMarkApplyResponse> {
+    const qs = buildQueryString({ repo });
+    return apiPost<AutoMarkApplyResponse>(`/api/sessions/${commitSha}/auto-mark-apply${qs}`, {});
   }
 
   // Refs
 
-  fetchRefs(): Promise<RefsResponse> {
-    return apiGet<RefsResponse>('/api/refs');
+  fetchRefs(repo?: string): Promise<RefsResponse> {
+    const qs = buildQueryString({ repo });
+    return apiGet<RefsResponse>(`/api/refs${qs}`);
   }
 
-  resolveRefs(refs: string[]): Promise<ResolveRefsResponse> {
-    const qs = buildQueryString({ refs: refs.join(',') });
+  resolveRefs(refs: string[], repo?: string): Promise<ResolveRefsResponse> {
+    const qs = buildQueryString({ refs: refs.join(','), repo });
     return apiGet<ResolveRefsResponse>(`/api/resolve-refs${qs}`);
+  }
+
+  // Repos
+
+  fetchRepos(): Promise<ReposResponse> {
+    return apiGet<ReposResponse>('/api/repos');
   }
 
   // Commits
 
-  fetchCommits(commitSha: string): Promise<CommitsResponse> {
-    return apiGet<CommitsResponse>(`/api/sessions/${commitSha}/commits`);
+  fetchCommits(commitSha: string, repo?: string): Promise<CommitsResponse> {
+    const qs = buildQueryString({ repo });
+    return apiGet<CommitsResponse>(`/api/sessions/${commitSha}/commits${qs}`);
   }
 
-  fetchCommitDiff(commitHash: string): Promise<CommitDiffResponse> {
-    return apiGet<CommitDiffResponse>(`/api/commits/${commitHash}/diff`);
+  fetchCommitDiff(commitHash: string, repo?: string): Promise<CommitDiffResponse> {
+    const qs = buildQueryString({ repo });
+    return apiGet<CommitDiffResponse>(`/api/commits/${commitHash}/diff${qs}`);
   }
 
-  fetchCommitFiles(commitHash: string): Promise<CommitFilesResponse> {
-    return apiGet<CommitFilesResponse>(`/api/commits/${commitHash}/files`);
+  fetchCommitFiles(commitHash: string, repo?: string): Promise<CommitFilesResponse> {
+    const qs = buildQueryString({ repo });
+    return apiGet<CommitFilesResponse>(`/api/commits/${commitHash}/files${qs}`);
   }
 }
