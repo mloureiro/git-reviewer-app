@@ -44,8 +44,7 @@ export interface UseDiffSearchReturn {
 // Constants
 // ---------------------------------------------------------------------------
 
-const MIN_QUERY_LENGTH = 2;
-const MAX_HITS = 5_000;
+const MAX_HITS = 1_000;
 const HIGHLIGHT_WINDOW = 100;
 const DEBOUNCE_MS = 100;
 const INDEX_CHUNK_SIZE = 500; // rows per chunk when building index
@@ -106,7 +105,7 @@ interface SearchResult {
 }
 
 function searchIndex(index: IndexEntry[], query: string): SearchResult {
-  if (query.length < MIN_QUERY_LENGTH) return { hits: [], totalCount: 0 };
+  if (query.length === 0) return { hits: [], totalCount: 0 };
   const lower = query.toLowerCase();
   const hits: SearchHit[] = [];
   let totalCount = 0;
@@ -290,7 +289,7 @@ export function useDiffSearch({
         cancelIndexRef.current = null;
 
         // Re-run search with current query
-        if (isSearchOpen && query.length >= MIN_QUERY_LENGTH) {
+        if (isSearchOpen && query.length > 0) {
           const result = searchIndex(entries, query);
           setHits(result.hits);
           setTotalCount(result.totalCount);
@@ -328,7 +327,7 @@ export function useDiffSearch({
 
     clearTimeout(debounceRef.current);
 
-    if (query.length < MIN_QUERY_LENGTH) {
+    if (query.length === 0) {
       setHits([]);
       setTotalCount(0);
       setCurrentIndex(0);
