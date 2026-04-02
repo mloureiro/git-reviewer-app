@@ -375,6 +375,10 @@ body {
   font-size: 0.8125rem;
   color: var(--color-text-primary);
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .diff-file-section__stats {
@@ -382,6 +386,7 @@ body {
   gap: 6px;
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 0.75rem;
+  flex-shrink: 0;
 }
 
 .diff-file-section__additions {
