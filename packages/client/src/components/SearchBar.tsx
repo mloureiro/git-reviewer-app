@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-const DEBOUNCE_MS = 150;
+const DEBOUNCE_MS = 80;
 
 interface SearchBarProps {
   isOpen: boolean;
@@ -87,7 +87,7 @@ export function SearchBar({
         ref={inputRef}
         className="search-bar__input"
         type="text"
-        placeholder="Find in diff\u2026"
+        placeholder={`Find in diff\u2026`}
         value={localValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
