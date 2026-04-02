@@ -1113,7 +1113,14 @@ body {
   flex-shrink: 0;
 }
 
-.file-tree__item:hover .copy-path-btn,
+.file-tree__item:hover .copy-path-btn {
+  opacity: 1;
+}
+
+.diff-file-section__header .copy-path-btn {
+  opacity: 0.6;
+}
+
 .diff-file-section__header:hover .copy-path-btn {
   opacity: 1;
 }
