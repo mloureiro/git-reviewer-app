@@ -11,6 +11,8 @@ export interface ShortcutDescriptor {
   description: string;
   /** The handler called when the key is pressed. */
   handler: () => void;
+  /** When true, requires Cmd (Mac) or Ctrl (Windows/Linux) to be held. */
+  meta?: boolean;
 }
 
 export interface ShortcutEntry {
@@ -18,6 +20,8 @@ export interface ShortcutEntry {
   key: string;
   /** Human-readable description for display in the help modal. */
   description: string;
+  /** When true, this shortcut requires Cmd/Ctrl. */
+  meta?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,10 +78,19 @@ export function useKeyboardShortcuts(
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (!enabledRef.current) return;
-    if (isTypingTarget(event.target)) return;
 
-    const match = shortcutsRef.current.find((s) => s.key === event.key);
+    const hasMeta = event.metaKey || event.ctrlKey;
+
+    const match = shortcutsRef.current.find((s) => {
+      if (s.key !== event.key) return false;
+      if (s.meta) return hasMeta;
+      // Plain shortcuts require no modifiers and must not fire on typing targets
+      return !hasMeta && !event.altKey;
+    });
     if (match == null) return;
+
+    // Plain (non-meta) shortcuts are suppressed on typing targets
+    if (!match.meta && isTypingTarget(event.target)) return;
 
     event.preventDefault();
     match.handler();
@@ -93,5 +106,5 @@ export function useKeyboardShortcuts(
   // Build the descriptions array. We derive it from the shortcuts prop directly
   // (not the ref) so React can memoize it — callers can wrap `shortcuts` in
   // useMemo if they want a stable reference.
-  return shortcuts.map(({ key, description }) => ({ key, description }));
+  return shortcuts.map(({ key, description, meta }) => ({ key, description, meta }));
 }

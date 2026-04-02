@@ -66,9 +66,14 @@ export function ShortcutsHelpModal({ isOpen, onClose, shortcuts }: ShortcutsHelp
 
         <table className="shortcuts-modal__table">
           <tbody>
-            {shortcuts.map(({ key, description }) => (
-              <tr key={key} className="shortcuts-modal__row">
+            {shortcuts.map(({ key, description, meta }) => (
+              <tr key={`${meta ? 'meta-' : ''}${key}`} className="shortcuts-modal__row">
                 <td className="shortcuts-modal__key-cell">
+                  {meta && (
+                    <kbd className="shortcuts-modal__kbd">
+                      {navigator.platform.includes('Mac') ? '\u2318' : 'Ctrl'}
+                    </kbd>
+                  )}
                   <kbd className="shortcuts-modal__kbd">{key === 'Escape' ? 'Esc' : key}</kbd>
                 </td>
                 <td className="shortcuts-modal__desc-cell">{description}</td>
