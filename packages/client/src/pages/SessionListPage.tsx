@@ -106,6 +106,20 @@ function repoDisplayName(repoPath: string): string {
 
 function SessionCard({ reviewData }: { reviewData: ReviewData }) {
   const { session } = reviewData;
+
+  const openInNewWindow = useCallback(async () => {
+    try {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('open_session_window', {
+        commitSha: session.headCommit,
+        title: session.title,
+      });
+    } catch {
+      // Fallback: navigate in current window
+      window.location.href = `/session/${session.headCommit}`;
+    }
+  }, [session.headCommit, session.title]);
+
   return (
     <li key={session.id} className="session-card">
       <div className="session-card__main">
@@ -122,6 +136,28 @@ function SessionCard({ reviewData }: { reviewData: ReviewData }) {
         </div>
       </div>
       <div className="session-card__aside">
+        {isTauri() && (
+          <button
+            className="btn btn--ghost btn--sm"
+            onClick={openInNewWindow}
+            title="Open in new window"
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+              <polyline points="15 3 21 3 21 9" />
+              <line x1="10" y1="14" x2="21" y2="3" />
+            </svg>
+          </button>
+        )}
         <StatusBadge status={session.status} />
       </div>
     </li>

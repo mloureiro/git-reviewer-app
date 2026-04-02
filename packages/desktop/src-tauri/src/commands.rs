@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::collections::HashSet;
 
+use tauri::Manager;
+
 use crate::auto_mark::evaluate_auto_mark_rules;
 use crate::git_ops;
 use crate::types::*;
@@ -745,6 +747,33 @@ pub fn select_repository(
     }
 
     Ok(path)
+}
+
+/// Open a review session in a new window.
+#[tauri::command]
+pub fn open_session_window(
+    app: tauri::AppHandle,
+    commit_sha: String,
+    title: Option<String>,
+) -> Result<(), String> {
+    let label = format!("session-{}", &commit_sha[..7.min(commit_sha.len())]);
+    let url = format!("/session/{}", commit_sha);
+    let window_title = title.unwrap_or_else(|| format!("Review {}", &commit_sha[..7.min(commit_sha.len())]));
+
+    // Check if window already exists, and focus it
+    if let Some(window) = app.get_webview_window(&label) {
+        window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        return Ok(());
+    }
+
+    tauri::WebviewWindowBuilder::new(&app, &label, tauri::WebviewUrl::App(url.into()))
+        .title(&window_title)
+        .inner_size(1200.0, 800.0)
+        .resizable(true)
+        .build()
+        .map_err(|e| format!("Failed to create window: {}", e))?;
+
+    Ok(())
 }
 
 /// List all registered repository paths.

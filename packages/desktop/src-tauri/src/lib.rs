@@ -108,6 +108,7 @@ pub fn run() {
             commands::list_repos,
             commands::register_repo,
             commands::resolve_refs,
+            commands::open_session_window,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -2,6 +2,6 @@
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-utils/schema.json",
   "identifier": "default",
   "description": "Default permissions for the Git Reviewer desktop app",
-  "windows": ["main"],
+  "windows": ["main", "session-*"],
   "permissions": ["core:default", "shell:allow-open", "dialog:allow-open"]
 }
