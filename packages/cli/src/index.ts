@@ -9,6 +9,36 @@ import { createApp, createGitClient, validateRefs, createAutoSession } from '@gi
 
 const VERSION = '0.1.0';
 
+/**
+ * Probe for an existing git-reviewer server on the given port.
+ * If found, register the repo with it and return true.
+ */
+async function tryRegisterWithExistingServer(port: number, repoPath: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+
+    const healthRes = await fetch(`http://localhost:${port}/api/health`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!healthRes.ok) return false;
+    const health = (await healthRes.json()) as { status?: string };
+    if (health.status !== 'ok') return false;
+
+    const registerRes = await fetch(`http://localhost:${port}/api/repos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: repoPath }),
+    });
+
+    return registerRes.ok;
+  } catch {
+    return false;
+  }
+}
+
 const program = new Command();
 
 program
@@ -84,6 +114,16 @@ program
 
       const sessionUrl = `http://localhost:${port}/session/${sessionCommit}`;
 
+      // ── Reuse existing server if one is already running ──
+      const registered = await tryRegisterWithExistingServer(port, repoPath);
+      if (registered) {
+        console.log(`Server already running on port ${port}. Registered repo: ${repoPath}`);
+        if (options.open) {
+          await open(sessionUrl).catch(() => {});
+        }
+        process.exit(0);
+      }
+
       // ── Background mode (default): spawn detached server and exit ──
       if (!options.foreground) {
         const scriptPath = fileURLToPath(import.meta.url);
@@ -112,7 +152,7 @@ program
 
       const app = createApp({ repoPath, staticDir });
 
-      app.listen(port, () => {
+      const server = app.listen(port, () => {
         console.log(`git-reviewer v${VERSION} running at http://localhost:${port}`);
         console.log(`Reviewing repo: ${repoPath}`);
         console.log(`Review session: ${sessionUrl}`);
@@ -124,6 +164,23 @@ program
             );
           });
         }
+      });
+
+      server.on('error', async (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+          // Another server may have just started — retry registration
+          const retried = await tryRegisterWithExistingServer(port, repoPath);
+          if (retried) {
+            console.log(`Server already running on port ${port}. Registered repo: ${repoPath}`);
+            if (options.open) {
+              await open(sessionUrl).catch(() => {});
+            }
+            process.exit(0);
+          }
+          console.error(`Port ${port} is already in use. Use --port to specify a different port.`);
+          process.exit(1);
+        }
+        throw err;
       });
     },
   );
