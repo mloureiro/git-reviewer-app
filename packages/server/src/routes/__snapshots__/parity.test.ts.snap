@@ -1,0 +1,301 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`parity snapshots — canonical response shapes > AutoMarkApplyResponse 1`] = `
+{
+  "autoMarked": [
+    {
+      "autoMarkedBy": "lockfile",
+      "diffHash": "lock-hash-456",
+      "path": "package-lock.json",
+      "viewedAt": "2026-03-19T10:10:00.000Z",
+    },
+  ],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > AutoMarkRulesResponse 1`] = `
+{
+  "autoMarked": [
+    {
+      "autoMarkedBy": "lockfile",
+      "diffHash": "lock-hash-456",
+      "path": "package-lock.json",
+      "viewedAt": "2026-03-19T10:10:00.000Z",
+    },
+  ],
+  "rules": [
+    "lockfile",
+    "rename-only",
+  ],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > CommitsResponse 1`] = `
+{
+  "commits": [
+    {
+      "author": "Dev",
+      "date": "2026-03-18T09:00:00.000Z",
+      "hash": "aaa111bbb222ccc333ddd444eee555fff666aaa1",
+      "message": "feat: add new feature",
+      "shortHash": "aaa111b",
+    },
+  ],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > CommitsResponse — empty 1`] = `
+{
+  "commits": [],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > CreateCommentResponse 1`] = `
+{
+  "author": "reviewer",
+  "body": "This needs fixing",
+  "createdAt": "2026-03-19T10:05:00.000Z",
+  "file": "src/foo.ts",
+  "id": "comment-uuid-1",
+  "line": 42,
+  "resolved": false,
+  "side": "right",
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > DiffResponse 1`] = `
+{
+  "diff": "diff --git a/src/foo.ts b/src/foo.ts
+--- a/src/foo.ts
++++ b/src/foo.ts
+@@ -1,3 +1,4 @@
+ line1
++added line
+ line2
+ line3
+",
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > FilesResponse — empty 1`] = `
+{
+  "files": [],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > FilesResponse — with files, diffHashes, and renamed file 1`] = `
+{
+  "diffHashes": {
+    "src/foo.ts": "hash-foo-123",
+    "src/new-name.ts": "hash-new-456",
+  },
+  "files": [
+    {
+      "additions": 5,
+      "deletions": 2,
+      "path": "src/foo.ts",
+      "status": "modified",
+    },
+    {
+      "additions": 1,
+      "deletions": 1,
+      "oldPath": "src/old-name.ts",
+      "path": "src/new-name.ts",
+      "status": "renamed",
+    },
+  ],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > SessionListResponse — empty 1`] = `
+{
+  "sessions": [],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > SessionListResponse — with sessions 1`] = `
+{
+  "sessions": [
+    {
+      "autoMarkRules": [
+        "lockfile",
+        "rename-only",
+      ],
+      "comments": [
+        {
+          "author": "reviewer",
+          "body": "This needs fixing",
+          "createdAt": "2026-03-19T10:05:00.000Z",
+          "file": "src/foo.ts",
+          "id": "comment-uuid-1",
+          "line": 42,
+          "resolved": false,
+          "side": "right",
+        },
+      ],
+      "session": {
+        "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+        "baseRef": "main",
+        "createdAt": "2026-03-19T10:00:00.000Z",
+        "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+        "headRef": "feature-branch",
+        "id": "session-uuid-1",
+        "status": "pending",
+        "title": "Test Review",
+        "updatedAt": "2026-03-19T10:00:00.000Z",
+      },
+      "version": 1,
+      "viewedFiles": [
+        {
+          "diffHash": "abc123hash",
+          "path": "src/bar.ts",
+          "viewedAt": "2026-03-19T10:10:00.000Z",
+        },
+        {
+          "autoMarkedBy": "lockfile",
+          "diffHash": "lock-hash-456",
+          "path": "package-lock.json",
+          "viewedAt": "2026-03-19T10:10:00.000Z",
+        },
+      ],
+    },
+    {
+      "comments": [],
+      "session": {
+        "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+        "baseRef": "main",
+        "createdAt": "2026-03-19T10:00:00.000Z",
+        "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+        "headRef": "feature-branch",
+        "id": "session-uuid-1",
+        "status": "approved",
+        "title": "Test Review",
+        "updatedAt": "2026-03-19T10:00:00.000Z",
+      },
+      "version": 1,
+    },
+  ],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > SessionResponse — full ReviewData with all optional fields 1`] = `
+{
+  "autoMarkRules": [
+    "lockfile",
+    "rename-only",
+  ],
+  "comments": [
+    {
+      "author": "reviewer",
+      "body": "This needs fixing",
+      "createdAt": "2026-03-19T10:05:00.000Z",
+      "file": "src/foo.ts",
+      "id": "comment-uuid-1",
+      "line": 42,
+      "resolved": false,
+      "side": "right",
+    },
+  ],
+  "session": {
+    "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+    "baseRef": "main",
+    "createdAt": "2026-03-19T10:00:00.000Z",
+    "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+    "headRef": "feature-branch",
+    "id": "session-uuid-1",
+    "status": "pending",
+    "title": "Test Review",
+    "updatedAt": "2026-03-19T10:00:00.000Z",
+  },
+  "version": 1,
+  "viewedFiles": [
+    {
+      "diffHash": "abc123hash",
+      "path": "src/bar.ts",
+      "viewedAt": "2026-03-19T10:10:00.000Z",
+    },
+    {
+      "autoMarkedBy": "lockfile",
+      "diffHash": "lock-hash-456",
+      "path": "package-lock.json",
+      "viewedAt": "2026-03-19T10:10:00.000Z",
+    },
+  ],
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > SessionResponse — minimal ReviewData without optional fields 1`] = `
+{
+  "comments": [],
+  "session": {
+    "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+    "baseRef": "main",
+    "createdAt": "2026-03-19T10:00:00.000Z",
+    "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+    "headRef": "feature-branch",
+    "id": "session-uuid-1",
+    "status": "approved",
+    "title": "Test Review",
+    "updatedAt": "2026-03-19T10:00:00.000Z",
+  },
+  "version": 1,
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > UpdateCommentResponse — resolved comment 1`] = `
+{
+  "author": "reviewer",
+  "body": "This needs fixing",
+  "createdAt": "2026-03-19T10:05:00.000Z",
+  "file": "src/foo.ts",
+  "id": "comment-uuid-1",
+  "line": 42,
+  "resolved": true,
+  "side": "right",
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > UpdateSessionStatusResponse — approved session 1`] = `
+{
+  "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+  "baseRef": "main",
+  "createdAt": "2026-03-19T10:00:00.000Z",
+  "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+  "headRef": "feature-branch",
+  "id": "session-uuid-1",
+  "status": "approved",
+  "title": "Test Review",
+  "updatedAt": "2026-03-19T11:00:00.000Z",
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > UpdateSessionStatusResponse — changes_requested 1`] = `
+{
+  "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+  "baseRef": "main",
+  "createdAt": "2026-03-19T10:00:00.000Z",
+  "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+  "headRef": "feature-branch",
+  "id": "session-uuid-1",
+  "status": "changes_requested",
+  "title": "Test Review",
+  "updatedAt": "2026-03-19T11:00:00.000Z",
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > ViewedFile — auto-marked 1`] = `
+{
+  "autoMarkedBy": "lockfile",
+  "diffHash": "lock-hash-456",
+  "path": "package-lock.json",
+  "viewedAt": "2026-03-19T10:10:00.000Z",
+}
+`;
+
+exports[`parity snapshots — canonical response shapes > ViewedFile — manually viewed (no autoMarkedBy) 1`] = `
+{
+  "diffHash": "abc123hash",
+  "path": "src/bar.ts",
+  "viewedAt": "2026-03-19T10:10:00.000Z",
+}
+`;
