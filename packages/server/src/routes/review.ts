@@ -73,8 +73,20 @@ async function resolveRepoForSession(
       return null;
     }
   }
-  // Search all repos for this session
-  for (const repoPath of registry.listPaths()) {
+
+  const paths = registry.listPaths();
+
+  // Single repo: use the default directly (no search needed)
+  if (paths.length <= 1) {
+    try {
+      return registry.resolve(undefined);
+    } catch {
+      return null;
+    }
+  }
+
+  // Multiple repos: search for the session across all repos
+  for (const repoPath of paths) {
     const git = registry.getRepo(repoPath);
     const data = await readReviewNote(git, commitSha);
     if (data) return [git, repoPath];
