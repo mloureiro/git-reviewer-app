@@ -1040,6 +1040,30 @@ body {
   min-width: 0;
 }
 
+/* Copy path button — shared between FileTree and DiffView */
+.copy-path-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+  padding: 2px 4px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.file-tree__item:hover .copy-path-btn,
+.diff-file-section__header:hover .copy-path-btn {
+  opacity: 1;
+}
+
+.copy-path-btn:hover {
+  color: var(--color-accent);
+  background-color: var(--color-neutral-hover);
+}
+
 .file-tree__stats {
   flex-shrink: 0;
   display: flex;

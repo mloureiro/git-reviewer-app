@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { AutoMarkRule, DiffFile } from '../types/review';
+import { CopyPathButton } from './CopyPathButton';
 
 const AUTO_MARK_LABELS: Record<AutoMarkRule, string> = {
   'rename-only': 'Rename only',
@@ -241,6 +242,7 @@ function TreeNodeRow({
         )}
         <StatusDot status={file.status} />
         <span className="file-tree__path">{label}</span>
+        <CopyPathButton path={file.path} />
         <span className="file-tree__stats">
           {file.additions > 0 && <span className="file-tree__additions">+{file.additions}</span>}
           {file.deletions > 0 && <span className="file-tree__deletions">-{file.deletions}</span>}

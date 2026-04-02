@@ -8,6 +8,7 @@ import hljs from 'highlight.js/lib/common';
 
 import type { FocusableLine } from '../hooks/useLineFocus';
 import type { DiffLineData, DiffViewMode } from '../types/review';
+import { CopyPathButton } from './CopyPathButton';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -655,6 +656,7 @@ export function DiffFileComponent({
           </span>
         )}
         <span className="diff-file-section__filename">{filePath}</span>
+        <CopyPathButton path={filePath} />
         <span className="diff-file-section__stats">
           {file.addedLines > 0 && (
             <span className="diff-file-section__additions">+{file.addedLines}</span>
