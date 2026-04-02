@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { useThemePreferences } from '../hooks/useThemePreferences';
-import { getSchemesForMode } from '../theme/schemes';
+import { getScheme, getSchemesForMode } from '../theme/schemes';
+import type { ColorScheme } from '../theme/types';
 import { SchemeCard } from '../components/SchemeCard';
+import { DiffPreview } from '../components/DiffPreview';
 
 export function SettingsPage() {
   const {
     mode,
+    activeScheme,
     darkSchemeId,
     lightSchemeId,
     toggleMode,
@@ -16,6 +20,13 @@ export function SettingsPage() {
 
   const darkSchemes = getSchemesForMode('dark');
   const lightSchemes = getSchemesForMode('light');
+
+  // Track which scheme is being hovered for the diff preview
+  const [hoveredDarkScheme, setHoveredDarkScheme] = useState<ColorScheme | null>(null);
+  const [hoveredLightScheme, setHoveredLightScheme] = useState<ColorScheme | null>(null);
+
+  const darkPreviewScheme = hoveredDarkScheme ?? getScheme(darkSchemeId) ?? activeScheme;
+  const lightPreviewScheme = hoveredLightScheme ?? getScheme(lightSchemeId) ?? activeScheme;
 
   return (
     <div className="settings">
@@ -47,6 +58,7 @@ export function SettingsPage() {
       <div className="settings__schemes">
         <section className="settings__scheme-group">
           <h3 className="settings__scheme-group-title">Dark Mode Scheme</h3>
+          <DiffPreview scheme={darkPreviewScheme} />
           <div className="settings__scheme-grid">
             {darkSchemes.map((scheme) => (
               <SchemeCard
@@ -54,8 +66,14 @@ export function SettingsPage() {
                 scheme={scheme}
                 selected={scheme.id === darkSchemeId}
                 onSelect={() => setDarkScheme(scheme.id)}
-                onPreview={() => previewScheme(scheme)}
-                onClearPreview={clearPreview}
+                onPreview={() => {
+                  setHoveredDarkScheme(scheme);
+                  previewScheme(scheme);
+                }}
+                onClearPreview={() => {
+                  setHoveredDarkScheme(null);
+                  clearPreview();
+                }}
               />
             ))}
           </div>
@@ -63,6 +81,7 @@ export function SettingsPage() {
 
         <section className="settings__scheme-group">
           <h3 className="settings__scheme-group-title">Light Mode Scheme</h3>
+          <DiffPreview scheme={lightPreviewScheme} />
           <div className="settings__scheme-grid">
             {lightSchemes.map((scheme) => (
               <SchemeCard
@@ -70,8 +89,14 @@ export function SettingsPage() {
                 scheme={scheme}
                 selected={scheme.id === lightSchemeId}
                 onSelect={() => setLightScheme(scheme.id)}
-                onPreview={() => previewScheme(scheme)}
-                onClearPreview={clearPreview}
+                onPreview={() => {
+                  setHoveredLightScheme(scheme);
+                  previewScheme(scheme);
+                }}
+                onClearPreview={() => {
+                  setHoveredLightScheme(null);
+                  clearPreview();
+                }}
               />
             ))}
           </div>
