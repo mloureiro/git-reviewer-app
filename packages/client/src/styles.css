@@ -264,10 +264,7 @@ body {
 .diff-file-section {
   border: 1px solid var(--color-border-default);
   border-radius: 6px;
-  /* Use `clip` instead of `hidden` so the border-radius still clips the header
-     corners visually, but children (the diff table wrapper) can still establish
-     their own scroll containers and show scrollbars. */
-  overflow: clip;
+  /* overflow left visible to allow position:sticky on the header */
   transition:
     border-color 0.15s ease,
     box-shadow 0.15s ease;
@@ -293,6 +290,10 @@ body {
   padding: 8px 16px;
   background-color: var(--color-bg-surface);
   border-bottom: 1px solid var(--color-border-default);
+  border-radius: 6px 6px 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .diff-file-section__filename {
