@@ -22,6 +22,7 @@ import type {
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
+  ReposResponse,
 } from '../types/review';
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -151,6 +152,13 @@ export class TauriBackend implements Backend {
   async resolveRefs(refs: string[]): Promise<ResolveRefsResponse> {
     const invoke = await getInvoke();
     return invoke('resolve_refs', { refs }) as Promise<ResolveRefsResponse>;
+  }
+
+  // Repos
+
+  async fetchRepos(): Promise<ReposResponse> {
+    // Tauri desktop app operates on a single repo; return an empty list
+    return { repos: [] };
   }
 
   // Commits

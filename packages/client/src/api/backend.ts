@@ -21,6 +21,7 @@ import type {
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
+  ReposResponse,
 } from '../types/review';
 
 /**
@@ -34,36 +35,49 @@ export interface Backend {
 
   // Sessions
   fetchSessions(): Promise<SessionListResponse>;
-  fetchSession(commitSha: string): Promise<SessionResponse>;
-  createSession(data: CreateSessionRequest): Promise<SessionResponse>;
-  deleteSession(commitSha: string): Promise<void>;
+  fetchSession(commitSha: string, repo?: string): Promise<SessionResponse>;
+  createSession(data: CreateSessionRequest, repo?: string): Promise<SessionResponse>;
+  deleteSession(commitSha: string, repo?: string): Promise<void>;
   updateSessionStatus(
     commitSha: string,
     data: UpdateSessionStatusRequest,
+    repo?: string,
   ): Promise<UpdateSessionStatusResponse>;
 
   // Comments
-  postComment(commitSha: string, data: CreateCommentRequest): Promise<CreateCommentResponse>;
+  postComment(
+    commitSha: string,
+    data: CreateCommentRequest,
+    repo?: string,
+  ): Promise<CreateCommentResponse>;
   patchComment(
     commitSha: string,
     commentId: string,
     data: UpdateCommentRequest,
+    repo?: string,
   ): Promise<UpdateCommentResponse>;
 
   // Viewed files
-  markFileViewed(commitSha: string, path: string): Promise<ViewedFile>;
-  unmarkFileViewed(commitSha: string, path: string): Promise<void>;
+  markFileViewed(commitSha: string, path: string, repo?: string): Promise<ViewedFile>;
+  unmarkFileViewed(commitSha: string, path: string, repo?: string): Promise<void>;
 
   // Auto-mark rules
-  updateAutoMarkRules(commitSha: string, rules: AutoMarkRule[]): Promise<AutoMarkRulesResponse>;
-  applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse>;
+  updateAutoMarkRules(
+    commitSha: string,
+    rules: AutoMarkRule[],
+    repo?: string,
+  ): Promise<AutoMarkRulesResponse>;
+  applyAutoMarkRules(commitSha: string, repo?: string): Promise<AutoMarkApplyResponse>;
 
   // Refs
-  fetchRefs(): Promise<RefsResponse>;
-  resolveRefs(refs: string[]): Promise<ResolveRefsResponse>;
+  fetchRefs(repo?: string): Promise<RefsResponse>;
+  resolveRefs(refs: string[], repo?: string): Promise<ResolveRefsResponse>;
+
+  // Repos
+  fetchRepos(): Promise<ReposResponse>;
 
   // Commits
-  fetchCommits(commitSha: string): Promise<CommitsResponse>;
-  fetchCommitDiff(commitHash: string): Promise<CommitDiffResponse>;
-  fetchCommitFiles(commitHash: string): Promise<CommitFilesResponse>;
+  fetchCommits(commitSha: string, repo?: string): Promise<CommitsResponse>;
+  fetchCommitDiff(commitHash: string, repo?: string): Promise<CommitDiffResponse>;
+  fetchCommitFiles(commitHash: string, repo?: string): Promise<CommitFilesResponse>;
 }
