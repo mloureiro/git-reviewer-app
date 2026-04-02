@@ -12,6 +12,12 @@ pub fn open_repo() -> Result<Repository, String> {
     Repository::discover(&cwd).map_err(|e| format!("Failed to open git repository: {}", e))
 }
 
+/// Open the git repository at a specific path.
+pub fn open_repo_at(path: &str) -> Result<Repository, String> {
+    let p = std::path::Path::new(path);
+    Repository::discover(p).map_err(|e| format!("Failed to open git repository at '{}': {}", path, e))
+}
+
 /// Get the current branch short name (e.g. "feature/auth"), or None if detached.
 pub fn current_branch_name(repo: &Repository) -> Option<String> {
     let head = repo.head().ok()?;

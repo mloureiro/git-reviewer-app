@@ -70,6 +70,8 @@ pub struct ReviewSession {
     pub status: ReviewStatus,
     pub created_at: String,
     pub updated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub repo_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -116,6 +118,16 @@ pub struct CommitInfo {
 }
 
 // --- Response types ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResolveRefsResponse {
+    pub refs: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReposResponse {
+    pub repos: Vec<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -182,6 +194,7 @@ mod tests {
             status: ReviewStatus::Pending,
             created_at: "2026-03-19T10:00:00.000Z".into(),
             updated_at: "2026-03-19T10:00:00.000Z".into(),
+            repo_path: None,
         }
     }
 

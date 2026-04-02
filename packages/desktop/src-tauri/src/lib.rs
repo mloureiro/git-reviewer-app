@@ -12,6 +12,11 @@ pub struct InitialSession(pub Mutex<Option<String>>);
 /// Holds the optional repo path provided via `--repo`.
 pub struct RepoPath(pub Mutex<Option<String>>);
 
+/// Registry of all known repository paths. The first registered repo is the default.
+pub struct RepoRegistry {
+    pub paths: Mutex<Vec<String>>,
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -20,6 +25,9 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .manage(InitialSession(Mutex::new(None)))
         .manage(RepoPath(Mutex::new(None)))
+        .manage(RepoRegistry {
+            paths: Mutex::new(Vec::new()),
+        })
         .setup(|app| {
             use tauri_plugin_cli::CliExt;
 
@@ -38,10 +46,16 @@ pub fn run() {
                 }
             }
 
-            // Store repo path in managed state
+            // Store repo path in managed state and register in RepoRegistry
             if let Some(repo_path) = repo_arg {
                 let state = app.state::<RepoPath>();
-                *state.0.lock().unwrap() = Some(repo_path);
+                *state.0.lock().unwrap() = Some(repo_path.clone());
+
+                let registry = app.state::<RepoRegistry>();
+                let mut paths = registry.paths.lock().unwrap();
+                if !paths.contains(&repo_path) {
+                    paths.push(repo_path);
+                }
             }
 
             // Extract --base and --head
@@ -91,6 +105,9 @@ pub fn run() {
             commands::install_cli,
             commands::get_current_repo,
             commands::select_repository,
+            commands::list_repos,
+            commands::register_repo,
+            commands::resolve_refs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

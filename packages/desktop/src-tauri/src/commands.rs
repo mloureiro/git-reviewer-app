@@ -1,9 +1,11 @@
+use std::collections::HashMap;
 use std::collections::HashSet;
 
 use crate::auto_mark::evaluate_auto_mark_rules;
 use crate::git_ops;
 use crate::types::*;
 use crate::InitialSession;
+use crate::RepoRegistry;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -13,22 +15,55 @@ fn now_iso() -> String {
     chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
 }
 
+/// Open a repository, either from an explicit path or by falling back to CWD.
+fn open_repo_from(repo: &Option<String>) -> Result<git2::Repository, String> {
+    match repo {
+        Some(path) if !path.is_empty() => git_ops::open_repo_at(path),
+        _ => git_ops::open_repo(),
+    }
+}
+
+/// Resolve the repo path string: if provided, use it; otherwise derive from CWD repo.
+fn resolve_repo_path(repo: &Option<String>) -> Result<String, String> {
+    match repo {
+        Some(path) if !path.is_empty() => Ok(path.clone()),
+        _ => {
+            let r = git_ops::open_repo()?;
+            r.workdir()
+                .map(|p| p.to_string_lossy().to_string())
+                .ok_or_else(|| "Repository has no working directory".to_string())
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Refs
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn fetch_refs() -> Result<RefsResponse, String> {
-    let repo = git_ops::open_repo()?;
-    let branches = git_ops::list_branches(&repo)?;
-    let tags = git_ops::list_tags(&repo)?;
-    let current_branch = git_ops::current_branch_name(&repo).unwrap_or_default();
+pub fn fetch_refs(repo: Option<String>) -> Result<RefsResponse, String> {
+    let repository = open_repo_from(&repo)?;
+    let branches = git_ops::list_branches(&repository)?;
+    let tags = git_ops::list_tags(&repository)?;
+    let current_branch = git_ops::current_branch_name(&repository).unwrap_or_default();
 
     Ok(RefsResponse {
         branches,
         tags,
         current_branch,
     })
+}
+
+#[tauri::command]
+pub fn resolve_refs(refs: Vec<String>, repo: Option<String>) -> Result<ResolveRefsResponse, String> {
+    let repository = open_repo_from(&repo)?;
+    let mut resolved = HashMap::new();
+    for r in &refs {
+        if let Ok(sha) = git_ops::resolve_ref(&repository, r) {
+            resolved.insert(r.clone(), sha);
+        }
+    }
+    Ok(ResolveRefsResponse { refs: resolved })
 }
 
 // ---------------------------------------------------------------------------
@@ -40,8 +75,9 @@ pub fn fetch_files(
     base: Option<String>,
     head: Option<String>,
     uncommitted: Option<String>,
+    repo: Option<String>,
 ) -> Result<FilesResponse, String> {
-    let repo = git_ops::open_repo()?;
+    let repo = open_repo_from(&repo)?;
     let is_uncommitted = uncommitted.as_deref() == Some("true");
 
     let files = if is_uncommitted {
@@ -73,8 +109,9 @@ pub fn fetch_diff(
     base: Option<String>,
     head: Option<String>,
     uncommitted: Option<String>,
+    repo: Option<String>,
 ) -> Result<DiffResponse, String> {
-    let repo = git_ops::open_repo()?;
+    let repo = open_repo_from(&repo)?;
     let is_uncommitted = uncommitted.as_deref() == Some("true");
 
     let diff = if is_uncommitted {
@@ -93,14 +130,40 @@ pub fn fetch_diff(
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn fetch_sessions() -> Result<SessionListResponse, String> {
-    let repo = git_ops::open_repo()?;
-    let commit_shas = git_ops::list_review_notes(&repo)?;
+pub fn fetch_sessions(
+    registry: tauri::State<'_, RepoRegistry>,
+) -> Result<SessionListResponse, String> {
+    let paths = registry.paths.lock().unwrap().clone();
     let mut sessions: Vec<ReviewData> = Vec::new();
 
-    for sha in &commit_shas {
-        if let Some(data) = git_ops::read_review_note(&repo, sha)? {
-            sessions.push(data);
+    if paths.is_empty() {
+        // Fallback to CWD when no repos are registered
+        if let Ok(repo) = git_ops::open_repo() {
+            let repo_path = repo.workdir().map(|p| p.to_string_lossy().to_string());
+            let commit_shas = git_ops::list_review_notes(&repo)?;
+            for sha in &commit_shas {
+                if let Some(mut data) = git_ops::read_review_note(&repo, sha)? {
+                    if data.session.repo_path.is_none() {
+                        data.session.repo_path = repo_path.clone();
+                    }
+                    sessions.push(data);
+                }
+            }
+        }
+    } else {
+        for repo_path in &paths {
+            if let Ok(repo) = git_ops::open_repo_at(repo_path) {
+                if let Ok(commit_shas) = git_ops::list_review_notes(&repo) {
+                    for sha in &commit_shas {
+                        if let Ok(Some(mut data)) = git_ops::read_review_note(&repo, sha) {
+                            if data.session.repo_path.is_none() {
+                                data.session.repo_path = Some(repo_path.clone());
+                            }
+                            sessions.push(data);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -108,9 +171,43 @@ pub fn fetch_sessions() -> Result<SessionListResponse, String> {
 }
 
 #[tauri::command]
-pub fn fetch_session(commit_sha: String) -> Result<ReviewData, String> {
-    let repo = git_ops::open_repo()?;
-    match git_ops::read_review_note(&repo, &commit_sha)? {
+pub fn fetch_session(
+    commit_sha: String,
+    repo: Option<String>,
+    registry: tauri::State<'_, RepoRegistry>,
+) -> Result<ReviewData, String> {
+    // If repo is specified, use it directly. Otherwise search all registered repos.
+    if let Some(ref path) = repo {
+        if !path.is_empty() {
+            let repository = git_ops::open_repo_at(path)?;
+            return match git_ops::read_review_note(&repository, &commit_sha)? {
+                Some(mut data) => {
+                    if data.session.repo_path.is_none() {
+                        data.session.repo_path = Some(path.clone());
+                    }
+                    Ok(data)
+                }
+                None => Err("Review session not found".to_string()),
+            };
+        }
+    }
+
+    // Search across all registered repos
+    let paths = registry.paths.lock().unwrap().clone();
+    for path in &paths {
+        if let Ok(repository) = git_ops::open_repo_at(path) {
+            if let Ok(Some(mut data)) = git_ops::read_review_note(&repository, &commit_sha) {
+                if data.session.repo_path.is_none() {
+                    data.session.repo_path = Some(path.clone());
+                }
+                return Ok(data);
+            }
+        }
+    }
+
+    // Fallback to CWD
+    let repository = git_ops::open_repo()?;
+    match git_ops::read_review_note(&repository, &commit_sha)? {
         Some(data) => Ok(data),
         None => Err("Review session not found".to_string()),
     }
@@ -121,11 +218,13 @@ pub fn create_session(
     title: String,
     base_ref: String,
     head_ref: String,
+    repo: Option<String>,
 ) -> Result<ReviewData, String> {
-    let repo = git_ops::open_repo()?;
+    let repository = open_repo_from(&repo)?;
+    let repo_path = resolve_repo_path(&repo)?;
 
-    let base_commit = git_ops::resolve_ref(&repo, &base_ref)?;
-    let head_commit = git_ops::resolve_ref(&repo, &head_ref)?;
+    let base_commit = git_ops::resolve_ref(&repository, &base_ref)?;
+    let head_commit = git_ops::resolve_ref(&repository, &head_ref)?;
 
     let now = now_iso();
 
@@ -141,27 +240,28 @@ pub fn create_session(
             status: ReviewStatus::Pending,
             created_at: now.clone(),
             updated_at: now,
+            repo_path: Some(repo_path),
         },
         comments: Vec::new(),
         viewed_files: None,
         auto_mark_rules: None,
     };
 
-    git_ops::write_review_note(&repo, &head_commit, &data)?;
+    git_ops::write_review_note(&repository, &head_commit, &data)?;
     Ok(data)
 }
 
 #[tauri::command]
-pub fn delete_session(commit_sha: String) -> Result<(), String> {
-    let repo = git_ops::open_repo()?;
+pub fn delete_session(commit_sha: String, repo: Option<String>) -> Result<(), String> {
+    let repository = open_repo_from(&repo)?;
 
     // Verify session exists
-    match git_ops::read_review_note(&repo, &commit_sha)? {
+    match git_ops::read_review_note(&repository, &commit_sha)? {
         Some(_) => {}
         None => return Err("Review session not found".to_string()),
     }
 
-    git_ops::remove_review_note(&repo, &commit_sha)?;
+    git_ops::remove_review_note(&repository, &commit_sha)?;
     Ok(())
 }
 
@@ -169,8 +269,9 @@ pub fn delete_session(commit_sha: String) -> Result<(), String> {
 pub fn update_session_status(
     commit_sha: String,
     status: String,
+    repo: Option<String>,
 ) -> Result<ReviewSession, String> {
-    let repo = git_ops::open_repo()?;
+    let repo = open_repo_from(&repo)?;
 
     let review_status = match status.as_str() {
         "pending" => ReviewStatus::Pending,
@@ -205,8 +306,9 @@ pub fn post_comment(
     side: Option<String>,
     body: String,
     author: Option<String>,
+    repo: Option<String>,
 ) -> Result<ReviewComment, String> {
-    let repo = git_ops::open_repo()?;
+    let repo = open_repo_from(&repo)?;
 
     let mut data = git_ops::read_review_note(&repo, &commit_sha)?
         .ok_or_else(|| "Review session not found".to_string())?;
@@ -240,8 +342,9 @@ pub fn patch_comment(
     commit_sha: String,
     comment_id: String,
     resolved: bool,
+    repo: Option<String>,
 ) -> Result<ReviewComment, String> {
-    let repo = git_ops::open_repo()?;
+    let repo = open_repo_from(&repo)?;
 
     let mut data = git_ops::read_review_note(&repo, &commit_sha)?
         .ok_or_else(|| "Review session not found".to_string())?;
@@ -266,8 +369,8 @@ pub fn patch_comment(
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn mark_file_viewed(commit_sha: String, path: String) -> Result<ViewedFile, String> {
-    let repo = git_ops::open_repo()?;
+pub fn mark_file_viewed(commit_sha: String, path: String, repo: Option<String>) -> Result<ViewedFile, String> {
+    let repo = open_repo_from(&repo)?;
 
     let mut data = git_ops::read_review_note(&repo, &commit_sha)?
         .ok_or_else(|| "Review session not found".to_string())?;
@@ -298,8 +401,8 @@ pub fn mark_file_viewed(commit_sha: String, path: String) -> Result<ViewedFile, 
 }
 
 #[tauri::command]
-pub fn unmark_file_viewed(commit_sha: String, path: String) -> Result<(), String> {
-    let repo = git_ops::open_repo()?;
+pub fn unmark_file_viewed(commit_sha: String, path: String, repo: Option<String>) -> Result<(), String> {
+    let repo = open_repo_from(&repo)?;
 
     let mut data = git_ops::read_review_note(&repo, &commit_sha)?
         .ok_or_else(|| "Review session not found".to_string())?;
@@ -322,8 +425,9 @@ pub fn unmark_file_viewed(commit_sha: String, path: String) -> Result<(), String
 pub fn update_auto_mark_rules(
     commit_sha: String,
     rules: Vec<AutoMarkRule>,
+    repo: Option<String>,
 ) -> Result<AutoMarkRulesResponse, String> {
-    let repo = git_ops::open_repo()?;
+    let repo = open_repo_from(&repo)?;
 
     let mut data = git_ops::read_review_note(&repo, &commit_sha)?
         .ok_or_else(|| "Review session not found".to_string())?;
@@ -372,8 +476,8 @@ pub fn update_auto_mark_rules(
 }
 
 #[tauri::command]
-pub fn apply_auto_mark_rules(commit_sha: String) -> Result<AutoMarkApplyResponse, String> {
-    let repo = git_ops::open_repo()?;
+pub fn apply_auto_mark_rules(commit_sha: String, repo: Option<String>) -> Result<AutoMarkApplyResponse, String> {
+    let repo = open_repo_from(&repo)?;
 
     let mut data = git_ops::read_review_note(&repo, &commit_sha)?
         .ok_or_else(|| "Review session not found".to_string())?;
@@ -421,8 +525,8 @@ pub fn apply_auto_mark_rules(commit_sha: String) -> Result<AutoMarkApplyResponse
 // ---------------------------------------------------------------------------
 
 #[tauri::command]
-pub fn fetch_commits(commit_sha: String) -> Result<CommitsResponse, String> {
-    let repo = git_ops::open_repo()?;
+pub fn fetch_commits(commit_sha: String, repo: Option<String>) -> Result<CommitsResponse, String> {
+    let repo = open_repo_from(&repo)?;
 
     let data = git_ops::read_review_note(&repo, &commit_sha)?
         .ok_or_else(|| "Review session not found".to_string())?;
@@ -437,15 +541,15 @@ pub fn fetch_commits(commit_sha: String) -> Result<CommitsResponse, String> {
 }
 
 #[tauri::command]
-pub fn fetch_commit_diff(commit_hash: String) -> Result<DiffResponse, String> {
-    let repo = git_ops::open_repo()?;
+pub fn fetch_commit_diff(commit_hash: String, repo: Option<String>) -> Result<DiffResponse, String> {
+    let repo = open_repo_from(&repo)?;
     let diff = git_ops::get_commit_diff_text(&repo, &commit_hash)?;
     Ok(DiffResponse { diff })
 }
 
 #[tauri::command]
-pub fn fetch_commit_files(commit_hash: String) -> Result<FilesResponse, String> {
-    let repo = git_ops::open_repo()?;
+pub fn fetch_commit_files(commit_hash: String, repo: Option<String>) -> Result<FilesResponse, String> {
+    let repo = open_repo_from(&repo)?;
     let files = git_ops::get_commit_changed_files(&repo, &commit_hash)?;
     let diff_text = git_ops::get_commit_diff_text(&repo, &commit_hash)?;
     let diff_hashes = git_ops::get_file_diff_hashes(&diff_text);
@@ -545,6 +649,7 @@ pub fn install_cli() -> Result<String, String> {
 /// Create a review session from CLI arguments (called during app setup, not a Tauri command).
 pub fn create_session_from_cli(base_ref: &str, head_ref: &str) -> Result<String, String> {
     let repo = git_ops::open_repo()?;
+    let repo_path = repo.workdir().map(|p| p.to_string_lossy().to_string());
 
     let base_commit = git_ops::resolve_ref(&repo, base_ref)?;
     let head_commit = git_ops::resolve_ref(&repo, head_ref)?;
@@ -575,6 +680,7 @@ pub fn create_session_from_cli(base_ref: &str, head_ref: &str) -> Result<String,
             status: ReviewStatus::Pending,
             created_at: now.clone(),
             updated_at: now,
+            repo_path,
         },
         comments: Vec::new(),
         viewed_files: None,
@@ -617,8 +723,12 @@ pub fn get_current_repo() -> Result<Option<String>, String> {
 }
 
 /// Set the working directory to the given path (must be a git repository).
+/// Also registers the repo in the registry.
 #[tauri::command]
-pub fn select_repository(path: String) -> Result<String, String> {
+pub fn select_repository(
+    path: String,
+    registry: tauri::State<'_, RepoRegistry>,
+) -> Result<String, String> {
     let p = std::path::Path::new(&path);
     if !p.exists() || !p.is_dir() {
         return Err(format!("Path does not exist or is not a directory: {}", path));
@@ -628,5 +738,40 @@ pub fn select_repository(path: String) -> Result<String, String> {
         .map_err(|e| format!("Not a git repository: {}", e))?;
     std::env::set_current_dir(p)
         .map_err(|e| format!("Failed to set working directory: {}", e))?;
+
+    let mut paths = registry.paths.lock().unwrap();
+    if !paths.contains(&path) {
+        paths.push(path.clone());
+    }
+
+    Ok(path)
+}
+
+/// List all registered repository paths.
+#[tauri::command]
+pub fn list_repos(registry: tauri::State<'_, RepoRegistry>) -> Result<ReposResponse, String> {
+    let paths = registry.paths.lock().unwrap().clone();
+    Ok(ReposResponse { repos: paths })
+}
+
+/// Register a new repository path.
+#[tauri::command]
+pub fn register_repo(
+    path: String,
+    registry: tauri::State<'_, RepoRegistry>,
+) -> Result<String, String> {
+    let p = std::path::Path::new(&path);
+    if !p.exists() || !p.is_dir() {
+        return Err(format!("Path does not exist or is not a directory: {}", path));
+    }
+    // Verify it's a git repo
+    git2::Repository::discover(p)
+        .map_err(|e| format!("Not a git repository: {}", e))?;
+
+    let mut paths = registry.paths.lock().unwrap();
+    if !paths.contains(&path) {
+        paths.push(path.clone());
+    }
+
     Ok(path)
 }
