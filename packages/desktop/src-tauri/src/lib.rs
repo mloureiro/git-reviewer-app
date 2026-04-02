@@ -70,6 +70,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            commands::fetch_refs,
             commands::fetch_files,
             commands::fetch_diff,
             commands::fetch_sessions,

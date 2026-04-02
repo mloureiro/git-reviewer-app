@@ -18,6 +18,7 @@ import type {
   ViewedFile,
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
+  RefsResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -109,6 +110,11 @@ export function updateAutoMarkRules(
 /** POST /api/sessions/:commitSha/auto-mark-apply — Re-apply existing auto-mark rules. */
 export function applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse> {
   return getBackend().applyAutoMarkRules(commitSha);
+}
+
+/** GET /api/refs — Fetch branches and tags for the repository. */
+export function fetchRefs(): Promise<RefsResponse> {
+  return getBackend().fetchRefs();
 }
 
 /** GET /api/sessions/:commitSha/commits — Fetch the commit list for a session's base..head range. */

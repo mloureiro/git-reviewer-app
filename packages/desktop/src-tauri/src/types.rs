@@ -153,6 +153,14 @@ pub struct CommitsResponse {
     pub commits: Vec<CommitInfo>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefsResponse {
+    pub branches: Vec<String>,
+    pub tags: Vec<String>,
+    pub current_branch: String,
+}
+
 // ---------------------------------------------------------------------------
 // Serialization tests — verify JSON keys match the TypeScript frontend contract
 // ---------------------------------------------------------------------------

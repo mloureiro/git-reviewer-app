@@ -22,6 +22,36 @@ pub fn current_branch_name(repo: &Repository) -> Option<String> {
     }
 }
 
+/// List all local branch names.
+pub fn list_branches(repo: &Repository) -> Result<Vec<String>, String> {
+    let branches = repo
+        .branches(Some(git2::BranchType::Local))
+        .map_err(|e| format!("Failed to list branches: {}", e))?;
+
+    let mut names = Vec::new();
+    for branch in branches {
+        let (branch, _) = branch.map_err(|e| format!("Failed to read branch: {}", e))?;
+        if let Some(name) = branch.name().map_err(|e| format!("Invalid branch name: {}", e))? {
+            names.push(name.to_string());
+        }
+    }
+    names.sort();
+    Ok(names)
+}
+
+/// List all tag names.
+pub fn list_tags(repo: &Repository) -> Result<Vec<String>, String> {
+    let mut tags = Vec::new();
+    let tag_names = repo
+        .tag_names(None)
+        .map_err(|e| format!("Failed to list tags: {}", e))?;
+    for name in tag_names.iter().flatten() {
+        tags.push(name.to_string());
+    }
+    tags.sort();
+    Ok(tags)
+}
+
 /// Resolve a ref name (branch, tag, SHA, HEAD, etc.) to its full commit SHA.
 pub fn resolve_ref(repo: &Repository, ref_name: &str) -> Result<String, String> {
     let obj = repo

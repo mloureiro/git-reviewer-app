@@ -83,6 +83,25 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
     }
   });
 
+  // List branches and tags for the repo
+  router.get('/refs', async (req, res) => {
+    try {
+      const [git] = registry.resolve(req.query.repo);
+      const [branchResult, tagResult] = await Promise.all([git.branchLocal(), git.tag()]);
+
+      const branches = branchResult.all;
+      const currentBranch = branchResult.current;
+      const tags = tagResult
+        .split('\n')
+        .map((t) => t.trim())
+        .filter(Boolean);
+
+      res.json({ branches, tags, currentBranch });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
   // Get diff between base and head
   router.get('/diff', async (req, res) => {
     try {

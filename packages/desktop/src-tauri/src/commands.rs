@@ -14,6 +14,24 @@ fn now_iso() -> String {
 }
 
 // ---------------------------------------------------------------------------
+// Refs
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub fn fetch_refs() -> Result<RefsResponse, String> {
+    let repo = git_ops::open_repo()?;
+    let branches = git_ops::list_branches(&repo)?;
+    let tags = git_ops::list_tags(&repo)?;
+    let current_branch = git_ops::current_branch_name(&repo).unwrap_or_default();
+
+    Ok(RefsResponse {
+        branches,
+        tags,
+        current_branch,
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Files & Diff
 // ---------------------------------------------------------------------------
 
@@ -476,7 +494,7 @@ pub fn install_cli() -> Result<String, String> {
 
         if let Some(app_path) = app_bundle {
             format!(
-                "#!/bin/sh\nopen -a \"{}\" --args \"$@\"\n",
+                "#!/bin/sh\nopen -a \"{}\" --args --repo \"$(pwd)\" \"$@\"\n",
                 app_path.display()
             )
         } else {

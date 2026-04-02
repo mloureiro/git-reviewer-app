@@ -876,6 +876,11 @@ body {
   color: var(--color-text-secondary);
 }
 
+.form-field__current-branch code {
+  font-size: 0.6875rem;
+  color: var(--color-accent);
+}
+
 /* ── Review Layout (two-column: sidebar + diff) ────────────────────────── */
 
 .review-layout {

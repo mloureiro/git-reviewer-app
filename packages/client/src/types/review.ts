@@ -108,6 +108,13 @@ export interface AutoMarkApplyResponse {
   autoMarked: ViewedFile[];
 }
 
+// GET /api/refs
+export interface RefsResponse {
+  branches: string[];
+  tags: string[];
+  currentBranch: string;
+}
+
 // GET /api/sessions/:commitSha/commits
 export interface CommitsResponse {
   commits: CommitInfo[];

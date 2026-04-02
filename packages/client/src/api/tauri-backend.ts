@@ -17,6 +17,7 @@ import type {
   ViewedFile,
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
+  RefsResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -137,6 +138,13 @@ export class TauriBackend implements Backend {
   async applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse> {
     const invoke = await getInvoke();
     return invoke('apply_auto_mark_rules', { commitSha }) as Promise<AutoMarkApplyResponse>;
+  }
+
+  // Refs
+
+  async fetchRefs(): Promise<RefsResponse> {
+    const invoke = await getInvoke();
+    return invoke('fetch_refs') as Promise<RefsResponse>;
   }
 
   // Commits

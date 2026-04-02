@@ -18,6 +18,7 @@ import type {
   ViewedFile,
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
+  RefsResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -119,6 +120,12 @@ export class HttpBackend implements Backend {
 
   applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse> {
     return apiPost<AutoMarkApplyResponse>(`/api/sessions/${commitSha}/auto-mark-apply`, {});
+  }
+
+  // Refs
+
+  fetchRefs(): Promise<RefsResponse> {
+    return apiGet<RefsResponse>('/api/refs');
   }
 
   // Commits

@@ -16,6 +16,7 @@ import type {
   ViewedFile,
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
+  RefsResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -55,6 +56,9 @@ export interface Backend {
   // Auto-mark rules
   updateAutoMarkRules(commitSha: string, rules: AutoMarkRule[]): Promise<AutoMarkRulesResponse>;
   applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse>;
+
+  // Refs
+  fetchRefs(): Promise<RefsResponse>;
 
   // Commits
   fetchCommits(commitSha: string): Promise<CommitsResponse>;
