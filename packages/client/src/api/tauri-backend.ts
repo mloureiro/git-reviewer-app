@@ -46,6 +46,7 @@ export class TauriBackend implements Backend {
       base: params.base,
       head: params.head,
       uncommitted: params.uncommitted,
+      repo: params.repo,
     }) as Promise<FilesResponse>;
   }
 
@@ -55,6 +56,7 @@ export class TauriBackend implements Backend {
       base: params.base,
       head: params.head,
       uncommitted: params.uncommitted,
+      repo: params.repo,
     }) as Promise<DiffResponse>;
   }
 
@@ -65,66 +67,75 @@ export class TauriBackend implements Backend {
     return invoke('fetch_sessions') as Promise<SessionListResponse>;
   }
 
-  async fetchSession(commitSha: string): Promise<SessionResponse> {
+  async fetchSession(commitSha: string, repo?: string): Promise<SessionResponse> {
     const invoke = await getInvoke();
-    return invoke('fetch_session', { commitSha }) as Promise<SessionResponse>;
+    return invoke('fetch_session', { commitSha, repo }) as Promise<SessionResponse>;
   }
 
-  async createSession(data: CreateSessionRequest): Promise<SessionResponse> {
+  async createSession(data: CreateSessionRequest, repo?: string): Promise<SessionResponse> {
     const invoke = await getInvoke();
     return invoke('create_session', {
       title: data.title,
       baseRef: data.baseRef,
       headRef: data.headRef,
+      repo,
     }) as Promise<SessionResponse>;
   }
 
-  async deleteSession(commitSha: string): Promise<void> {
+  async deleteSession(commitSha: string, repo?: string): Promise<void> {
     const invoke = await getInvoke();
-    await invoke('delete_session', { commitSha });
+    await invoke('delete_session', { commitSha, repo });
   }
 
   async updateSessionStatus(
     commitSha: string,
     data: UpdateSessionStatusRequest,
+    repo?: string,
   ): Promise<UpdateSessionStatusResponse> {
     const invoke = await getInvoke();
     return invoke('update_session_status', {
       commitSha,
       status: data.status,
+      repo,
     }) as Promise<UpdateSessionStatusResponse>;
   }
 
   // Comments
 
-  async postComment(commitSha: string, data: CreateCommentRequest): Promise<CreateCommentResponse> {
+  async postComment(
+    commitSha: string,
+    data: CreateCommentRequest,
+    repo?: string,
+  ): Promise<CreateCommentResponse> {
     const invoke = await getInvoke();
-    return invoke('post_comment', { commitSha, ...data }) as Promise<CreateCommentResponse>;
+    return invoke('post_comment', { commitSha, ...data, repo }) as Promise<CreateCommentResponse>;
   }
 
   async patchComment(
     commitSha: string,
     commentId: string,
     data: UpdateCommentRequest,
+    repo?: string,
   ): Promise<UpdateCommentResponse> {
     const invoke = await getInvoke();
     return invoke('patch_comment', {
       commitSha,
       commentId,
       resolved: data.resolved,
+      repo,
     }) as Promise<UpdateCommentResponse>;
   }
 
   // Viewed files
 
-  async markFileViewed(commitSha: string, path: string): Promise<ViewedFile> {
+  async markFileViewed(commitSha: string, path: string, repo?: string): Promise<ViewedFile> {
     const invoke = await getInvoke();
-    return invoke('mark_file_viewed', { commitSha, path }) as Promise<ViewedFile>;
+    return invoke('mark_file_viewed', { commitSha, path, repo }) as Promise<ViewedFile>;
   }
 
-  async unmarkFileViewed(commitSha: string, path: string): Promise<void> {
+  async unmarkFileViewed(commitSha: string, path: string, repo?: string): Promise<void> {
     const invoke = await getInvoke();
-    await invoke('unmark_file_viewed', { commitSha, path });
+    await invoke('unmark_file_viewed', { commitSha, path, repo });
   }
 
   // Auto-mark rules
@@ -132,50 +143,55 @@ export class TauriBackend implements Backend {
   async updateAutoMarkRules(
     commitSha: string,
     rules: AutoMarkRule[],
+    repo?: string,
   ): Promise<AutoMarkRulesResponse> {
     const invoke = await getInvoke();
-    return invoke('update_auto_mark_rules', { commitSha, rules }) as Promise<AutoMarkRulesResponse>;
+    return invoke('update_auto_mark_rules', {
+      commitSha,
+      rules,
+      repo,
+    }) as Promise<AutoMarkRulesResponse>;
   }
 
-  async applyAutoMarkRules(commitSha: string): Promise<AutoMarkApplyResponse> {
+  async applyAutoMarkRules(commitSha: string, repo?: string): Promise<AutoMarkApplyResponse> {
     const invoke = await getInvoke();
-    return invoke('apply_auto_mark_rules', { commitSha }) as Promise<AutoMarkApplyResponse>;
+    return invoke('apply_auto_mark_rules', { commitSha, repo }) as Promise<AutoMarkApplyResponse>;
   }
 
   // Refs
 
-  async fetchRefs(): Promise<RefsResponse> {
+  async fetchRefs(repo?: string): Promise<RefsResponse> {
     const invoke = await getInvoke();
-    return invoke('fetch_refs') as Promise<RefsResponse>;
+    return invoke('fetch_refs', { repo }) as Promise<RefsResponse>;
   }
 
-  async resolveRefs(refs: string[]): Promise<ResolveRefsResponse> {
+  async resolveRefs(refs: string[], repo?: string): Promise<ResolveRefsResponse> {
     const invoke = await getInvoke();
-    return invoke('resolve_refs', { refs }) as Promise<ResolveRefsResponse>;
+    return invoke('resolve_refs', { refs, repo }) as Promise<ResolveRefsResponse>;
   }
 
   // Repos
 
   async fetchRepos(): Promise<ReposResponse> {
-    // Tauri desktop app operates on a single repo; return an empty list
-    return { repos: [] };
+    const invoke = await getInvoke();
+    return invoke('list_repos') as Promise<ReposResponse>;
   }
 
   // Commits
 
-  async fetchCommits(commitSha: string): Promise<CommitsResponse> {
+  async fetchCommits(commitSha: string, repo?: string): Promise<CommitsResponse> {
     const invoke = await getInvoke();
-    return invoke('fetch_commits', { commitSha }) as Promise<CommitsResponse>;
+    return invoke('fetch_commits', { commitSha, repo }) as Promise<CommitsResponse>;
   }
 
-  async fetchCommitDiff(commitHash: string): Promise<CommitDiffResponse> {
+  async fetchCommitDiff(commitHash: string, repo?: string): Promise<CommitDiffResponse> {
     const invoke = await getInvoke();
-    return invoke('fetch_commit_diff', { commitHash }) as Promise<CommitDiffResponse>;
+    return invoke('fetch_commit_diff', { commitHash, repo }) as Promise<CommitDiffResponse>;
   }
 
-  async fetchCommitFiles(commitHash: string): Promise<CommitFilesResponse> {
+  async fetchCommitFiles(commitHash: string, repo?: string): Promise<CommitFilesResponse> {
     const invoke = await getInvoke();
-    return invoke('fetch_commit_files', { commitHash }) as Promise<CommitFilesResponse>;
+    return invoke('fetch_commit_files', { commitHash, repo }) as Promise<CommitFilesResponse>;
   }
 
   async getInitialSession(): Promise<string | null> {
