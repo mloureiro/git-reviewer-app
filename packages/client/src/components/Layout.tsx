@@ -22,12 +22,6 @@ export function Layout() {
               Reviews
             </NavLink>
             <NavLink
-              to="/new"
-              className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
-            >
-              New Review
-            </NavLink>
-            <NavLink
               to="/settings"
               className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             >
