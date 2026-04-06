@@ -1811,6 +1811,9 @@ body {
      800 px is the practical minimum for a readable two-column layout. */
   min-width: max(100%, 800px);
   width: 100%;
+  /* Fixed layout ensures the two code cells split remaining space evenly
+     after fixed-width cells (linenumber, prefix, divider) are accounted for. */
+  table-layout: fixed;
 }
 
 /* Thin vertical divider between left and right panes */
@@ -1847,6 +1850,44 @@ body {
 .diff-file-section .d2h-sbs-linenumber--empty {
   background-color: var(--color-neutral-bg-faint);
   border-right: 1px solid var(--color-border-subtle);
+}
+
+/* Side-by-side placeholder for added/deleted files */
+.diff-sbs-wrapper {
+  position: relative;
+}
+
+.diff-sbs-placeholder {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: var(--color-neutral-bg-faint);
+  color: var(--color-text-muted);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.diff-sbs-placeholder--left {
+  left: 0;
+}
+
+.diff-sbs-placeholder--right {
+  right: 0;
+}
+
+.diff-sbs-placeholder__icon {
+  opacity: 0.5;
+}
+
+.diff-sbs-placeholder__text {
+  font-size: 0.8125rem;
+  font-weight: 500;
 }
 
 /* ── Shortcuts Help Modal ──────────────────────────────────────────────── */

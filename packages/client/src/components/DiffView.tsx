@@ -650,6 +650,10 @@ export function DiffFileComponent({
     .filter(Boolean)
     .join(' ');
 
+  const isNewFile = file.oldName === '' || (file.deletedLines === 0 && file.addedLines > 0);
+  const isDeletedFile = file.newName === '' || (file.addedLines === 0 && file.deletedLines > 0);
+  const showPlaceholder = viewMode === 'side-by-side' && (isNewFile || isDeletedFile);
+
   return (
     <section key={sectionId} id={sectionId} className={sectionClass}>
       <div
@@ -695,8 +699,41 @@ export function DiffFileComponent({
 
       {!isCollapsed && (
         <div
-          className={`d2h-file-diff ${schemeClass}${viewMode === 'side-by-side' ? ' d2h-file-diff--sbs' : ''}`}
+          className={`d2h-file-diff ${schemeClass}${viewMode === 'side-by-side' ? ' d2h-file-diff--sbs' : ''}${showPlaceholder ? ' diff-sbs-wrapper' : ''}`}
         >
+          {showPlaceholder && (
+            <div
+              className={`diff-sbs-placeholder ${isNewFile ? 'diff-sbs-placeholder--left' : 'diff-sbs-placeholder--right'}`}
+            >
+              <svg
+                className="diff-sbs-placeholder__icon"
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                {isNewFile ? (
+                  <>
+                    <line x1="12" y1="13" x2="12" y2="19" />
+                    <line x1="9" y1="16" x2="15" y2="16" />
+                  </>
+                ) : (
+                  <>
+                    <line x1="9" y1="15" x2="15" y2="15" />
+                  </>
+                )}
+              </svg>
+              <span className="diff-sbs-placeholder__text">
+                {isNewFile ? 'New file' : 'File removed'}
+              </span>
+            </div>
+          )}
           <table className="d2h-diff-table">
             {file.blocks.map((block, idx) => (
               <DiffBlockComponent
