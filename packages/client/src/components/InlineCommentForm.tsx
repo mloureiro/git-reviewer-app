@@ -68,7 +68,7 @@ export function InlineCommentForm({
           <textarea
             ref={textareaRef}
             className="inline-comment-form__textarea"
-            placeholder="Leave a comment… (Cmd+Enter to submit, Esc to cancel)"
+            placeholder="Leave a comment… (Cmd+Enter to comment, Esc to cancel)"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -84,7 +84,7 @@ export function InlineCommentForm({
               onClick={handleSubmit}
               disabled={isSubmitDisabled}
             >
-              Submit
+              Comment
             </button>
           </div>
         </div>
