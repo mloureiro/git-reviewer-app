@@ -22,6 +22,7 @@ import type {
   CommitDiffResponse,
   CommitFilesResponse,
   ReposResponse,
+  ValidateSessionsResponse,
 } from '../types/review';
 
 /**
@@ -35,6 +36,7 @@ export interface Backend {
 
   // Sessions
   fetchSessions(): Promise<SessionListResponse>;
+  validateSessions(): Promise<ValidateSessionsResponse>;
   fetchSession(commitSha: string, repo?: string): Promise<SessionResponse>;
   createSession(data: CreateSessionRequest, repo?: string): Promise<SessionResponse>;
   deleteSession(commitSha: string, repo?: string): Promise<void>;

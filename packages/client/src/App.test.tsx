@@ -45,12 +45,13 @@ describe('App', () => {
       sessions: null,
       loading: true,
       error: null,
+      health: {},
       refetch: vi.fn(),
     });
 
     renderApp();
 
-    expect(screen.getByText('Loading sessions...')).toBeInTheDocument();
+    expect(screen.getByText('Loading reviews...')).toBeInTheDocument();
   });
 
   it('shows an error message when the API call fails', () => {
@@ -58,6 +59,7 @@ describe('App', () => {
       sessions: null,
       loading: false,
       error: 'Network error',
+      health: {},
       refetch: vi.fn(),
     });
 
@@ -71,6 +73,7 @@ describe('App', () => {
       sessions: [],
       loading: false,
       error: null,
+      health: {},
       refetch: vi.fn(),
     });
 
@@ -85,6 +88,7 @@ describe('App', () => {
       sessions: [sampleSession],
       loading: false,
       error: null,
+      health: {},
       refetch: vi.fn(),
     });
 

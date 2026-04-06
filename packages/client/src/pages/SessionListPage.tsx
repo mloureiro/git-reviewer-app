@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import type { ReviewData } from '../types/review';
+import type { ReviewData, SessionHealth } from '../types/review';
 import { StatusBadge } from '../components/StatusBadge';
 import { useSessions } from '../hooks/useSessions';
-import { removeRepo } from '../api/reviews';
+import { removeRepo, deleteSession } from '../api/reviews';
 
 function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -65,8 +65,39 @@ function repoDisplayName(repoPath: string): string {
   return segments[segments.length - 1] || repoPath;
 }
 
-function SessionCard({ reviewData }: { reviewData: ReviewData }) {
+function staleRemoveLabel(health: SessionHealth): string {
+  if (health.status !== 'stale') return '';
+  return health.reason === 'no-changes' ? 'Remove empty review' : 'Remove stale review';
+}
+
+function staleTooltip(health: SessionHealth): string {
+  if (health.status !== 'stale') return '';
+  switch (health.reason) {
+    case 'base-ref-missing':
+      return 'Base branch no longer exists';
+    case 'head-ref-missing':
+      return 'Head branch no longer exists';
+    case 'both-refs-missing':
+      return 'Both branches no longer exist';
+    case 'no-changes':
+      return 'No differences between branches';
+    default:
+      return '';
+  }
+}
+
+function SessionCard({
+  reviewData,
+  health,
+  onRemoved,
+}: {
+  reviewData: ReviewData;
+  health?: SessionHealth;
+  onRemoved: () => void;
+}) {
   const { session } = reviewData;
+  const isStale = health?.status === 'stale';
+  const [removing, setRemoving] = useState(false);
 
   const openInNewWindow = useCallback(async () => {
     try {
@@ -81,12 +112,31 @@ function SessionCard({ reviewData }: { reviewData: ReviewData }) {
     }
   }, [session.headCommit, session.title]);
 
+  const handleRemove = useCallback(async () => {
+    setRemoving(true);
+    try {
+      await deleteSession(session.headCommit, session.repoPath);
+      onRemoved();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+      setRemoving(false);
+    }
+  }, [session.headCommit, session.repoPath, onRemoved]);
+
+  const cardClass = ['session-card', isStale ? 'session-card--stale' : '']
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <li key={session.id} className="session-card">
+    <li key={session.id} className={cardClass}>
       <div className="session-card__main">
-        <Link to={`/session/${session.headCommit}`} className="session-card__title">
-          {session.title}
-        </Link>
+        {isStale ? (
+          <span className="session-card__title session-card__title--disabled">{session.title}</span>
+        ) : (
+          <Link to={`/session/${session.headCommit}`} className="session-card__title">
+            {session.title}
+          </Link>
+        )}
         <div className="session-card__meta">
           <span className="session-card__refs">
             <code>{session.baseRef}</code>
@@ -97,7 +147,17 @@ function SessionCard({ reviewData }: { reviewData: ReviewData }) {
         </div>
       </div>
       <div className="session-card__aside">
-        {isTauri() && (
+        {isStale && health != null && (
+          <button
+            className="btn btn--danger btn--sm session-card__remove-btn"
+            onClick={handleRemove}
+            disabled={removing}
+            title={staleTooltip(health)}
+          >
+            {removing ? 'Removing...' : staleRemoveLabel(health)}
+          </button>
+        )}
+        {!isStale && isTauri() && (
           <button
             className="btn btn--ghost btn--sm"
             onClick={openInNewWindow}
@@ -182,9 +242,11 @@ function KebabMenu({ repoPath, onRemoved }: { repoPath: string; onRemoved: () =>
 
 function SessionGroups({
   sessions,
+  health,
   onRepoRemoved,
 }: {
   sessions: ReviewData[];
+  health: Record<string, SessionHealth>;
   onRepoRemoved: () => void;
 }) {
   const grouped = useMemo(() => {
@@ -253,7 +315,12 @@ function SessionGroups({
             {!isCollapsed && (
               <ul className="session-list__items">
                 {groupSessions.map((rd) => (
-                  <SessionCard key={rd.session.id} reviewData={rd} />
+                  <SessionCard
+                    key={rd.session.id}
+                    reviewData={rd}
+                    health={health[rd.session.headCommit]}
+                    onRemoved={onRepoRemoved}
+                  />
                 ))}
               </ul>
             )}
@@ -265,7 +332,7 @@ function SessionGroups({
 }
 
 export function SessionListPage() {
-  const { sessions, loading, error, refetch } = useSessions();
+  const { sessions, loading, error, health, refetch } = useSessions();
   const { checking, needsRepo, selectRepo } = useRepoCheck(refetch);
 
   if (checking) {
@@ -319,7 +386,7 @@ export function SessionListPage() {
         </div>
       </div>
 
-      <SessionGroups sessions={sessions} onRepoRemoved={refetch} />
+      <SessionGroups sessions={sessions} health={health} onRepoRemoved={refetch} />
     </div>
   );
 }

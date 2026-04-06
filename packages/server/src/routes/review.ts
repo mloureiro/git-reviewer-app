@@ -22,6 +22,7 @@ import type {
   ReviewComment,
   ReviewData,
   ReviewStatus,
+  SessionHealth,
   ViewedFile,
 } from '@git-reviewer/shared';
 
@@ -274,6 +275,56 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       }
 
       res.json({ sessions });
+    } catch (error) {
+      res.status(500).json({ error: String(error) });
+    }
+  });
+
+  // Validate all review sessions (check if refs still exist, detect empty diffs)
+  router.get('/sessions/validate', async (req, res) => {
+    try {
+      const health: Record<string, SessionHealth> = {};
+      const repoPaths = registry.listPaths();
+
+      for (const repoPath of repoPaths) {
+        const [git] = registry.resolve(repoPath);
+        const notes = await listReviewNotes(git);
+
+        for (const { commitHash } of notes) {
+          const data = await readReviewNote(git, commitHash);
+          if (!data) continue;
+
+          const { baseRef, headRef } = data.session;
+          let baseResolved: string | null = null;
+          let headResolved: string | null = null;
+
+          try {
+            baseResolved = await git.revparse([baseRef]);
+          } catch {
+            // baseRef no longer exists
+          }
+
+          try {
+            headResolved = await git.revparse([headRef]);
+          } catch {
+            // headRef no longer exists
+          }
+
+          if (baseResolved == null && headResolved == null) {
+            health[commitHash] = { status: 'stale', reason: 'both-refs-missing' };
+          } else if (baseResolved == null) {
+            health[commitHash] = { status: 'stale', reason: 'base-ref-missing' };
+          } else if (headResolved == null) {
+            health[commitHash] = { status: 'stale', reason: 'head-ref-missing' };
+          } else if (baseResolved.trim() === headResolved.trim()) {
+            health[commitHash] = { status: 'stale', reason: 'no-changes' };
+          } else {
+            health[commitHash] = { status: 'ok' };
+          }
+        }
+      }
+
+      res.json({ health });
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }

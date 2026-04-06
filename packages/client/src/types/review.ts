@@ -6,6 +6,7 @@ import type {
   AutoMarkRule,
   ViewedFile,
   CommitInfo,
+  SessionHealth,
 } from '@git-reviewer/shared';
 
 export type {
@@ -15,6 +16,8 @@ export type {
   ReviewStatus,
   ReviewSession,
   ReviewData,
+  SessionHealth,
+  SessionHealthReason,
   DiffFile,
   ViewedFile,
 } from '@git-reviewer/shared';
@@ -130,6 +133,11 @@ export interface CommitsResponse {
 // GET /api/repos
 export interface ReposResponse {
   repos: string[];
+}
+
+// GET /api/sessions/validate
+export interface ValidateSessionsResponse {
+  health: Record<string, SessionHealth>;
 }
 
 // GET /api/commits/:commitHash/diff

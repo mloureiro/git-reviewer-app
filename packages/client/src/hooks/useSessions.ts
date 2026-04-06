@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchSessions } from '../api/reviews';
-import type { ReviewData } from '../types/review';
+import { fetchSessions, validateSessions } from '../api/reviews';
+import type { ReviewData, SessionHealth } from '../types/review';
 
 interface UseSessionsResult {
   sessions: ReviewData[] | null;
   loading: boolean;
   error: string | null;
+  health: Record<string, SessionHealth>;
   refetch: () => void;
 }
 
@@ -13,6 +14,7 @@ export function useSessions(): UseSessionsResult {
   const [sessions, setSessions] = useState<ReviewData[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [health, setHealth] = useState<Record<string, SessionHealth>>({});
   const [revision, setRevision] = useState(0);
 
   const refetch = useCallback(() => {
@@ -31,6 +33,19 @@ export function useSessions(): UseSessionsResult {
           setSessions(response.sessions);
           setLoading(false);
         }
+
+        // Fire async validation after sessions load
+        if (!cancelled) {
+          validateSessions()
+            .then((result) => {
+              if (!cancelled) {
+                setHealth(result.health);
+              }
+            })
+            .catch(() => {
+              // Validation is best-effort; don't block the UI
+            });
+        }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
@@ -45,5 +60,5 @@ export function useSessions(): UseSessionsResult {
     };
   }, [revision]);
 
-  return { sessions, loading, error, refetch };
+  return { sessions, loading, error, health, refetch };
 }

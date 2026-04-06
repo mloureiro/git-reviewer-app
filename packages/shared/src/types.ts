@@ -46,6 +46,14 @@ export interface ViewedFile {
   autoMarkedBy?: AutoMarkRule;
 }
 
+export type SessionHealthReason =
+  | 'base-ref-missing'
+  | 'head-ref-missing'
+  | 'both-refs-missing'
+  | 'no-changes';
+
+export type SessionHealth = { status: 'ok' } | { status: 'stale'; reason: SessionHealthReason };
+
 export interface DiffFile {
   path: string;
   status: 'added' | 'modified' | 'deleted' | 'renamed';

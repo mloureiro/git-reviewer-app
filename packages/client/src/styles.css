@@ -814,7 +814,31 @@ body {
 }
 
 .session-card__aside {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.session-card--stale {
+  opacity: 0.6;
+}
+
+.session-card--stale:hover {
+  border-color: var(--color-border-default);
+}
+
+.session-card__title--disabled {
+  cursor: default;
+  color: var(--color-text-muted);
+}
+
+.session-card__title--disabled:hover {
+  text-decoration: none;
+}
+
+.session-card__remove-btn {
+  white-space: nowrap;
 }
 
 /* ── Status Badge ──────────────────────────────────────────────────────── */
@@ -906,6 +930,16 @@ body {
 .btn--secondary:hover {
   background-color: var(--color-neutral-hover);
   border-color: var(--color-text-secondary);
+}
+
+.btn--danger {
+  background-color: var(--color-danger-bg-subtle);
+  color: var(--color-danger);
+  border-color: var(--color-danger-border-subtle);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background-color: var(--color-danger-bg-hover);
 }
 
 .btn--sm {

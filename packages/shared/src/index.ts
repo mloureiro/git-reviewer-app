@@ -5,6 +5,8 @@ export type {
   ReviewStatus,
   ReviewSession,
   ReviewData,
+  SessionHealth,
+  SessionHealthReason,
   DiffFile,
   ViewedFile,
 } from './types.js';

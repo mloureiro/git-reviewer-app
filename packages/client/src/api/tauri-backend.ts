@@ -23,6 +23,7 @@ import type {
   CommitDiffResponse,
   CommitFilesResponse,
   ReposResponse,
+  ValidateSessionsResponse,
 } from '../types/review';
 
 type InvokeFn = (cmd: string, args?: Record<string, unknown>) => Promise<unknown>;
@@ -65,6 +66,11 @@ export class TauriBackend implements Backend {
   async fetchSessions(): Promise<SessionListResponse> {
     const invoke = await getInvoke();
     return invoke('fetch_sessions') as Promise<SessionListResponse>;
+  }
+
+  async validateSessions(): Promise<ValidateSessionsResponse> {
+    const invoke = await getInvoke();
+    return invoke('validate_sessions') as Promise<ValidateSessionsResponse>;
   }
 
   async fetchSession(commitSha: string, repo?: string): Promise<SessionResponse> {

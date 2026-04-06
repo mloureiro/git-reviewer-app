@@ -24,6 +24,7 @@ import type {
   CommitDiffResponse,
   CommitFilesResponse,
   ReposResponse,
+  ValidateSessionsResponse,
 } from '../types/review';
 
 function buildQueryString(params: Record<string, string | undefined>): string {
@@ -68,6 +69,10 @@ export class HttpBackend implements Backend {
 
   fetchSessions(): Promise<SessionListResponse> {
     return apiGet<SessionListResponse>('/api/sessions');
+  }
+
+  validateSessions(): Promise<ValidateSessionsResponse> {
+    return apiGet<ValidateSessionsResponse>('/api/sessions/validate');
   }
 
   fetchSession(commitSha: string, repo?: string): Promise<SessionResponse> {

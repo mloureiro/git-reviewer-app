@@ -24,6 +24,7 @@ import type {
   CommitDiffResponse,
   CommitFilesResponse,
   ReposResponse,
+  ValidateSessionsResponse,
 } from '../types/review';
 
 /** GET /api/files — Fetch the list of changed files for the given base/head/uncommitted params. */
@@ -39,6 +40,11 @@ export function fetchDiff(params: DiffQueryParams): Promise<DiffResponse> {
 /** GET /api/sessions — List all review sessions. */
 export function fetchSessions(): Promise<SessionListResponse> {
   return getBackend().fetchSessions();
+}
+
+/** GET /api/sessions/validate — Validate all sessions (check refs, detect stale). */
+export function validateSessions(): Promise<ValidateSessionsResponse> {
+  return getBackend().validateSessions();
 }
 
 /** GET /api/sessions/:commitSha — Fetch a single review session by its head commit SHA. */
