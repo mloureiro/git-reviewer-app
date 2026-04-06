@@ -19,7 +19,7 @@ export function Layout() {
               end
               className={({ isActive }) => (isActive ? 'nav-link active' : 'nav-link')}
             >
-              Sessions
+              Reviews
             </NavLink>
             <NavLink
               to="/new"

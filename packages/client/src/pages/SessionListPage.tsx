@@ -326,7 +326,7 @@ export function SessionListPage() {
   }
 
   if (loading) {
-    return <div className="loading">Loading sessions...</div>;
+    return <div className="loading">Loading reviews...</div>;
   }
 
   if (error) {
@@ -348,7 +348,7 @@ export function SessionListPage() {
   return (
     <div className="session-list">
       <div className="session-list__header">
-        <h1 className="session-list__title">Review Sessions</h1>
+        <h1 className="session-list__title">Reviews</h1>
         <div className="session-list__actions">
           <InstallCliButton />
           {isTauri() && (
