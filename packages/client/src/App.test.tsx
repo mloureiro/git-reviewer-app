@@ -46,6 +46,7 @@ describe('App', () => {
       loading: true,
       error: null,
       health: {},
+      stats: {},
       refetch: vi.fn(),
     });
 
@@ -60,6 +61,7 @@ describe('App', () => {
       loading: false,
       error: 'Network error',
       health: {},
+      stats: {},
       refetch: vi.fn(),
     });
 
@@ -74,6 +76,7 @@ describe('App', () => {
       loading: false,
       error: null,
       health: {},
+      stats: {},
       refetch: vi.fn(),
     });
 
@@ -89,6 +92,7 @@ describe('App', () => {
       loading: false,
       error: null,
       health: {},
+      stats: {},
       refetch: vi.fn(),
     });
 

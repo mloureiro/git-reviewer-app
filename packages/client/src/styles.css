@@ -813,6 +813,26 @@ body {
   color: var(--color-text-secondary);
 }
 
+.session-card__stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+}
+
+.session-card__stat-files {
+  color: var(--color-text-secondary);
+}
+
+.session-card__stat-adds {
+  color: var(--color-success-text);
+}
+
+.session-card__stat-dels {
+  color: var(--color-danger);
+}
+
 .session-card__aside {
   display: flex;
   align-items: center;

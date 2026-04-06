@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fetchSessions, validateSessions } from '../api/reviews';
-import type { ReviewData, SessionHealth } from '../types/review';
+import type { ReviewData, SessionHealth, SessionStats } from '../types/review';
 
 interface UseSessionsResult {
   sessions: ReviewData[] | null;
   loading: boolean;
   error: string | null;
   health: Record<string, SessionHealth>;
+  stats: Record<string, SessionStats>;
   refetch: () => void;
 }
 
@@ -15,6 +16,7 @@ export function useSessions(): UseSessionsResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [health, setHealth] = useState<Record<string, SessionHealth>>({});
+  const [stats, setStats] = useState<Record<string, SessionStats>>({});
   const [revision, setRevision] = useState(0);
 
   const refetch = useCallback(() => {
@@ -40,6 +42,7 @@ export function useSessions(): UseSessionsResult {
             .then((result) => {
               if (!cancelled) {
                 setHealth(result.health);
+                setStats(result.stats);
               }
             })
             .catch(() => {
@@ -60,5 +63,5 @@ export function useSessions(): UseSessionsResult {
     };
   }, [revision]);
 
-  return { sessions, loading, error, health, refetch };
+  return { sessions, loading, error, health, stats, refetch };
 }

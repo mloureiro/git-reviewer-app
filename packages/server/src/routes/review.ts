@@ -23,6 +23,7 @@ import type {
   ReviewData,
   ReviewStatus,
   SessionHealth,
+  SessionStats,
   ViewedFile,
 } from '@git-reviewer/shared';
 
@@ -281,9 +282,11 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Validate all review sessions (check if refs still exist, detect empty diffs)
+  // Also returns diff stats (files, additions, deletions) for healthy sessions.
   router.get('/sessions/validate', async (req, res) => {
     try {
       const health: Record<string, SessionHealth> = {};
+      const stats: Record<string, SessionStats> = {};
       const repoPaths = registry.listPaths();
 
       for (const repoPath of repoPaths) {
@@ -320,11 +323,25 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
             health[commitHash] = { status: 'stale', reason: 'no-changes' };
           } else {
             health[commitHash] = { status: 'ok' };
+
+            // Compute lightweight diff stats for healthy sessions
+            try {
+              const summary = await git.diffSummary([
+                `${baseResolved.trim()}...${headResolved.trim()}`,
+              ]);
+              stats[commitHash] = {
+                files: summary.changed,
+                additions: summary.insertions,
+                deletions: summary.deletions,
+              };
+            } catch {
+              // Stats are best-effort
+            }
           }
         }
       }
 
-      res.json({ health });
+      res.json({ health, stats });
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }

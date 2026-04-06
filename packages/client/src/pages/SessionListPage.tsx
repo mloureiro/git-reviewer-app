@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import type { ReviewData, SessionHealth } from '../types/review';
+import type { ReviewData, SessionHealth, SessionStats } from '../types/review';
 import { StatusBadge } from '../components/StatusBadge';
 import { useSessions } from '../hooks/useSessions';
 import { removeRepo, deleteSession } from '../api/reviews';
@@ -89,10 +89,12 @@ function staleTooltip(health: SessionHealth): string {
 function SessionCard({
   reviewData,
   health,
+  stats,
   onRemoved,
 }: {
   reviewData: ReviewData;
   health?: SessionHealth;
+  stats?: SessionStats;
   onRemoved: () => void;
 }) {
   const { session } = reviewData;
@@ -144,6 +146,17 @@ function SessionCard({
             <code>{session.headRef}</code>
           </span>
           <span className="session-card__date">Updated {formatDate(session.updatedAt)}</span>
+          {stats != null && (
+            <span className="session-card__stats">
+              <span className="session-card__stat-files">{stats.files} files</span>
+              {stats.additions > 0 && (
+                <span className="session-card__stat-adds">+{stats.additions}</span>
+              )}
+              {stats.deletions > 0 && (
+                <span className="session-card__stat-dels">-{stats.deletions}</span>
+              )}
+            </span>
+          )}
         </div>
       </div>
       <div className="session-card__aside">
@@ -243,10 +256,12 @@ function KebabMenu({ repoPath, onRemoved }: { repoPath: string; onRemoved: () =>
 function SessionGroups({
   sessions,
   health,
+  stats,
   onRepoRemoved,
 }: {
   sessions: ReviewData[];
   health: Record<string, SessionHealth>;
+  stats: Record<string, SessionStats>;
   onRepoRemoved: () => void;
 }) {
   const grouped = useMemo(() => {
@@ -319,6 +334,7 @@ function SessionGroups({
                     key={rd.session.id}
                     reviewData={rd}
                     health={health[rd.session.headCommit]}
+                    stats={stats[rd.session.headCommit]}
                     onRemoved={onRepoRemoved}
                   />
                 ))}
@@ -332,7 +348,7 @@ function SessionGroups({
 }
 
 export function SessionListPage() {
-  const { sessions, loading, error, health, refetch } = useSessions();
+  const { sessions, loading, error, health, stats, refetch } = useSessions();
   const { checking, needsRepo, selectRepo } = useRepoCheck(refetch);
 
   if (checking) {
@@ -386,7 +402,7 @@ export function SessionListPage() {
         </div>
       </div>
 
-      <SessionGroups sessions={sessions} health={health} onRepoRemoved={refetch} />
+      <SessionGroups sessions={sessions} health={health} stats={stats} onRepoRemoved={refetch} />
     </div>
   );
 }

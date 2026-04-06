@@ -7,6 +7,7 @@ import type {
   ViewedFile,
   CommitInfo,
   SessionHealth,
+  SessionStats,
 } from '@git-reviewer/shared';
 
 export type {
@@ -18,6 +19,7 @@ export type {
   ReviewData,
   SessionHealth,
   SessionHealthReason,
+  SessionStats,
   DiffFile,
   ViewedFile,
 } from '@git-reviewer/shared';
@@ -138,6 +140,7 @@ export interface ReposResponse {
 // GET /api/sessions/validate
 export interface ValidateSessionsResponse {
   health: Record<string, SessionHealth>;
+  stats: Record<string, SessionStats>;
 }
 
 // GET /api/commits/:commitHash/diff

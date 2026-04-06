@@ -54,6 +54,12 @@ export type SessionHealthReason =
 
 export type SessionHealth = { status: 'ok' } | { status: 'stale'; reason: SessionHealthReason };
 
+export interface SessionStats {
+  files: number;
+  additions: number;
+  deletions: number;
+}
+
 export interface DiffFile {
   path: string;
   status: 'added' | 'modified' | 'deleted' | 'renamed';
