@@ -133,6 +133,7 @@ pub fn run() {
             commands::fetch_files,
             commands::fetch_diff,
             commands::fetch_sessions,
+            commands::validate_sessions,
             commands::fetch_session,
             commands::create_session,
             commands::delete_session,

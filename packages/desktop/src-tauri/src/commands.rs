@@ -173,6 +173,120 @@ pub fn fetch_sessions(
 }
 
 #[tauri::command]
+pub fn validate_sessions(
+    registry: tauri::State<'_, RepoRegistry>,
+) -> Result<ValidateSessionsResponse, String> {
+    let paths = registry.paths.lock().unwrap().clone();
+    let mut health: HashMap<String, SessionHealth> = HashMap::new();
+    let mut stats: HashMap<String, SessionStats> = HashMap::new();
+
+    let repos: Vec<(String, git2::Repository)> = if paths.is_empty() {
+        match git_ops::open_repo() {
+            Ok(repo) => {
+                let rp = repo
+                    .workdir()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_default();
+                vec![(rp, repo)]
+            }
+            Err(_) => vec![],
+        }
+    } else {
+        paths
+            .iter()
+            .filter_map(|p| git_ops::open_repo_at(p).ok().map(|r| (p.clone(), r)))
+            .collect()
+    };
+
+    for (_repo_path, repo) in &repos {
+        let commit_shas = match git_ops::list_review_notes(repo) {
+            Ok(shas) => shas,
+            Err(_) => continue,
+        };
+
+        for sha in &commit_shas {
+            let data = match git_ops::read_review_note(repo, sha) {
+                Ok(Some(d)) => d,
+                _ => continue,
+            };
+
+            let base_ref = &data.session.base_ref;
+            let head_ref = &data.session.head_ref;
+
+            let base_resolved = repo
+                .revparse_single(base_ref)
+                .ok()
+                .and_then(|o| o.peel_to_commit().ok())
+                .map(|c| c.id());
+            let head_resolved = repo
+                .revparse_single(head_ref)
+                .ok()
+                .and_then(|o| o.peel_to_commit().ok())
+                .map(|c| c.id());
+
+            match (base_resolved, head_resolved) {
+                (None, None) => {
+                    health.insert(
+                        sha.clone(),
+                        SessionHealth::Stale {
+                            reason: SessionHealthReason::BothRefsMissing,
+                        },
+                    );
+                }
+                (None, Some(_)) => {
+                    health.insert(
+                        sha.clone(),
+                        SessionHealth::Stale {
+                            reason: SessionHealthReason::BaseRefMissing,
+                        },
+                    );
+                }
+                (Some(_), None) => {
+                    health.insert(
+                        sha.clone(),
+                        SessionHealth::Stale {
+                            reason: SessionHealthReason::HeadRefMissing,
+                        },
+                    );
+                }
+                (Some(base_oid), Some(head_oid)) => {
+                    if base_oid == head_oid {
+                        health.insert(
+                            sha.clone(),
+                            SessionHealth::Stale {
+                                reason: SessionHealthReason::NoChanges,
+                            },
+                        );
+                    } else {
+                        health.insert(sha.clone(), SessionHealth::Ok);
+
+                        // Compute lightweight diff stats
+                        if let Ok(files) = git_ops::get_changed_files(repo, base_ref, head_ref) {
+                            let mut additions: i64 = 0;
+                            let mut deletions: i64 = 0;
+                            for f in &files {
+                                additions += f.additions;
+                                deletions += f.deletions;
+                            }
+                            stats.insert(
+                                sha.clone(),
+                                SessionStats {
+                                    files: files.len(),
+                                    additions,
+                                    deletions,
+                                },
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(ValidateSessionsResponse { health, stats })
+}
+
+#[tauri::command]
 pub fn fetch_session(
     commit_sha: String,
     repo: Option<String>,

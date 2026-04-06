@@ -173,6 +173,43 @@ pub struct RefsResponse {
     pub current_branch: String,
 }
 
+// --- Session validation types ---
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SessionStats {
+    pub files: usize,
+    pub additions: i64,
+    pub deletions: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum SessionHealth {
+    #[serde(rename = "ok")]
+    Ok,
+    #[serde(rename = "stale")]
+    Stale { reason: SessionHealthReason },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SessionHealthReason {
+    #[serde(rename = "base-ref-missing")]
+    BaseRefMissing,
+    #[serde(rename = "head-ref-missing")]
+    HeadRefMissing,
+    #[serde(rename = "both-refs-missing")]
+    BothRefsMissing,
+    #[serde(rename = "no-changes")]
+    NoChanges,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ValidateSessionsResponse {
+    pub health: HashMap<String, SessionHealth>,
+    pub stats: HashMap<String, SessionStats>,
+}
+
 // ---------------------------------------------------------------------------
 // Serialization tests — verify JSON keys match the TypeScript frontend contract
 // ---------------------------------------------------------------------------
