@@ -12,9 +12,45 @@ pub struct InitialSession(pub Mutex<Option<String>>);
 /// Holds the optional repo path provided via `--repo`.
 pub struct RepoPath(pub Mutex<Option<String>>);
 
-/// Registry of all known repository paths. The first registered repo is the default.
+/// Registry of all known repository paths, persisted to disk.
 pub struct RepoRegistry {
     pub paths: Mutex<Vec<String>>,
+    pub storage_path: Mutex<Option<std::path::PathBuf>>,
+}
+
+impl RepoRegistry {
+    /// Load repo paths from disk. Call once during setup after resolving the app data dir.
+    pub fn load_from(&self, path: &std::path::Path) {
+        *self.storage_path.lock().unwrap() = Some(path.to_path_buf());
+
+        if path.exists() {
+            if let Ok(contents) = std::fs::read_to_string(path) {
+                if let Ok(saved) = serde_json::from_str::<Vec<String>>(&contents) {
+                    let mut paths = self.paths.lock().unwrap();
+                    for p in saved {
+                        // Only keep repos that still exist on disk
+                        if std::path::Path::new(&p).is_dir() && !paths.contains(&p) {
+                            paths.push(p);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Persist the current repo list to disk.
+    pub fn save(&self) {
+        let storage = self.storage_path.lock().unwrap();
+        if let Some(ref path) = *storage {
+            let paths = self.paths.lock().unwrap();
+            if let Ok(json) = serde_json::to_string_pretty(&*paths) {
+                if let Some(parent) = path.parent() {
+                    std::fs::create_dir_all(parent).ok();
+                }
+                std::fs::write(path, json).ok();
+            }
+        }
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -27,9 +63,16 @@ pub fn run() {
         .manage(RepoPath(Mutex::new(None)))
         .manage(RepoRegistry {
             paths: Mutex::new(Vec::new()),
+            storage_path: Mutex::new(None),
         })
         .setup(|app| {
             use tauri_plugin_cli::CliExt;
+
+            // Load persisted repos from disk
+            let registry = app.state::<RepoRegistry>();
+            let data_dir = app.path().app_data_dir().unwrap_or_default();
+            let repos_file = data_dir.join("repos.json");
+            registry.load_from(&repos_file);
 
             let matches = app.cli().matches()?;
 
@@ -56,6 +99,8 @@ pub fn run() {
                 if !paths.contains(&repo_path) {
                     paths.push(repo_path);
                 }
+                drop(paths);
+                registry.save();
             }
 
             // Extract --base and --head

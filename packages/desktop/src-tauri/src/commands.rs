@@ -745,6 +745,8 @@ pub fn select_repository(
     if !paths.contains(&path) {
         paths.push(path.clone());
     }
+    drop(paths);
+    registry.save();
 
     Ok(path)
 }
@@ -801,6 +803,8 @@ pub fn register_repo(
     if !paths.contains(&path) {
         paths.push(path.clone());
     }
+    drop(paths);
+    registry.save();
 
     Ok(path)
 }
