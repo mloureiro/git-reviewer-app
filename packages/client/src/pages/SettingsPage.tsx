@@ -4,6 +4,7 @@ import { getScheme, getSchemesForMode } from '../theme/schemes';
 import type { ColorScheme } from '../theme/types';
 import { SchemeCard } from '../components/SchemeCard';
 import { DiffPreview } from '../components/DiffPreview';
+import { InstallCliButton } from '../components/InstallCliButton';
 
 export function SettingsPage() {
   const {
@@ -102,6 +103,11 @@ export function SettingsPage() {
           </div>
         </section>
       </div>
+
+      <section className="settings__section">
+        <h2 className="settings__section-title">CLI</h2>
+        <InstallCliButton />
+      </section>
     </div>
   );
 }
