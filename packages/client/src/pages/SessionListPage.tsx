@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import type { ReviewData, SessionHealth, SessionStats } from '../types/review';
 import { StatusBadge } from '../components/StatusBadge';
+import { Button, LinkButton } from '../components/ui';
 import { useSessions } from '../hooks/useSessions';
 import { removeRepo, deleteSession } from '../api/reviews';
 
@@ -161,21 +162,18 @@ function SessionCard({
       </div>
       <div className="session-card__aside">
         {isStale && health != null && (
-          <button
-            className="btn btn--danger btn--sm session-card__remove-btn"
+          <Button
+            variant="danger"
+            size="sm"
             onClick={handleRemove}
             disabled={removing}
             title={staleTooltip(health)}
           >
             {removing ? 'Removing...' : staleRemoveLabel(health)}
-          </button>
+          </Button>
         )}
         {!isStale && isTauri() && (
-          <button
-            className="btn btn--ghost btn--sm"
-            onClick={openInNewWindow}
-            title="Open in new window"
-          >
+          <Button variant="ghost" size="sm" onClick={openInNewWindow} title="Open in new window">
             <svg
               width="14"
               height="14"
@@ -190,7 +188,7 @@ function SessionCard({
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
-          </button>
+          </Button>
         )}
         <StatusBadge status={session.status} />
       </div>
@@ -360,9 +358,9 @@ export function SessionListPage() {
       <div className="session-list-empty">
         <p className="session-list-empty__message">No git repository selected.</p>
         <p>Open a git repository to start reviewing code.</p>
-        <button className="btn btn--primary" onClick={selectRepo}>
+        <Button variant="primary" onClick={selectRepo}>
           Open Repository
-        </button>
+        </Button>
       </div>
     );
   }
@@ -379,9 +377,9 @@ export function SessionListPage() {
     return (
       <div className="session-list-empty">
         <p className="session-list-empty__message">No review sessions yet.</p>
-        <Link to="/new" className="btn btn--primary">
+        <LinkButton variant="primary" to="/new">
           Create your first review
-        </Link>
+        </LinkButton>
       </div>
     );
   }
@@ -392,13 +390,13 @@ export function SessionListPage() {
         <h1 className="session-list__title">Reviews</h1>
         <div className="session-list__actions">
           {isTauri() && (
-            <button className="btn btn--secondary" onClick={selectRepo}>
+            <Button variant="secondary" onClick={selectRepo}>
               Add Repository
-            </button>
+            </Button>
           )}
-          <Link to="/new" className="btn btn--primary">
+          <LinkButton variant="primary" to="/new">
             New Review
-          </Link>
+          </LinkButton>
         </div>
       </div>
 

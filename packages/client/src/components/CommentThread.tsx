@@ -1,4 +1,5 @@
 import type { ReviewComment } from '../types/review';
+import { Button } from './ui';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -72,13 +73,9 @@ export function CommentThread({ comments, onResolve, onReply, colSpan = 3 }: Com
           ))}
           {onReply !== undefined && (
             <div className="comment-thread__footer">
-              <button
-                type="button"
-                className="btn btn--secondary comment-thread__reply-btn"
-                onClick={onReply}
-              >
+              <Button size="sm" onClick={onReply}>
                 Reply
-              </button>
+              </Button>
             </div>
           )}
         </div>

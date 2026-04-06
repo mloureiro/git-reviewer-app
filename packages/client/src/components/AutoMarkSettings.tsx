@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { AutoMarkRule } from '../types/review';
+import { Button, IconButton, Checkbox } from './ui';
 
 interface AutoMarkSettingsProps {
   activeRules: AutoMarkRule[];
@@ -79,21 +80,14 @@ export function AutoMarkSettings({
         <div className="auto-mark-settings__panel">
           <div className="auto-mark-settings__header">
             <span className="auto-mark-settings__title">Auto-mark rules</span>
-            <button
-              type="button"
-              className="auto-mark-settings__close"
-              onClick={handleToggle}
-              aria-label="Close"
-            >
+            <IconButton size="sm" aria-label="Close auto-mark settings" onClick={handleToggle}>
               ✕
-            </button>
+            </IconButton>
           </div>
           <div className="auto-mark-settings__body">
             {RULE_DESCRIPTIONS.map(({ rule, label, description }) => (
               <label key={rule} className="auto-mark-settings__rule">
-                <input
-                  type="checkbox"
-                  className="auto-mark-settings__checkbox"
+                <Checkbox
                   checked={activeRules.includes(rule)}
                   onChange={() => handleRuleToggle(rule)}
                 />
@@ -105,13 +99,9 @@ export function AutoMarkSettings({
             ))}
           </div>
           <div className="auto-mark-settings__footer">
-            <button
-              type="button"
-              className="btn btn--secondary auto-mark-settings__apply-btn"
-              onClick={handleApplyNow}
-            >
+            <Button size="sm" onClick={handleApplyNow}>
               Re-apply rules
-            </button>
+            </Button>
           </div>
         </div>
       )}

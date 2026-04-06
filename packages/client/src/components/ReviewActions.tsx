@@ -1,4 +1,5 @@
 import type { ReviewStatus } from '../types/review';
+import { Button, type ButtonVariant } from './ui';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -13,7 +14,7 @@ interface ReviewActionsProps {
 interface ActionButton {
   label: string;
   targetStatus: ReviewStatus;
-  variant: 'approve' | 'request-changes' | 'revert';
+  variant: ButtonVariant;
 }
 
 // ---------------------------------------------------------------------------
@@ -22,16 +23,16 @@ interface ActionButton {
 
 const ACTIONS_BY_STATUS: Record<ReviewStatus, ActionButton[]> = {
   pending: [
-    { label: 'Approve', targetStatus: 'approved', variant: 'approve' },
-    { label: 'Request Changes', targetStatus: 'changes_requested', variant: 'request-changes' },
+    { label: 'Approve', targetStatus: 'approved', variant: 'primary' },
+    { label: 'Request Changes', targetStatus: 'changes_requested', variant: 'danger' },
   ],
   approved: [
-    { label: 'Request Changes', targetStatus: 'changes_requested', variant: 'request-changes' },
-    { label: 'Revert to Pending', targetStatus: 'pending', variant: 'revert' },
+    { label: 'Request Changes', targetStatus: 'changes_requested', variant: 'danger' },
+    { label: 'Revert to Pending', targetStatus: 'pending', variant: 'secondary' },
   ],
   changes_requested: [
-    { label: 'Approve', targetStatus: 'approved', variant: 'approve' },
-    { label: 'Revert to Pending', targetStatus: 'pending', variant: 'revert' },
+    { label: 'Approve', targetStatus: 'approved', variant: 'primary' },
+    { label: 'Revert to Pending', targetStatus: 'pending', variant: 'secondary' },
   ],
 };
 
@@ -49,15 +50,15 @@ export function ReviewActions({
   return (
     <div className="review-actions">
       {actions.map((action) => (
-        <button
+        <Button
           key={action.targetStatus}
-          type="button"
-          className={`btn review-actions__btn review-actions__btn--${action.variant}`}
+          variant={action.variant}
+          size="sm"
           onClick={() => onStatusChange(action.targetStatus)}
           disabled={disabled}
         >
           {action.label}
-        </button>
+        </Button>
       ))}
     </div>
   );

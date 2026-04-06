@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { AutoMarkSettings } from '../components/AutoMarkSettings';
+import { LinkButton } from '../components/ui';
 import { CommentThread } from '../components/CommentThread';
 import { ColorSchemeType } from 'diff2html/lib-esm/types';
 import { DiffView, filePathToId } from '../components/DiffView';
@@ -554,9 +555,7 @@ export function SessionDetailPage() {
     return (
       <div className="session-detail">
         <div className="session-detail__back">
-          <Link to="/" className="btn btn--secondary">
-            ← Back to sessions
-          </Link>
+          <LinkButton to="/">← Back to sessions</LinkButton>
         </div>
         <div className="error">Error loading session: {sessionError}</div>
       </div>
@@ -567,9 +566,7 @@ export function SessionDetailPage() {
     return (
       <div className="session-detail">
         <div className="session-detail__back">
-          <Link to="/" className="btn btn--secondary">
-            ← Back to sessions
-          </Link>
+          <LinkButton to="/">← Back to sessions</LinkButton>
         </div>
         <div className="empty">Session not found.</div>
       </div>
@@ -581,9 +578,7 @@ export function SessionDetailPage() {
   return (
     <div className="session-detail">
       <div className="session-detail__back">
-        <Link to="/" className="btn btn--secondary">
-          ← Back to sessions
-        </Link>
+        <LinkButton to="/">← Back to sessions</LinkButton>
       </div>
 
       <div className="session-detail__header">

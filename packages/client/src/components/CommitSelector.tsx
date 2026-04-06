@@ -1,4 +1,5 @@
 import type { CommitInfo } from '../types/review';
+import { IconButton } from './ui';
 
 interface CommitSelectorProps {
   commits: CommitInfo[];
@@ -55,16 +56,16 @@ export function CommitSelector({ commits, selectedIndex, onSelect }: CommitSelec
   return (
     <div className="commit-selector">
       <div className="commit-selector__controls">
-        <button
-          type="button"
-          className="btn btn--secondary commit-selector__nav-btn"
+        <IconButton
+          variant="secondary"
+          size="md"
           onClick={handlePrev}
           disabled={isAllChanges}
           title="Previous commit"
           aria-label="Previous commit"
         >
           &#8249;
-        </button>
+        </IconButton>
 
         <select
           className="commit-selector__dropdown"
@@ -79,16 +80,16 @@ export function CommitSelector({ commits, selectedIndex, onSelect }: CommitSelec
           ))}
         </select>
 
-        <button
-          type="button"
-          className="btn btn--secondary commit-selector__nav-btn"
+        <IconButton
+          variant="secondary"
+          size="md"
           onClick={handleNext}
           disabled={isAllChanges && commits.length === 0}
           title="Next commit"
           aria-label="Next commit"
         >
           &#8250;
-        </button>
+        </IconButton>
       </div>
 
       {selectedCommit != null && (

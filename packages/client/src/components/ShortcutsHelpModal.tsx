@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { ShortcutEntry } from '../hooks/useKeyboardShortcuts';
+import { IconButton } from './ui';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -54,14 +55,9 @@ export function ShortcutsHelpModal({ isOpen, onClose, shortcuts }: ShortcutsHelp
       >
         <div className="shortcuts-modal__header">
           <h2 className="shortcuts-modal__title">Keyboard shortcuts</h2>
-          <button
-            className="shortcuts-modal__close"
-            type="button"
-            aria-label="Close keyboard shortcuts"
-            onClick={onClose}
-          >
+          <IconButton size="md" aria-label="Close shortcuts" onClick={onClose}>
             ✕
-          </button>
+          </IconButton>
         </div>
 
         <table className="shortcuts-modal__table">

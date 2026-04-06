@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { createSession, fetchRefs, fetchRepos } from '../api/reviews';
 import { ApiError } from '../api/client';
+import { Button, LinkButton, TextInput, Select } from '../components/ui';
 
 function repoDisplayName(repoPath: string): string {
   if (!repoPath) return 'Unknown';
@@ -92,9 +93,8 @@ export function SessionCreatePage() {
             <label className="form-field__label" htmlFor="repo">
               Repository
             </label>
-            <select
+            <Select
               id="repo"
-              className="form-field__input"
               value={selectedRepo}
               onChange={(e) => setSelectedRepo(e.target.value)}
               disabled={submitting}
@@ -104,7 +104,7 @@ export function SessionCreatePage() {
                   {repoDisplayName(r)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
 
@@ -112,10 +112,8 @@ export function SessionCreatePage() {
           <label className="form-field__label" htmlFor="title">
             Title
           </label>
-          <input
+          <TextInput
             id="title"
-            type="text"
-            className="form-field__input"
             placeholder="e.g. Review auth changes"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -128,10 +126,8 @@ export function SessionCreatePage() {
           <label className="form-field__label" htmlFor="baseRef">
             Base Ref
           </label>
-          <input
+          <TextInput
             id="baseRef"
-            type="text"
-            className="form-field__input"
             placeholder="e.g. main"
             list="baseRef-options"
             value={baseRef}
@@ -156,10 +152,8 @@ export function SessionCreatePage() {
           <label className="form-field__label" htmlFor="headRef">
             Head Ref
           </label>
-          <input
+          <TextInput
             id="headRef"
-            type="text"
-            className="form-field__input"
             placeholder="e.g. HEAD"
             list="headRef-options"
             value={headRef}
@@ -189,12 +183,10 @@ export function SessionCreatePage() {
         {error !== null && <p className="session-create__error">{error}</p>}
 
         <div className="session-create__actions">
-          <Link to="/" className="btn btn--secondary">
-            Cancel
-          </Link>
-          <button type="submit" className="btn btn--primary" disabled={submitting}>
+          <LinkButton to="/">Cancel</LinkButton>
+          <Button type="submit" variant="primary" disabled={submitting}>
             {submitting ? 'Creating\u2026' : 'Create Review'}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

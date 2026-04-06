@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import type { CommentFormData, DiffLineData } from '../types/review';
+import { Button, Textarea } from './ui';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -65,9 +66,8 @@ export function InlineCommentForm({
     <tr className="inline-comment-form-row">
       <td className="inline-comment-form-cell" colSpan={colSpan}>
         <div className="inline-comment-form">
-          <textarea
+          <Textarea
             ref={textareaRef}
-            className="inline-comment-form__textarea"
             placeholder="Leave a comment… (Cmd+Enter to comment, Esc to cancel)"
             value={body}
             onChange={(e) => setBody(e.target.value)}
@@ -75,17 +75,10 @@ export function InlineCommentForm({
             rows={4}
           />
           <div className="inline-comment-form__actions">
-            <button type="button" className="btn btn--secondary" onClick={onCancel}>
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={handleSubmit}
-              disabled={isSubmitDisabled}
-            >
+            <Button onClick={onCancel}>Cancel</Button>
+            <Button variant="primary" onClick={handleSubmit} disabled={isSubmitDisabled}>
               Comment
-            </button>
+            </Button>
           </div>
         </div>
       </td>

@@ -1,3 +1,5 @@
+import { Button } from './ui';
+
 interface RefreshBannerProps {
   changedRefs: string[];
   onRefresh: () => void;
@@ -12,21 +14,12 @@ export function RefreshBanner({ changedRefs, onRefresh, onDismiss }: RefreshBann
       <span className="refresh-banner__message">
         New commits detected on <code>{refList}</code>
       </span>
-      <button
-        className="btn btn--sm btn--primary refresh-banner__btn"
-        type="button"
-        onClick={onRefresh}
-      >
+      <Button variant="primary" size="sm" onClick={onRefresh}>
         Refresh
-      </button>
-      <button
-        className="btn btn--sm refresh-banner__dismiss"
-        type="button"
-        onClick={onDismiss}
-        aria-label="Dismiss"
-      >
+      </Button>
+      <Button size="sm" onClick={onDismiss} aria-label="Dismiss">
         Dismiss
-      </button>
+      </Button>
     </div>
   );
 }
