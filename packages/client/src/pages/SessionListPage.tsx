@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import type { ReviewData } from '../types/review';
 import { StatusBadge } from '../components/StatusBadge';
 import { useSessions } from '../hooks/useSessions';
+import { removeRepo } from '../api/reviews';
 
 function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -164,7 +165,68 @@ function SessionCard({ reviewData }: { reviewData: ReviewData }) {
   );
 }
 
-function SessionGroups({ sessions }: { sessions: ReviewData[] }) {
+function KebabMenu({ repoPath, onRemoved }: { repoPath: string; onRemoved: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setConfirming(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const handleRemove = useCallback(async () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    try {
+      await removeRepo(repoPath);
+      onRemoved();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+    }
+    setOpen(false);
+    setConfirming(false);
+  }, [confirming, repoPath, onRemoved]);
+
+  return (
+    <div className="kebab-menu" ref={menuRef}>
+      <button
+        className="kebab-menu__trigger"
+        onClick={() => {
+          setOpen((v) => !v);
+          setConfirming(false);
+        }}
+        title="More actions"
+      >
+        &#x22EE;
+      </button>
+      {open && (
+        <div className="kebab-menu__dropdown">
+          <button className="kebab-menu__item kebab-menu__item--danger" onClick={handleRemove}>
+            {confirming ? 'Confirm remove?' : 'Remove repository'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SessionGroups({
+  sessions,
+  onRepoRemoved,
+}: {
+  sessions: ReviewData[];
+  onRepoRemoved: () => void;
+}) {
   const grouped = useMemo(() => {
     const groups = new Map<string, ReviewData[]>();
     for (const rd of sessions) {
@@ -173,29 +235,71 @@ function SessionGroups({ sessions }: { sessions: ReviewData[] }) {
       list.push(rd);
       groups.set(key, list);
     }
-    return groups;
+    // Sort by repo path
+    return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [sessions]);
 
-  const groupEntries = [...grouped.entries()];
-  const hasManyGroups = groupEntries.length > 1;
+  const hasManyGroups = grouped.length > 1;
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const toggleCollapse = useCallback((repoPath: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(repoPath)) {
+        next.delete(repoPath);
+      } else {
+        next.add(repoPath);
+      }
+      return next;
+    });
+  }, []);
 
   return (
     <div className="session-groups">
-      {groupEntries.map(([repoPath, groupSessions]) => (
-        <div key={repoPath || '__default'} className="session-group">
-          {hasManyGroups && (
-            <div className="session-group__header" title={repoPath || undefined}>
-              <span className="session-group__name">{repoDisplayName(repoPath)}</span>
-              <span className="session-group__path">{repoPath}</span>
-            </div>
-          )}
-          <ul className="session-list__items">
-            {groupSessions.map((rd) => (
-              <SessionCard key={rd.session.id} reviewData={rd} />
-            ))}
-          </ul>
-        </div>
-      ))}
+      {grouped.map(([repoPath, groupSessions]) => {
+        const key = repoPath || '__default';
+        const isCollapsed = collapsed.has(key);
+
+        return (
+          <div key={key} className="session-group">
+            {hasManyGroups && (
+              <div className="session-group__header" title={repoPath || undefined}>
+                <button
+                  className="session-group__toggle"
+                  onClick={() => toggleCollapse(key)}
+                  aria-expanded={!isCollapsed}
+                  aria-label={isCollapsed ? 'Expand group' : 'Collapse group'}
+                >
+                  <svg
+                    className={`session-group__chevron${isCollapsed ? ' session-group__chevron--collapsed' : ''}`}
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                <span className="session-group__name">{repoDisplayName(repoPath)}</span>
+                <span className="session-group__path">{repoPath}</span>
+                <span className="session-group__count">{groupSessions.length}</span>
+                {repoPath && <KebabMenu repoPath={repoPath} onRemoved={onRepoRemoved} />}
+              </div>
+            )}
+            {!isCollapsed && (
+              <ul className="session-list__items">
+                {groupSessions.map((rd) => (
+                  <SessionCard key={rd.session.id} reviewData={rd} />
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -258,7 +362,7 @@ export function SessionListPage() {
         </div>
       </div>
 
-      <SessionGroups sessions={sessions} />
+      <SessionGroups sessions={sessions} onRepoRemoved={refetch} />
     </div>
   );
 }
