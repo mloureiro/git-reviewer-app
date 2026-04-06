@@ -52,6 +52,10 @@ export const monokai: ColorScheme = {
     'color-backdrop': 'rgba(39, 40, 34, 0.8)',
     'color-shadow-strong': 'rgba(0, 0, 0, 0.6)',
     'color-shadow-highlight': 'rgba(255, 255, 255, 0.03)',
+    'color-bg-subtle': 'rgba(117, 113, 94, 0.1)',
+    'color-success-text': '#a6e22e',
+    'color-danger-text': '#f92672',
+    'color-danger-bg': 'rgba(249, 38, 114, 0.1)',
   },
   hljs: {
     base: '#f8f8f2',

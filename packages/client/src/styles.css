@@ -72,6 +72,12 @@
   --color-backdrop: rgba(1, 4, 9, 0.75);
   --color-shadow-strong: rgba(1, 4, 9, 0.85);
   --color-shadow-highlight: rgba(255, 255, 255, 0.03);
+
+  /* Aliases for convenience */
+  --color-bg-subtle: var(--color-neutral-bg-subtle);
+  --color-success-text: var(--color-success);
+  --color-danger-text: var(--color-danger);
+  --color-danger-bg: var(--color-danger-bg-faint);
 }
 
 /* ── CSS Custom Properties — Light Theme ────────────────────────────────── */
@@ -148,6 +154,12 @@
   --color-backdrop: rgba(31, 35, 40, 0.5);
   --color-shadow-strong: rgba(31, 35, 40, 0.12);
   --color-shadow-highlight: rgba(255, 255, 255, 0.6);
+
+  /* Aliases for convenience */
+  --color-bg-subtle: var(--color-neutral-bg-subtle);
+  --color-success-text: var(--color-success);
+  --color-danger-text: var(--color-danger);
+  --color-danger-bg: var(--color-danger-bg-faint);
 }
 
 html {
@@ -679,7 +691,7 @@ body {
   background: var(--color-bg-primary);
   border: 1px solid var(--color-border-subtle);
   border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--color-shadow-strong);
   min-width: 160px;
   padding: 4px;
 }
@@ -706,7 +718,7 @@ body {
 }
 
 .kebab-menu__item--danger:hover {
-  background: var(--color-danger-bg, rgba(248, 81, 73, 0.1));
+  background: var(--color-danger-bg);
 }
 
 .session-list__items {
@@ -960,6 +972,17 @@ body {
 
 .btn--danger:hover:not(:disabled) {
   background-color: var(--color-danger-bg-hover);
+}
+
+.btn--ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: transparent;
+}
+
+.btn--ghost:hover {
+  background-color: var(--color-neutral-hover);
+  color: var(--color-text-primary);
 }
 
 .btn--sm {

@@ -52,6 +52,10 @@ export const githubDark: ColorScheme = {
     'color-backdrop': 'rgba(1, 4, 9, 0.75)',
     'color-shadow-strong': 'rgba(1, 4, 9, 0.85)',
     'color-shadow-highlight': 'rgba(255, 255, 255, 0.03)',
+    'color-bg-subtle': 'rgba(110, 118, 129, 0.1)',
+    'color-success-text': '#3fb950',
+    'color-danger-text': '#f85149',
+    'color-danger-bg': 'rgba(248, 81, 73, 0.1)',
   },
   hljs: {
     base: '#c9d1d9',

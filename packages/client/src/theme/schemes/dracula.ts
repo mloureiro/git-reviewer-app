@@ -52,6 +52,10 @@ export const dracula: ColorScheme = {
     'color-backdrop': 'rgba(40, 42, 54, 0.8)',
     'color-shadow-strong': 'rgba(0, 0, 0, 0.6)',
     'color-shadow-highlight': 'rgba(255, 255, 255, 0.03)',
+    'color-bg-subtle': 'rgba(98, 114, 164, 0.1)',
+    'color-success-text': '#50fa7b',
+    'color-danger-text': '#ff5555',
+    'color-danger-bg': 'rgba(255, 85, 85, 0.1)',
   },
   hljs: {
     base: '#f8f8f2',

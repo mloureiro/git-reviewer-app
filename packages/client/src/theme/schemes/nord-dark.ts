@@ -52,6 +52,10 @@ export const nordDark: ColorScheme = {
     'color-backdrop': 'rgba(46, 52, 64, 0.8)',
     'color-shadow-strong': 'rgba(0, 0, 0, 0.5)',
     'color-shadow-highlight': 'rgba(255, 255, 255, 0.03)',
+    'color-bg-subtle': 'rgba(76, 86, 106, 0.15)',
+    'color-success-text': '#a3be8c',
+    'color-danger-text': '#bf616a',
+    'color-danger-bg': 'rgba(191, 97, 106, 0.1)',
   },
   hljs: {
     base: '#d8dee9',

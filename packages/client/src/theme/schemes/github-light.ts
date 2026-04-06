@@ -52,6 +52,10 @@ export const githubLight: ColorScheme = {
     'color-backdrop': 'rgba(31, 35, 40, 0.5)',
     'color-shadow-strong': 'rgba(31, 35, 40, 0.12)',
     'color-shadow-highlight': 'rgba(255, 255, 255, 0.6)',
+    'color-bg-subtle': 'rgba(175, 184, 193, 0.2)',
+    'color-success-text': '#1a7f37',
+    'color-danger-text': '#cf222e',
+    'color-danger-bg': 'rgba(207, 34, 46, 0.06)',
   },
   hljs: {
     base: '#24292e',

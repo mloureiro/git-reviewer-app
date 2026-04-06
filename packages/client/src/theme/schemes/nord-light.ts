@@ -52,6 +52,10 @@ export const nordLight: ColorScheme = {
     'color-backdrop': 'rgba(46, 52, 64, 0.5)',
     'color-shadow-strong': 'rgba(46, 52, 64, 0.12)',
     'color-shadow-highlight': 'rgba(255, 255, 255, 0.6)',
+    'color-bg-subtle': 'rgba(196, 202, 214, 0.3)',
+    'color-success-text': '#6a8e57',
+    'color-danger-text': '#bf616a',
+    'color-danger-bg': 'rgba(191, 97, 106, 0.06)',
   },
   hljs: {
     base: '#2e3440',

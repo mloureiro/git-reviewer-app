@@ -52,6 +52,10 @@ export const solarizedLight: ColorScheme = {
     'color-backdrop': 'rgba(88, 110, 117, 0.5)',
     'color-shadow-strong': 'rgba(88, 110, 117, 0.12)',
     'color-shadow-highlight': 'rgba(255, 255, 255, 0.6)',
+    'color-bg-subtle': 'rgba(211, 203, 183, 0.3)',
+    'color-success-text': '#859900',
+    'color-danger-text': '#dc322f',
+    'color-danger-bg': 'rgba(220, 50, 47, 0.06)',
   },
   hljs: {
     base: '#586e75',
