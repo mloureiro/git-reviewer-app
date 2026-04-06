@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { Button } from './ui';
 
 function isTauri(): boolean {
   return typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -27,13 +28,9 @@ export function InstallCliButton() {
 
   return (
     <div className="install-cli">
-      <button
-        className="btn btn--secondary btn--sm"
-        onClick={handleInstall}
-        disabled={status === 'loading'}
-      >
+      <Button size="sm" onClick={handleInstall} disabled={status === 'loading'}>
         {status === 'loading' ? 'Installing...' : 'Install CLI'}
-      </button>
+      </Button>
       {status === 'success' && (
         <span className="install-cli__message install-cli__message--success">{message}</span>
       )}
