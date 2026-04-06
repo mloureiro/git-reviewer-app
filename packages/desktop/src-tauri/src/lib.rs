@@ -152,6 +152,7 @@ pub fn run() {
             commands::select_repository,
             commands::list_repos,
             commands::register_repo,
+            commands::unregister_repo,
             commands::resolve_refs,
             commands::open_session_window,
         ])

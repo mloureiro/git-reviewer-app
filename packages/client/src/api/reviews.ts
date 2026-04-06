@@ -140,6 +140,11 @@ export function fetchRepos(): Promise<ReposResponse> {
   return getBackend().fetchRepos();
 }
 
+/** DELETE /api/repos — Remove a repository from the registry. */
+export function removeRepo(path: string): Promise<void> {
+  return getBackend().removeRepo(path);
+}
+
 /** GET /api/sessions/:commitSha/commits — Fetch the commit list for a session's base..head range. */
 export function fetchCommits(commitSha: string, repo?: string): Promise<CommitsResponse> {
   return getBackend().fetchCommits(commitSha, repo);

@@ -177,6 +177,11 @@ export class TauriBackend implements Backend {
     return invoke('list_repos') as Promise<ReposResponse>;
   }
 
+  async removeRepo(path: string): Promise<void> {
+    const invoke = await getInvoke();
+    await invoke('unregister_repo', { path });
+  }
+
   // Commits
 
   async fetchCommits(commitSha: string, repo?: string): Promise<CommitsResponse> {

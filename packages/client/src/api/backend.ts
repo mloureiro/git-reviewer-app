@@ -75,6 +75,7 @@ export interface Backend {
 
   // Repos
   fetchRepos(): Promise<ReposResponse>;
+  removeRepo(path: string): Promise<void>;
 
   // Commits
   fetchCommits(commitSha: string, repo?: string): Promise<CommitsResponse>;

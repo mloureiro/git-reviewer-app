@@ -67,4 +67,13 @@ export class RepoRegistry {
   has(repoPath: string): boolean {
     return this.repos.has(repoPath);
   }
+
+  unregisterRepo(repoPath: string): boolean {
+    const deleted = this.repos.delete(repoPath);
+    if (deleted && this.defaultPath === repoPath) {
+      const firstKey = this.repos.keys().next();
+      this.defaultPath = firstKey.done ? null : firstKey.value;
+    }
+    return deleted;
+  }
 }

@@ -102,6 +102,23 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
     res.json({ repos: registry.listPaths() });
   });
 
+  // Unregister a repo
+  router.delete('/repos', (req, res) => {
+    const repoPath =
+      (typeof req.query.path === 'string' && req.query.path) ||
+      (req.body as { path?: string })?.path;
+    if (typeof repoPath !== 'string' || repoPath.trim().length === 0) {
+      res.status(400).json({ error: 'path is required (query param or body)' });
+      return;
+    }
+    const removed = registry.unregisterRepo(repoPath);
+    if (!removed) {
+      res.status(404).json({ error: 'Repository not registered' });
+      return;
+    }
+    res.json({ path: repoPath });
+  });
+
   // Register a new repo
   router.post('/repos', (req, res) => {
     const { path: repoPath } = req.body as { path: string };

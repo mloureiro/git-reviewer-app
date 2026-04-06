@@ -166,6 +166,11 @@ export class HttpBackend implements Backend {
     return apiGet<ReposResponse>('/api/repos');
   }
 
+  removeRepo(path: string): Promise<void> {
+    const qs = buildQueryString({ path });
+    return apiDelete(`/api/repos${qs}`);
+  }
+
   // Commits
 
   fetchCommits(commitSha: string, repo?: string): Promise<CommitsResponse> {

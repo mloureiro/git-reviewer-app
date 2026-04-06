@@ -808,3 +808,20 @@ pub fn register_repo(
 
     Ok(path)
 }
+
+/// Remove a repository from the registry.
+#[tauri::command]
+pub fn unregister_repo(
+    path: String,
+    registry: tauri::State<'_, RepoRegistry>,
+) -> Result<(), String> {
+    let mut paths = registry.paths.lock().unwrap();
+    let before = paths.len();
+    paths.retain(|p| p != &path);
+    if paths.len() == before {
+        return Err(format!("Repository not registered: {}", path));
+    }
+    drop(paths);
+    registry.save();
+    Ok(())
+}
