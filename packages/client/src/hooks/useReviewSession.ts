@@ -107,17 +107,21 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
 
   const handleMarkViewed = useCallback(
     async (path: string): Promise<void> => {
+      // Capture previous state before the optimistic update so we can roll
+      // back if the server request fails.
+      let prevViewedFiles: ViewedFile[] | undefined;
+
       // Optimistic update
       setSession((prev) => {
         if (prev === null) return prev;
-        const viewedFiles = prev.viewedFiles ?? [];
+        prevViewedFiles = prev.viewedFiles ?? [];
         const optimistic: ViewedFile = {
           path,
           viewedAt: new Date().toISOString(),
           diffHash: '',
         };
-        const existing = viewedFiles.findIndex((vf) => vf.path === path);
-        const next = [...viewedFiles];
+        const existing = prevViewedFiles.findIndex((vf) => vf.path === path);
+        const next = [...prevViewedFiles];
         if (existing >= 0) {
           next[existing] = optimistic;
         } else {
@@ -126,31 +130,54 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
         return { ...prev, viewedFiles: next };
       });
 
-      const viewedFile = await markFileViewed(commitSha, path, repo);
-      // Update with server response (has correct diffHash)
-      setSession((prev) => {
-        if (prev === null) return prev;
-        const viewedFiles = (prev.viewedFiles ?? []).map((vf) =>
-          vf.path === path ? viewedFile : vf,
-        );
-        return { ...prev, viewedFiles };
-      });
+      try {
+        const viewedFile = await markFileViewed(commitSha, path, repo);
+        // Update with server response (has correct diffHash)
+        setSession((prev) => {
+          if (prev === null) return prev;
+          const viewedFiles = (prev.viewedFiles ?? []).map((vf) =>
+            vf.path === path ? viewedFile : vf,
+          );
+          return { ...prev, viewedFiles };
+        });
+      } catch (err) {
+        // Roll back to the state before the optimistic update
+        setSession((prev) => {
+          if (prev === null) return prev;
+          return { ...prev, viewedFiles: prevViewedFiles ?? prev.viewedFiles ?? [] };
+        });
+        throw err;
+      }
     },
     [commitSha, repo],
   );
 
   const handleUnmarkViewed = useCallback(
     async (path: string): Promise<void> => {
+      // Capture previous state before the optimistic update so we can roll
+      // back if the server request fails.
+      let prevViewedFiles: ViewedFile[] | undefined;
+
       // Optimistic update
       setSession((prev) => {
         if (prev === null) return prev;
+        prevViewedFiles = prev.viewedFiles ?? [];
         return {
           ...prev,
-          viewedFiles: (prev.viewedFiles ?? []).filter((vf) => vf.path !== path),
+          viewedFiles: prevViewedFiles.filter((vf) => vf.path !== path),
         };
       });
 
-      await unmarkFileViewed(commitSha, path, repo);
+      try {
+        await unmarkFileViewed(commitSha, path, repo);
+      } catch (err) {
+        // Roll back to the state before the optimistic update
+        setSession((prev) => {
+          if (prev === null) return prev;
+          return { ...prev, viewedFiles: prevViewedFiles ?? prev.viewedFiles ?? [] };
+        });
+        throw err;
+      }
     },
     [commitSha, repo],
   );

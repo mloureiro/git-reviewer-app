@@ -417,12 +417,12 @@ export function SessionDetailPage() {
     }
   }
 
-  function handleLineClick(lineData: DiffLineData): void {
+  const handleLineClick = useCallback((lineData: DiffLineData): void => {
     // Toggle: clicking the same line again closes the form.
     setActiveLine((prev) =>
       prev != null && prev.file === lineData.file && prev.line === lineData.line ? null : lineData,
     );
-  }
+  }, []);
 
   const handleCommentSubmit = useCallback(
     async (formData: CommentFormData): Promise<void> => {
@@ -505,11 +505,16 @@ export function SessionDetailPage() {
 
   const handleToggleViewed = useCallback(
     (filePath: string, isCurrentlyViewed: boolean): void => {
-      if (isCurrentlyViewed) {
-        void unmarkViewed(filePath);
-      } else {
-        void markViewed(filePath);
-      }
+      const action = isCurrentlyViewed ? unmarkViewed(filePath) : markViewed(filePath);
+      action.catch((err: unknown) => {
+        const message =
+          err instanceof ApiError
+            ? err.message
+            : isCurrentlyViewed
+              ? 'Failed to unmark file as viewed. Please try again.'
+              : 'Failed to mark file as viewed. Please try again.';
+        setMutationError(message);
+      });
     },
     [markViewed, unmarkViewed],
   );
