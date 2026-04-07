@@ -110,7 +110,11 @@ describe('useReviewSession', () => {
     });
 
     expect(result.current.session?.session.status).toBe('approved');
-    expect(mockUpdateSessionStatus).toHaveBeenCalledWith('def456', { status: 'approved' });
+    expect(mockUpdateSessionStatus).toHaveBeenCalledWith(
+      'def456',
+      { status: 'approved' },
+      undefined,
+    );
   });
 
   it('addComment appends new comment to session state', async () => {
@@ -151,7 +155,12 @@ describe('useReviewSession', () => {
     });
 
     expect(result.current.session?.comments[0]?.resolved).toBe(true);
-    expect(mockPatchComment).toHaveBeenCalledWith('def456', 'comment-1', { resolved: true });
+    expect(mockPatchComment).toHaveBeenCalledWith(
+      'def456',
+      'comment-1',
+      { resolved: true },
+      undefined,
+    );
   });
 
   it('handles non-Error rejections gracefully', async () => {

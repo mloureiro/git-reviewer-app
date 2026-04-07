@@ -65,7 +65,7 @@ describe('ShortcutsHelpModal', () => {
       const onClose = vi.fn();
       render(<ShortcutsHelpModal isOpen onClose={onClose} shortcuts={SHORTCUTS} />);
 
-      fireEvent.click(screen.getByRole('button', { name: /close keyboard shortcuts/i }));
+      fireEvent.click(screen.getByRole('button', { name: /close shortcuts/i }));
 
       expect(onClose).toHaveBeenCalledOnce();
     });

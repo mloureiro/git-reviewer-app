@@ -794,7 +794,7 @@ describe('SessionDetailPage', () => {
 
       const textarea = screen.getByPlaceholderText(/Leave a comment/);
       fireEvent.change(textarea, { target: { value: 'Great change.' } });
-      fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
 
       await waitFor(() => {
         expect(mockAddComment).toHaveBeenCalledWith(
@@ -816,7 +816,7 @@ describe('SessionDetailPage', () => {
 
       fireEvent.click(screen.getByTestId('diff-line'));
 
-      const submitBtn = screen.getByRole('button', { name: 'Submit' });
+      const submitBtn = screen.getByRole('button', { name: 'Comment' });
       expect(submitBtn).toBeDisabled();
     });
   });
@@ -842,13 +842,18 @@ describe('SessionDetailPage', () => {
 
       renderPage();
 
-      expect(mockUseFiles).toHaveBeenCalledWith(null);
+      expect(mockUseFiles).toHaveBeenCalledWith(null, null, expect.any(Number), undefined);
     });
 
     it('passes baseRef and headRef to useFiles when session data is available', () => {
       renderPage();
 
-      expect(mockUseFiles).toHaveBeenCalledWith({ base: 'main', head: 'feature/auth' });
+      expect(mockUseFiles).toHaveBeenCalledWith(
+        { base: 'main', head: 'feature/auth', repo: undefined },
+        null,
+        expect.any(Number),
+        undefined,
+      );
     });
   });
 

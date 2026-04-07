@@ -18,6 +18,8 @@ vi.mock('react-router-dom', async () => {
 });
 
 const mockCreateSession = vi.mocked(reviewsApi.createSession);
+const mockFetchRepos = vi.mocked(reviewsApi.fetchRepos);
+const mockFetchRefs = vi.mocked(reviewsApi.fetchRefs);
 
 const sampleSession: ReviewData = {
   version: 1,
@@ -46,6 +48,10 @@ function renderPage() {
 describe('SessionCreatePage', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // fetchRepos and fetchRefs are called on mount; default to never-resolving
+    // promises so they don't interfere with test assertions.
+    mockFetchRepos.mockReturnValue(new Promise(() => undefined));
+    mockFetchRefs.mockReturnValue(new Promise(() => undefined));
   });
 
   it('renders the form with title, base ref, and head ref fields', () => {
@@ -69,11 +75,14 @@ describe('SessionCreatePage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create Review' }));
 
     await waitFor(() => {
-      expect(mockCreateSession).toHaveBeenCalledWith({
-        title: 'My Review',
-        baseRef: 'main',
-        headRef: 'HEAD',
-      });
+      expect(mockCreateSession).toHaveBeenCalledWith(
+        {
+          title: 'My Review',
+          baseRef: 'main',
+          headRef: 'HEAD',
+        },
+        undefined,
+      );
       expect(mockNavigate).toHaveBeenCalledWith('/session/head456');
     });
   });

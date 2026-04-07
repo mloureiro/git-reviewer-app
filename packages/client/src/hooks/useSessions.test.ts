@@ -7,6 +7,7 @@ import type { ReviewData } from '../types/review';
 vi.mock('../api/reviews');
 
 const mockFetchSessions = vi.mocked(reviewsApi.fetchSessions);
+const mockValidateSessions = vi.mocked(reviewsApi.validateSessions);
 
 const makeSession = (overrides: Partial<ReviewData['session']> = {}): ReviewData => ({
   version: 1,
@@ -28,6 +29,9 @@ const makeSession = (overrides: Partial<ReviewData['session']> = {}): ReviewData
 describe('useSessions', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    // validateSessions is called after fetchSessions resolves; default to a
+    // never-resolving promise so it doesn't interfere with test assertions.
+    mockValidateSessions.mockReturnValue(new Promise(() => undefined));
   });
 
   it('returns loading=true initially', () => {

@@ -98,7 +98,7 @@ describe('App', () => {
 
     renderApp();
 
-    expect(screen.getByText('Review Sessions')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Reviews' })).toBeInTheDocument();
     expect(
       screen.getByRole('link', { name: 'Review AI-generated auth changes' }),
     ).toBeInTheDocument();

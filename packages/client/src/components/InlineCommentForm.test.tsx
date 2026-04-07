@@ -52,7 +52,7 @@ describe('InlineCommentForm', () => {
     );
 
     expect(screen.getByRole('textbox')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Comment' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
@@ -61,7 +61,7 @@ describe('InlineCommentForm', () => {
       <InlineCommentForm lineData={LINE_DATA} onSubmit={onSubmit} onCancel={onCancel} />,
     );
 
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Comment' })).toBeDisabled();
   });
 
   it('submit button is disabled when textarea contains only whitespace', () => {
@@ -71,7 +71,7 @@ describe('InlineCommentForm', () => {
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '   ' } });
 
-    expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Comment' })).toBeDisabled();
   });
 
   it('does not call onSubmit when submit button is clicked with empty text', () => {
@@ -79,7 +79,7 @@ describe('InlineCommentForm', () => {
       <InlineCommentForm lineData={LINE_DATA} onSubmit={onSubmit} onCancel={onCancel} />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
 
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -92,7 +92,7 @@ describe('InlineCommentForm', () => {
     fireEvent.change(screen.getByRole('textbox'), {
       target: { value: 'This needs error handling' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
 
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(onSubmit).toHaveBeenCalledWith({
@@ -109,7 +109,7 @@ describe('InlineCommentForm', () => {
     );
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: '  good comment  ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ body: 'good comment' }));
   });
