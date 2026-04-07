@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { parse } from 'diff2html';
 import type { DiffBlock, DiffFile, DiffLine } from 'diff2html/lib-esm/types';
 import { LineType } from 'diff2html/lib-esm/types';
@@ -257,7 +257,7 @@ interface DiffViewProps {
 // DiffLineRow (line-by-line mode)
 // ---------------------------------------------------------------------------
 
-export function DiffLineRow({
+export const DiffLineRow = React.memo(function DiffLineRow({
   line,
   filePath,
   language,
@@ -339,7 +339,7 @@ export function DiffLineRow({
       </td>
     </tr>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // SideBySideRow — renders a paired left/right row
@@ -428,7 +428,7 @@ function renderSideCell(
   );
 }
 
-function SideBySideRow({
+const SideBySideRow = React.memo(function SideBySideRow({
   pair,
   filePath,
   language,
@@ -488,7 +488,7 @@ function SideBySideRow({
       )}
     </tr>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // DiffBlock
@@ -627,7 +627,7 @@ export function DiffBlockComponent({
 // DiffFileComponent
 // ---------------------------------------------------------------------------
 
-export function DiffFileComponent({
+export const DiffFileComponent = React.memo(function DiffFileComponent({
   file,
   colorScheme,
   viewMode,
@@ -753,7 +753,7 @@ export function DiffFileComponent({
       )}
     </section>
   );
-}
+});
 
 // ---------------------------------------------------------------------------
 // DiffView (top-level)
@@ -774,7 +774,7 @@ export function DiffView({
   collapsedFiles,
   onToggleCollapsed,
 }: DiffViewProps) {
-  const diffFiles = parse(diffText);
+  const diffFiles = useMemo(() => parse(diffText), [diffText]);
 
   if (diffFiles.length === 0) {
     return null;

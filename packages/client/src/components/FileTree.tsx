@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { AutoMarkRule, DiffFile } from '../types/review';
 import { CopyPathButton } from './CopyPathButton';
 
@@ -285,11 +285,11 @@ export function FileTree({
     });
   }, []);
 
+  const tree = useMemo(() => buildTree(files), [files]);
+
   if (files.length === 0) {
     return null;
   }
-
-  const tree = buildTree(files);
 
   return (
     <nav className="file-tree" aria-label="Changed files">
