@@ -849,6 +849,208 @@ describe('review API routes — integration', () => {
   });
 
   // ---------------------------------------------------------------------------
+  // GET /api/sessions/validate
+  // ---------------------------------------------------------------------------
+  describe('GET /api/sessions/validate', () => {
+    const BASE_SHA = 'base0000000000000000000000000000000000';
+    const HEAD_SHA = 'head0000000000000000000000000000000000';
+
+    it('returns empty health and stats when there are no sessions', async () => {
+      mockListReviewNotes.mockResolvedValueOnce([]);
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ health: {}, stats: {} });
+    });
+
+    it('marks a committed session as ok when both refs resolve to different commits', async () => {
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(sampleSession);
+      // revparse called twice: baseRef then headRef
+      mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
+      mockRevparse.mockResolvedValueOnce(`${HEAD_SHA}\n`);
+      // diffSummary called for stats
+      const mockDiffSummary = vi.fn().mockResolvedValueOnce({
+        changed: 3,
+        insertions: 10,
+        deletions: 5,
+      });
+      (mockGit as unknown as Record<string, unknown>).diffSummary = mockDiffSummary;
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'ok' });
+      expect(res.body.stats[COMMIT_SHA]).toEqual({ files: 3, additions: 10, deletions: 5 });
+    });
+
+    it('marks a committed session as stale (both-refs-missing) when both revparses throw', async () => {
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(sampleSession);
+      mockRevparse.mockRejectedValueOnce(new Error('unknown revision'));
+      mockRevparse.mockRejectedValueOnce(new Error('unknown revision'));
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body.health[COMMIT_SHA]).toEqual({
+        status: 'stale',
+        reason: 'both-refs-missing',
+      });
+      expect(res.body.stats[COMMIT_SHA]).toBeUndefined();
+    });
+
+    it('marks a committed session as stale (base-ref-missing) when baseRef revparse throws', async () => {
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(sampleSession);
+      mockRevparse.mockRejectedValueOnce(new Error('unknown revision')); // baseRef
+      mockRevparse.mockResolvedValueOnce(`${HEAD_SHA}\n`); // headRef
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body.health[COMMIT_SHA]).toEqual({
+        status: 'stale',
+        reason: 'base-ref-missing',
+      });
+    });
+
+    it('marks a committed session as stale (head-ref-missing) when headRef revparse throws', async () => {
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(sampleSession);
+      mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`); // baseRef
+      mockRevparse.mockRejectedValueOnce(new Error('unknown revision')); // headRef
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body.health[COMMIT_SHA]).toEqual({
+        status: 'stale',
+        reason: 'head-ref-missing',
+      });
+    });
+
+    it('marks a committed session as stale (no-changes) when both refs resolve to the same commit', async () => {
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(sampleSession);
+      mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
+      mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`); // same as base
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'stale', reason: 'no-changes' });
+    });
+
+    it('does NOT call revparse for headRef on an uncommitted session', async () => {
+      const uncommittedSession: ReviewData = {
+        ...sampleSession,
+        session: { ...sampleSession.session, headRef: 'working tree' },
+      };
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
+      // Only baseRef revparse should be called
+      mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
+      const files = [
+        { path: 'src/foo.ts', status: 'modified' as const, additions: 5, deletions: 2 },
+      ];
+      mockGetUncommittedChangedFiles.mockResolvedValueOnce(files);
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      // revparse called exactly once (for baseRef only)
+      expect(mockRevparse).toHaveBeenCalledTimes(1);
+      expect(mockRevparse).toHaveBeenCalledWith(['main']);
+      expect(mockGetUncommittedChangedFiles).toHaveBeenCalledWith(mockGit);
+    });
+
+    it('marks an uncommitted session as ok when base resolves and there are uncommitted changes', async () => {
+      const uncommittedSession: ReviewData = {
+        ...sampleSession,
+        session: { ...sampleSession.session, headRef: 'working tree' },
+      };
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
+      mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
+      const files = [
+        { path: 'src/foo.ts', status: 'modified' as const, additions: 5, deletions: 2 },
+        { path: 'src/bar.ts', status: 'added' as const, additions: 10, deletions: 0 },
+      ];
+      mockGetUncommittedChangedFiles.mockResolvedValueOnce(files);
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'ok' });
+      expect(res.body.stats[COMMIT_SHA]).toEqual({ files: 2, additions: 15, deletions: 2 });
+    });
+
+    it('marks an uncommitted session as stale (no-changes) when there are no uncommitted changes', async () => {
+      const uncommittedSession: ReviewData = {
+        ...sampleSession,
+        session: { ...sampleSession.session, headRef: 'working tree' },
+      };
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
+      mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
+      mockGetUncommittedChangedFiles.mockResolvedValueOnce([]);
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'stale', reason: 'no-changes' });
+      expect(res.body.stats[COMMIT_SHA]).toBeUndefined();
+    });
+
+    it('marks an uncommitted session as stale (base-ref-missing) when baseRef revparse throws', async () => {
+      const uncommittedSession: ReviewData = {
+        ...sampleSession,
+        session: { ...sampleSession.session, headRef: 'working tree' },
+      };
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
+      mockRevparse.mockRejectedValueOnce(new Error('unknown revision'));
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      expect(res.body.health[COMMIT_SHA]).toEqual({
+        status: 'stale',
+        reason: 'base-ref-missing',
+      });
+      expect(mockGetUncommittedChangedFiles).not.toHaveBeenCalled();
+    });
+
+    it('marks an uncommitted session as ok when getUncommittedChangedFiles throws', async () => {
+      const uncommittedSession: ReviewData = {
+        ...sampleSession,
+        session: { ...sampleSession.session, headRef: 'working tree' },
+      };
+      mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
+      mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
+      mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
+      mockGetUncommittedChangedFiles.mockRejectedValueOnce(new Error('git diff failed'));
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(200);
+      // Falls back to ok to avoid false stale warnings
+      expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'ok' });
+    });
+
+    it('returns 500 when listReviewNotes throws', async () => {
+      mockListReviewNotes.mockRejectedValueOnce(new Error('git notes list failed'));
+
+      const res = await request(app).get('/api/sessions/validate');
+
+      expect(res.status).toBe(500);
+      expect(res.body).toHaveProperty('error');
+    });
+  });
+
+  // ---------------------------------------------------------------------------
   // POST /api/sessions/:commitSha/auto-mark-apply
   // ---------------------------------------------------------------------------
   describe('POST /api/sessions/:commitSha/auto-mark-apply', () => {

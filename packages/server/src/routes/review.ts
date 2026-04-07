@@ -328,44 +328,79 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
           if (!data) continue;
 
           const { baseRef, headRef } = data.session;
-          let baseResolved: string | null = null;
-          let headResolved: string | null = null;
 
-          try {
-            baseResolved = await git.revparse([baseRef]);
-          } catch {
-            // baseRef no longer exists
-          }
-
-          try {
-            headResolved = await git.revparse([headRef]);
-          } catch {
-            // headRef no longer exists
-          }
-
-          if (baseResolved == null && headResolved == null) {
-            health[commitHash] = { status: 'stale', reason: 'both-refs-missing' };
-          } else if (baseResolved == null) {
-            health[commitHash] = { status: 'stale', reason: 'base-ref-missing' };
-          } else if (headResolved == null) {
-            health[commitHash] = { status: 'stale', reason: 'head-ref-missing' };
-          } else if (baseResolved.trim() === headResolved.trim()) {
-            health[commitHash] = { status: 'stale', reason: 'no-changes' };
-          } else {
-            health[commitHash] = { status: 'ok' };
-
-            // Compute lightweight diff stats for healthy sessions
+          if (isUncommittedSession(headRef)) {
+            // For uncommitted sessions, 'working tree' is not a git ref.
+            // Validate by checking if the base ref resolves and whether
+            // there are any uncommitted changes in the working tree.
+            let baseResolved: string | null = null;
             try {
-              const summary = await git.diffSummary([
-                `${baseResolved.trim()}...${headResolved.trim()}`,
-              ]);
-              stats[commitHash] = {
-                files: summary.changed,
-                additions: summary.insertions,
-                deletions: summary.deletions,
-              };
+              baseResolved = await git.revparse([baseRef]);
             } catch {
-              // Stats are best-effort
+              // baseRef no longer exists
+            }
+
+            if (baseResolved == null) {
+              health[commitHash] = { status: 'stale', reason: 'base-ref-missing' };
+            } else {
+              // Check whether there are uncommitted changes to review
+              try {
+                const files = await getUncommittedChangedFiles(git);
+                if (files.length === 0) {
+                  health[commitHash] = { status: 'stale', reason: 'no-changes' };
+                } else {
+                  health[commitHash] = { status: 'ok' };
+                  stats[commitHash] = {
+                    files: files.length,
+                    additions: files.reduce((sum, f) => sum + f.additions, 0),
+                    deletions: files.reduce((sum, f) => sum + f.deletions, 0),
+                  };
+                }
+              } catch {
+                // If we can't determine changes, treat as ok to avoid false stale warnings
+                health[commitHash] = { status: 'ok' };
+              }
+            }
+          } else {
+            let baseResolved: string | null = null;
+            let headResolved: string | null = null;
+
+            try {
+              baseResolved = await git.revparse([baseRef]);
+            } catch {
+              // baseRef no longer exists
+            }
+
+            try {
+              headResolved = await git.revparse([headRef]);
+            } catch {
+              // headRef no longer exists
+            }
+
+            if (baseResolved == null && headResolved == null) {
+              health[commitHash] = { status: 'stale', reason: 'both-refs-missing' };
+            } else if (baseResolved == null) {
+              health[commitHash] = { status: 'stale', reason: 'base-ref-missing' };
+            } else if (headResolved == null) {
+              health[commitHash] = { status: 'stale', reason: 'head-ref-missing' };
+            } else if (baseResolved.trim() === headResolved.trim()) {
+              health[commitHash] = { status: 'stale', reason: 'no-changes' };
+            } else {
+              health[commitHash] = { status: 'ok' };
+
+              // Compute lightweight diff stats for healthy sessions
+              try {
+                const summary = await git.diffSummary([
+                  `${baseResolved.trim()}...${headResolved.trim()}`,
+                ]);
+                stats[commitHash] = {
+                  files: summary.changed,
+                  additions: summary.insertions,
+                  deletions: summary.deletions,
+                };
+              } catch {
+                // Stats are best-effort
+              }
             }
           }
         }
