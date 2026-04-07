@@ -54,6 +54,7 @@ program
   .option('--uncommitted', 'Review uncommitted (working tree) changes', false)
   .option('--repo <path>', 'Path to the git repository to review', process.cwd())
   .option('--port <number>', 'Port to listen on', '3847')
+  .option('--host <address>', 'Network interface to bind to', '127.0.0.1')
   .option('--no-open', 'Do not automatically open the browser after starting')
   .option('--foreground', 'Run in foreground (do not detach)', false)
   .action(
@@ -63,11 +64,15 @@ program
       uncommitted: boolean;
       repo: string;
       port: string;
+      host: string;
       open: boolean;
       foreground: boolean;
     }) => {
       const repoPath = path.resolve(options.repo);
       const port = parseInt(options.port, 10);
+      const host = options.host;
+      // Use 'localhost' in browser-facing URLs when binding to all interfaces
+      const browserHost = host === '0.0.0.0' ? 'localhost' : host;
       const git = createGitClient(repoPath);
 
       // Always validate refs and create session up front (visible errors)
@@ -112,7 +117,7 @@ program
         process.exit(1);
       }
 
-      const sessionUrl = `http://localhost:${port}/session/${sessionCommit}`;
+      const sessionUrl = `http://${browserHost}:${port}/session/${sessionCommit}`;
 
       // ── Reuse existing server if one is already running ──
       const registered = await tryRegisterWithExistingServer(port, repoPath);
@@ -136,7 +141,7 @@ program
         });
         child.unref();
 
-        console.log(`git-reviewer v${VERSION} starting at http://localhost:${port}`);
+        console.log(`git-reviewer v${VERSION} starting at http://${browserHost}:${port}`);
 
         if (options.open) {
           await open(sessionUrl).catch(() => {});
@@ -152,8 +157,8 @@ program
 
       const app = createApp({ repoPath, staticDir });
 
-      const server = app.listen(port, () => {
-        console.log(`git-reviewer v${VERSION} running at http://localhost:${port}`);
+      const server = app.listen(port, host, () => {
+        console.log(`git-reviewer v${VERSION} running at http://${browserHost}:${port}`);
         console.log(`Reviewing repo: ${repoPath}`);
         console.log(`Review session: ${sessionUrl}`);
 
