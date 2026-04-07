@@ -4,7 +4,7 @@ import { getUncommittedChangedFiles } from '../git/diff.js';
 import { listReviewNotes, readReviewNote } from '../git/notes.js';
 import type { RepoRegistry } from '../git/repo-registry.js';
 import { validateCommitSha, resolveRepo, type ResolvedRepoLocals } from './middleware.js';
-import { isUncommittedSession } from './ref-validation.js';
+import { isUncommittedSession, isValidRef } from './ref-validation.js';
 import {
   getSession,
   createSession,
@@ -222,6 +222,14 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       }
       if (typeof headRef !== 'string' || headRef.trim().length === 0) {
         res.status(400).json({ error: 'Invalid body: headRef must be a non-empty string' });
+        return;
+      }
+      if (!isValidRef(baseRef)) {
+        res.status(400).json({ error: 'Invalid baseRef: contains unsafe characters' });
+        return;
+      }
+      if (!isValidRef(headRef)) {
+        res.status(400).json({ error: 'Invalid headRef: contains unsafe characters' });
         return;
       }
 
