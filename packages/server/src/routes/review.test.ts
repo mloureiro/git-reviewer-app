@@ -17,6 +17,7 @@ vi.mock('../git/diff.js', () => ({
   getUncommittedDiffText: vi.fn(),
   getChangedFiles: vi.fn(),
   getUncommittedChangedFiles: vi.fn(),
+  getFileDiffHashes: vi.fn().mockReturnValue({}),
   createGitClient: vi.fn(),
 }));
 
@@ -31,6 +32,7 @@ import {
   getUncommittedDiffText,
   getChangedFiles,
   getUncommittedChangedFiles,
+  getFileDiffHashes,
   createGitClient,
 } from '../git/diff.js';
 
@@ -42,6 +44,7 @@ const mockGetDiffText = vi.mocked(getDiffText);
 const mockGetUncommittedDiffText = vi.mocked(getUncommittedDiffText);
 const mockGetChangedFiles = vi.mocked(getChangedFiles);
 const mockGetUncommittedChangedFiles = vi.mocked(getUncommittedChangedFiles);
+const mockGetFileDiffHashes = vi.mocked(getFileDiffHashes);
 const mockCreateGitClient = vi.mocked(createGitClient);
 
 // Minimal SimpleGit stub — routes call git.revparse only in POST /sessions
@@ -91,6 +94,8 @@ describe('review API routes — integration', () => {
     vi.resetAllMocks();
     mockWriteReviewNote.mockResolvedValue(undefined);
     mockRemoveReviewNote.mockResolvedValue(undefined);
+    // Pure function — default to empty hash map so routes don't throw when not overridden
+    mockGetFileDiffHashes.mockReturnValue({});
   });
 
   // ---------------------------------------------------------------------------
@@ -188,7 +193,7 @@ describe('review API routes — integration', () => {
       const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ files });
+      expect(res.body).toEqual({ files, diffHashes: {} });
       expect(mockGetChangedFiles).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
     });
 
@@ -201,7 +206,7 @@ describe('review API routes — integration', () => {
       const res = await request(app).get('/api/files').query({ uncommitted: 'true' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ files });
+      expect(res.body).toEqual({ files, diffHashes: {} });
       expect(mockGetUncommittedChangedFiles).toHaveBeenCalledWith(mockGit);
       expect(mockGetChangedFiles).not.toHaveBeenCalled();
     });
@@ -221,7 +226,7 @@ describe('review API routes — integration', () => {
       const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ files: [] });
+      expect(res.body).toEqual({ files: [], diffHashes: {} });
     });
 
     it('returns 400 when base contains shell-dangerous characters', async () => {
@@ -716,6 +721,183 @@ describe('review API routes — integration', () => {
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
       expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/sessions/:commitSha/viewed-files
+  // ---------------------------------------------------------------------------
+  describe('POST /api/sessions/:commitSha/viewed-files', () => {
+    it('marks a file as viewed for a committed session using getDiffText', async () => {
+      const diffText = 'diff --git a/src/foo.ts b/src/foo.ts\n+line\n';
+      mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
+      mockGetDiffText.mockResolvedValueOnce(diffText);
+
+      const res = await request(app)
+        .post(`/api/sessions/${COMMIT_SHA}/viewed-files`)
+        .send({ path: 'src/foo.ts' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.path).toBe('src/foo.ts');
+      expect(mockGetDiffText).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+      expect(mockGetUncommittedDiffText).not.toHaveBeenCalled();
+      expect(mockWriteReviewNote).toHaveBeenCalledOnce();
+    });
+
+    it('marks a file as viewed for an uncommitted session using getUncommittedDiffText', async () => {
+      const uncommittedSession: ReviewData = {
+        ...sampleSession,
+        session: { ...sampleSession.session, headRef: 'working tree' },
+      };
+      const diffText = 'diff --git a/src/foo.ts b/src/foo.ts\n+line\n';
+      mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
+      mockGetUncommittedDiffText.mockResolvedValueOnce(diffText);
+
+      const res = await request(app)
+        .post(`/api/sessions/${COMMIT_SHA}/viewed-files`)
+        .send({ path: 'src/foo.ts' });
+
+      expect(res.status).toBe(201);
+      expect(res.body.path).toBe('src/foo.ts');
+      expect(mockGetUncommittedDiffText).toHaveBeenCalledWith(mockGit);
+      expect(mockGetDiffText).not.toHaveBeenCalled();
+      expect(mockWriteReviewNote).toHaveBeenCalledOnce();
+    });
+
+    it('returns 400 when path is missing', async () => {
+      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/viewed-files`).send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when session does not exist', async () => {
+      mockReadReviewNote.mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .post(`/api/sessions/${COMMIT_SHA}/viewed-files`)
+        .send({ path: 'src/foo.ts' });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Review session not found' });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // PUT /api/sessions/:commitSha/auto-mark-rules
+  // ---------------------------------------------------------------------------
+  describe('PUT /api/sessions/:commitSha/auto-mark-rules', () => {
+    it('applies auto-mark rules for a committed session using getDiffText/getChangedFiles', async () => {
+      mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
+      mockGetChangedFiles.mockResolvedValueOnce([]);
+      mockGetDiffText.mockResolvedValueOnce('');
+
+      const res = await request(app)
+        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .send({ rules: ['lockfile'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.rules).toEqual(['lockfile']);
+      expect(mockGetChangedFiles).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+      expect(mockGetDiffText).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+      expect(mockGetUncommittedChangedFiles).not.toHaveBeenCalled();
+      expect(mockGetUncommittedDiffText).not.toHaveBeenCalled();
+    });
+
+    it('applies auto-mark rules for an uncommitted session using uncommitted variants', async () => {
+      const uncommittedSession: ReviewData = {
+        ...sampleSession,
+        session: { ...sampleSession.session, headRef: 'working tree' },
+      };
+      mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
+      mockGetUncommittedChangedFiles.mockResolvedValueOnce([]);
+      mockGetUncommittedDiffText.mockResolvedValueOnce('');
+
+      const res = await request(app)
+        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .send({ rules: ['lockfile'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.rules).toEqual(['lockfile']);
+      expect(mockGetUncommittedChangedFiles).toHaveBeenCalledWith(mockGit);
+      expect(mockGetUncommittedDiffText).toHaveBeenCalledWith(mockGit);
+      expect(mockGetChangedFiles).not.toHaveBeenCalled();
+      expect(mockGetDiffText).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when rules contains an invalid value', async () => {
+      const res = await request(app)
+        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .send({ rules: ['invalid-rule'] });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toHaveProperty('error');
+      expect(mockReadReviewNote).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when session does not exist', async () => {
+      mockReadReviewNote.mockResolvedValueOnce(null);
+
+      const res = await request(app)
+        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .send({ rules: [] });
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Review session not found' });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // POST /api/sessions/:commitSha/auto-mark-apply
+  // ---------------------------------------------------------------------------
+  describe('POST /api/sessions/:commitSha/auto-mark-apply', () => {
+    it('re-applies rules for a committed session using getDiffText/getChangedFiles', async () => {
+      const sessionWithRules: ReviewData = {
+        ...sampleSession,
+        autoMarkRules: ['lockfile'],
+      };
+      mockReadReviewNote.mockResolvedValueOnce(sessionWithRules);
+      mockGetChangedFiles.mockResolvedValueOnce([]);
+      mockGetDiffText.mockResolvedValueOnce('');
+
+      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/auto-mark-apply`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('autoMarked');
+      expect(mockGetChangedFiles).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+      expect(mockGetDiffText).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
+      expect(mockGetUncommittedChangedFiles).not.toHaveBeenCalled();
+      expect(mockGetUncommittedDiffText).not.toHaveBeenCalled();
+    });
+
+    it('re-applies rules for an uncommitted session using uncommitted variants', async () => {
+      const uncommittedSession: ReviewData = {
+        ...sampleSession,
+        session: { ...sampleSession.session, headRef: 'working tree' },
+        autoMarkRules: ['lockfile'],
+      };
+      mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
+      mockGetUncommittedChangedFiles.mockResolvedValueOnce([]);
+      mockGetUncommittedDiffText.mockResolvedValueOnce('');
+
+      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/auto-mark-apply`);
+
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('autoMarked');
+      expect(mockGetUncommittedChangedFiles).toHaveBeenCalledWith(mockGit);
+      expect(mockGetUncommittedDiffText).toHaveBeenCalledWith(mockGit);
+      expect(mockGetChangedFiles).not.toHaveBeenCalled();
+      expect(mockGetDiffText).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when session does not exist', async () => {
+      mockReadReviewNote.mockResolvedValueOnce(null);
+
+      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/auto-mark-apply`);
+
+      expect(res.status).toBe(404);
+      expect(res.body).toEqual({ error: 'Review session not found' });
     });
   });
 });

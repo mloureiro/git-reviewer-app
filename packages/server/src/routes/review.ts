@@ -19,6 +19,7 @@ import { evaluateAutoMarkRules } from '../git/auto-mark.js';
 import type { RepoRegistry } from '../git/repo-registry.js';
 import type {
   AutoMarkRule,
+  DiffFile,
   ReviewComment,
   ReviewData,
   ReviewStatus,
@@ -45,6 +46,35 @@ const VALID_AUTO_MARK_RULES: ReadonlyArray<AutoMarkRule> = [
 
 function isValidRef(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && !SHELL_DANGEROUS_RE.test(value);
+}
+
+/**
+ * Returns true when the session represents uncommitted (working-tree) changes.
+ * Such sessions have headRef set to the literal string 'working tree', which
+ * is not a valid git ref and must not be passed to git commands like diff/revparse.
+ */
+function isUncommittedSession(headRef: string): boolean {
+  return headRef === 'working tree';
+}
+
+async function getSessionDiffText(
+  git: SimpleGit,
+  baseRef: string,
+  headRef: string,
+): Promise<string> {
+  return isUncommittedSession(headRef)
+    ? getUncommittedDiffText(git)
+    : getDiffText(git, baseRef, headRef);
+}
+
+async function getSessionChangedFiles(
+  git: SimpleGit,
+  baseRef: string,
+  headRef: string,
+): Promise<DiffFile[]> {
+  return isUncommittedSession(headRef)
+    ? getUncommittedChangedFiles(git)
+    : getChangedFiles(git, baseRef, headRef);
 }
 
 /**
@@ -634,7 +664,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       }
 
       // Compute the current diff hash for this file
-      const diffText = await getDiffText(git, data.session.baseRef, data.session.headRef);
+      const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
       const diffHashes = getFileDiffHashes(diffText);
       const diffHash = diffHashes[path] ?? '';
 
@@ -728,8 +758,8 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       data.autoMarkRules = rules;
 
       // Evaluate rules against current files
-      const files = await getChangedFiles(git, data.session.baseRef, data.session.headRef);
-      const diffText = await getDiffText(git, data.session.baseRef, data.session.headRef);
+      const files = await getSessionChangedFiles(git, data.session.baseRef, data.session.headRef);
+      const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
       const diffHashes = getFileDiffHashes(diffText);
       const matches = evaluateAutoMarkRules(files, diffText, rules);
 
@@ -780,8 +810,8 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       }
 
       const rules = data.autoMarkRules ?? [];
-      const files = await getChangedFiles(git, data.session.baseRef, data.session.headRef);
-      const diffText = await getDiffText(git, data.session.baseRef, data.session.headRef);
+      const files = await getSessionChangedFiles(git, data.session.baseRef, data.session.headRef);
+      const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
       const diffHashes = getFileDiffHashes(diffText);
       const matches = evaluateAutoMarkRules(files, diffText, rules);
 
