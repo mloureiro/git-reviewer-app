@@ -1,4 +1,5 @@
 import type { AutoMarkRule, DiffFile } from '@git-reviewer/shared';
+import { parseFileDiffSections } from './parse-utils.js';
 
 /** Known lock-file basenames. */
 const LOCKFILE_NAMES = new Set([
@@ -181,24 +182,4 @@ function extractChangedLines(diffSection: string): string[] {
   }
 
   return changed;
-}
-
-/**
- * Split a unified diff text into per-file sections keyed by file path.
- */
-function parseFileDiffSections(diffText: string): Map<string, string> {
-  const result = new Map<string, string>();
-  if (!diffText.trim()) return result;
-
-  const sections = diffText.split(/^(?=diff --git )/m).filter(Boolean);
-
-  for (const section of sections) {
-    const headerMatch = section.match(/^diff --git a\/(.+?) b\/(.+)/m);
-    if (headerMatch == null) continue;
-
-    const filePath = headerMatch[2] as string;
-    result.set(filePath, section);
-  }
-
-  return result;
 }
