@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import type { SimpleGit } from 'simple-git';
-import { v4 as uuid } from 'uuid';
 import {
   getDiffText,
   getUncommittedDiffText,
@@ -9,13 +8,7 @@ import {
   getFileDiffHashes,
 } from '../git/diff.js';
 import { getCommitList, getCommitDiffText, getCommitChangedFiles } from '../git/commits.js';
-import {
-  listReviewNotes,
-  readReviewNote,
-  removeReviewNote,
-  writeReviewNote,
-} from '../git/notes.js';
-import { evaluateAutoMarkRules } from '../git/auto-mark.js';
+import { listReviewNotes, readReviewNote } from '../git/notes.js';
 import type { RepoRegistry } from '../git/repo-registry.js';
 import {
   validateCommitSha,
@@ -23,15 +16,25 @@ import {
   resolveRepo,
   type ResolvedRepoLocals,
 } from './middleware.js';
+import {
+  getSession,
+  createSession,
+  deleteSession,
+  updateStatus,
+  addComment,
+  resolveComment,
+  markFileViewed,
+  unmarkFileViewed,
+  setAutoMarkRules,
+  applyAutoMarkRules,
+} from '../services/session-service.js';
 import type {
   AutoMarkRule,
-  DiffFile,
   ReviewComment,
   ReviewData,
   ReviewStatus,
   SessionHealth,
   SessionStats,
-  ViewedFile,
 } from '@git-reviewer/shared';
 
 // Allowlist for git ref characters: letters, digits, hyphen, underscore, dot, slash
@@ -67,33 +70,8 @@ export function isValidRef(value: unknown): value is string {
   return VALID_REF_RE.test(value);
 }
 
-/**
- * Returns true when the session represents uncommitted (working-tree) changes.
- * Such sessions have headRef set to the literal string 'working tree', which
- * is not a valid git ref and must not be passed to git commands like diff/revparse.
- */
 function isUncommittedSession(headRef: string): boolean {
-  return headRef === 'working tree';
-}
-
-async function getSessionDiffText(
-  git: SimpleGit,
-  baseRef: string,
-  headRef: string,
-): Promise<string> {
-  return isUncommittedSession(headRef)
-    ? getUncommittedDiffText(git)
-    : getDiffText(git, baseRef, headRef);
-}
-
-async function getSessionChangedFiles(
-  git: SimpleGit,
-  baseRef: string,
-  headRef: string,
-): Promise<DiffFile[]> {
-  return isUncommittedSession(headRef)
-    ? getUncommittedChangedFiles(git)
-    : getChangedFiles(git, baseRef, headRef);
+  return headRef === WORKING_TREE_SENTINEL;
 }
 
 /**
@@ -271,7 +249,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // List all review sessions (aggregated across all registered repos)
-  router.get('/sessions', async (req, res) => {
+  router.get('/sessions', async (_req, res) => {
     try {
       const sessions: ReviewData[] = [];
       const repoPaths = registry.listPaths();
@@ -300,7 +278,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
 
   // Validate all review sessions (check if refs still exist, detect empty diffs)
   // Also returns diff stats (files, additions, deletions) for healthy sessions.
-  router.get('/sessions/validate', async (req, res) => {
+  router.get('/sessions/validate', async (_req, res) => {
     try {
       const health: Record<string, SessionHealth> = {};
       const stats: Record<string, SessionStats> = {};
@@ -405,7 +383,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
 
-      const data = await readReviewNote(git, commitSha);
+      const data = await getSession(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -422,7 +400,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
 
-      const data = await readReviewNote(git, commitSha);
+      const data = await getSession(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -485,28 +463,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const headCommit = await git.revparse([headRef]);
-      const baseCommit = await git.revparse([baseRef]);
-      const now = new Date().toISOString();
-
-      const data: ReviewData = {
-        version: 1,
-        session: {
-          id: uuid(),
-          title,
-          baseRef,
-          headRef,
-          baseCommit: baseCommit.trim(),
-          headCommit: headCommit.trim(),
-          status: 'pending',
-          createdAt: now,
-          updatedAt: now,
-          repoPath,
-        },
-        comments: [],
-      };
-
-      await writeReviewNote(git, headCommit.trim(), data);
+      const data = await createSession(git, { title, baseRef, headRef, repoPath });
       res.status(201).json(data);
     } catch (error) {
       res.status(500).json({ error: String(error) });
@@ -545,26 +502,17 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const data = await readReviewNote(git, commitSha);
-      if (!data) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-
-      const comment: ReviewComment = {
-        id: uuid(),
+      const comment = await addComment(git, commitSha, {
         file,
         line,
         side: side ?? 'right',
         body,
         author: author ?? 'reviewer',
-        createdAt: new Date().toISOString(),
-        resolved: false,
-      };
-
-      data.comments.push(comment);
-      data.session.updatedAt = new Date().toISOString();
-      await writeReviewNote(git, commitSha, data);
+      });
+      if (!comment) {
+        res.status(404).json({ error: 'Review session not found' });
+        return;
+      }
 
       res.status(201).json(comment);
     } catch (error) {
@@ -587,23 +535,17 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
           return;
         }
 
-        const data = await readReviewNote(git, commitSha);
-        if (!data) {
+        const result = await resolveComment(git, commitSha, req.params.commentId ?? '', resolved);
+        if (result === null) {
           res.status(404).json({ error: 'Review session not found' });
           return;
         }
-
-        const comment = data.comments.find(({ id }) => id === req.params.commentId);
-        if (!comment) {
+        if (result === 'comment-not-found') {
           res.status(404).json({ error: 'Comment not found' });
           return;
         }
 
-        comment.resolved = resolved;
-        data.session.updatedAt = new Date().toISOString();
-        await writeReviewNote(git, commitSha, data);
-
-        res.json(comment);
+        res.json(result);
       } catch (error) {
         res.status(500).json({ error: String(error) });
       }
@@ -622,34 +564,11 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const data = await readReviewNote(git, commitSha);
-      if (!data) {
+      const viewedFile = await markFileViewed(git, commitSha, path);
+      if (!viewedFile) {
         res.status(404).json({ error: 'Review session not found' });
         return;
       }
-
-      // Compute the current diff hash for this file
-      const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
-      const diffHashes = getFileDiffHashes(diffText);
-      const diffHash = diffHashes[path] ?? '';
-
-      const viewedFile: ViewedFile = {
-        path,
-        viewedAt: new Date().toISOString(),
-        diffHash,
-      };
-
-      // Replace existing entry for this path or add new
-      const viewedFiles = data.viewedFiles ?? [];
-      const existingIndex = viewedFiles.findIndex((vf) => vf.path === path);
-      if (existingIndex >= 0) {
-        viewedFiles[existingIndex] = viewedFile;
-      } else {
-        viewedFiles.push(viewedFile);
-      }
-      data.viewedFiles = viewedFiles;
-      data.session.updatedAt = new Date().toISOString();
-      await writeReviewNote(git, commitSha, data);
 
       res.status(201).json(viewedFile);
     } catch (error) {
@@ -668,16 +587,11 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
 
         const filePath = decodeURIComponent(req.params.filePath ?? '');
 
-        const data = await readReviewNote(git, commitSha);
-        if (!data) {
+        const found = await unmarkFileViewed(git, commitSha, filePath);
+        if (!found) {
           res.status(404).json({ error: 'Review session not found' });
           return;
         }
-
-        const viewedFiles = data.viewedFiles ?? [];
-        data.viewedFiles = viewedFiles.filter((vf) => vf.path !== filePath);
-        data.session.updatedAt = new Date().toISOString();
-        await writeReviewNote(git, commitSha, data);
 
         res.status(204).send();
       } catch (error) {
@@ -700,40 +614,13 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const data = await readReviewNote(git, commitSha);
-      if (!data) {
+      const result = await setAutoMarkRules(git, commitSha, rules);
+      if (!result) {
         res.status(404).json({ error: 'Review session not found' });
         return;
       }
 
-      data.autoMarkRules = rules;
-
-      // Evaluate rules against current files
-      const files = await getSessionChangedFiles(git, data.session.baseRef, data.session.headRef);
-      const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
-      const diffHashes = getFileDiffHashes(diffText);
-      const matches = evaluateAutoMarkRules(files, diffText, rules);
-
-      // Build new auto-marked ViewedFile entries
-      const now = new Date().toISOString();
-      const autoMarked: ViewedFile[] = matches.map((m) => ({
-        path: m.path,
-        viewedAt: now,
-        diffHash: diffHashes[m.path] ?? '',
-        autoMarkedBy: m.rule,
-      }));
-
-      // Merge: keep manually-marked files, remove stale auto-marked, add new auto-marked
-      const viewedFiles = data.viewedFiles ?? [];
-      const manuallyViewed = viewedFiles.filter((vf) => vf.autoMarkedBy == null);
-      const autoMarkedPaths = new Set(autoMarked.map((vf) => vf.path));
-      // Keep manual entries that don't overlap with new auto-marked entries
-      const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
-      data.viewedFiles = [...kept, ...autoMarked];
-      data.session.updatedAt = now;
-      await writeReviewNote(git, commitSha, data);
-
-      res.json({ rules, autoMarked });
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }
@@ -745,36 +632,13 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
 
-      const data = await readReviewNote(git, commitSha);
-      if (!data) {
+      const result = await applyAutoMarkRules(git, commitSha);
+      if (!result) {
         res.status(404).json({ error: 'Review session not found' });
         return;
       }
 
-      const rules = data.autoMarkRules ?? [];
-      const files = await getSessionChangedFiles(git, data.session.baseRef, data.session.headRef);
-      const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
-      const diffHashes = getFileDiffHashes(diffText);
-      const matches = evaluateAutoMarkRules(files, diffText, rules);
-
-      const now = new Date().toISOString();
-      const autoMarked: ViewedFile[] = matches.map((m) => ({
-        path: m.path,
-        viewedAt: now,
-        diffHash: diffHashes[m.path] ?? '',
-        autoMarkedBy: m.rule,
-      }));
-
-      // Merge: keep manually-marked, replace auto-marked
-      const viewedFiles = data.viewedFiles ?? [];
-      const manuallyViewed = viewedFiles.filter((vf) => vf.autoMarkedBy == null);
-      const autoMarkedPaths = new Set(autoMarked.map((vf) => vf.path));
-      const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
-      data.viewedFiles = [...kept, ...autoMarked];
-      data.session.updatedAt = now;
-      await writeReviewNote(git, commitSha, data);
-
-      res.json({ autoMarked });
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }
@@ -786,13 +650,12 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
 
-      const data = await readReviewNote(git, commitSha);
-      if (!data) {
+      const found = await deleteSession(git, commitSha);
+      if (!found) {
         res.status(404).json({ error: 'Review session not found' });
         return;
       }
 
-      await removeReviewNote(git, commitSha);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: String(error) });
@@ -813,17 +676,13 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const data = await readReviewNote(git, commitSha);
-      if (!data) {
+      const session = await updateStatus(git, commitSha, status as ReviewStatus);
+      if (!session) {
         res.status(404).json({ error: 'Review session not found' });
         return;
       }
 
-      data.session.status = status;
-      data.session.updatedAt = new Date().toISOString();
-      await writeReviewNote(git, commitSha, data);
-
-      res.json(data.session);
+      res.json(session);
     } catch (error) {
       res.status(500).json({ error: String(error) });
     }
