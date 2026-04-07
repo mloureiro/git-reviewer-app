@@ -21,6 +21,9 @@ import type {
   ReviewStatus,
   SessionHealth,
   SessionStats,
+  CreateSessionRequest,
+  UpdateSessionStatusRequest,
+  AutoMarkRulesRequest,
 } from '@git-reviewer/shared';
 
 const VALID_STATUSES: ReadonlyArray<ReviewStatus> = ['pending', 'approved', 'changes_requested'];
@@ -207,11 +210,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
   router.post('/sessions', async (req, res) => {
     try {
       const [git, repoPath] = registry.resolve(req.query.repo);
-      const { title, baseRef, headRef } = req.body as {
-        title: string;
-        baseRef: string;
-        headRef: string;
-      };
+      const { title, baseRef, headRef } = req.body as CreateSessionRequest;
 
       if (typeof title !== 'string' || title.trim().length === 0) {
         res.status(400).json({ error: 'Invalid body: title must be a non-empty string' });
@@ -287,7 +286,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
 
-      const { rules } = req.body as { rules: AutoMarkRule[] };
+      const { rules } = req.body as AutoMarkRulesRequest;
       if (!Array.isArray(rules) || !rules.every((r) => VALID_AUTO_MARK_RULES.includes(r))) {
         res.status(400).json({
           error: `Invalid body: rules must be an array of valid rule types (${VALID_AUTO_MARK_RULES.join(', ')})`,
@@ -349,7 +348,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
 
-      const { status } = req.body as { status: ReviewData['session']['status'] };
+      const { status } = req.body as UpdateSessionStatusRequest;
       if (!VALID_STATUSES.includes(status as ReviewStatus)) {
         res
           .status(400)

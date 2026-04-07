@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { RepoRegistry } from '../git/repo-registry.js';
 import { validateCommitSha, resolveRepo, type ResolvedRepoLocals } from './middleware.js';
 import { addComment, resolveComment } from '../services/session-service.js';
-import type { ReviewComment } from '@git-reviewer/shared';
+import type { CreateCommentRequest, UpdateCommentRequest } from '@git-reviewer/shared';
 
 export function createCommentsRouter(registry: RepoRegistry): Router {
   const router = Router();
@@ -15,10 +15,7 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
 
-      const { file, line, side, body, author } = req.body as Omit<
-        ReviewComment,
-        'id' | 'createdAt' | 'resolved'
-      >;
+      const { file, line, side, body, author } = req.body as CreateCommentRequest;
 
       if (typeof file !== 'string' || file.trim().length === 0) {
         res.status(400).json({ error: 'Invalid body: file must be a non-empty string' });
@@ -68,7 +65,7 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
         const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
         const commitSha = req.params.commitSha ?? '';
 
-        const { resolved } = req.body as { resolved: boolean };
+        const { resolved } = req.body as UpdateCommentRequest;
         if (typeof resolved !== 'boolean') {
           res.status(400).json({ error: 'Invalid body: resolved must be a boolean' });
           return;
