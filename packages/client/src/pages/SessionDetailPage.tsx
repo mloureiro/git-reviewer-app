@@ -475,8 +475,9 @@ export function SessionDetailPage() {
     [updateStatus],
   );
 
-  const comments = reviewData?.comments ?? [];
-  const commentsByLine = groupCommentsByLine(comments);
+  const comments = useMemo(() => reviewData?.comments ?? [], [reviewData?.comments]);
+
+  const commentsByLine = useMemo(() => groupCommentsByLine(comments), [comments]);
 
   /** Returns true if any comment exists on the given diff line. */
   const hasCommentOnLine = useCallback(
@@ -489,12 +490,15 @@ export function SessionDetailPage() {
   );
 
   /** Map of file path -> count of unresolved comments on that file. */
-  const unresolvedCounts: Record<string, number> = {};
-  for (const comment of comments) {
-    if (!comment.resolved) {
-      unresolvedCounts[comment.file] = (unresolvedCounts[comment.file] ?? 0) + 1;
+  const unresolvedCounts = useMemo<Record<string, number>>(() => {
+    const counts: Record<string, number> = {};
+    for (const comment of comments) {
+      if (!comment.resolved) {
+        counts[comment.file] = (counts[comment.file] ?? 0) + 1;
+      }
     }
-  }
+    return counts;
+  }, [comments]);
 
   const totalUnresolved = comments.filter((c) => !c.resolved).length;
   const summaryStats = { total: comments.length, unresolved: totalUnresolved };
