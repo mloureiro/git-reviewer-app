@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AutoMarkSettings } from '../components/AutoMarkSettings';
-import { LinkButton } from '../components/ui';
+import { ApiError } from '../api/client.js';
+import { Button, LinkButton } from '../components/ui';
 import { CommentThread } from '../components/CommentThread';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ColorSchemeType } from 'diff2html/lib-esm/types';
@@ -66,6 +67,7 @@ export function SessionDetailPage() {
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
   const [activeLine, setActiveLine] = useState<DiffLineData | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [mutationError, setMutationError] = useState<string | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   // The user's stored preference (persisted to localStorage).
   const [diffViewMode, setDiffViewMode] = useLocalStorage<DiffViewMode>(
@@ -348,6 +350,10 @@ export function SessionDetailPage() {
     });
   }, [commits.length]);
 
+  const handleDismissMutationError = useCallback((): void => {
+    setMutationError(null);
+  }, []);
+
   const handleToggleHelp = useCallback((): void => {
     setIsHelpOpen((prev) => !prev);
   }, []);
@@ -421,21 +427,34 @@ export function SessionDetailPage() {
   const handleCommentSubmit = useCallback(
     async (formData: CommentFormData): Promise<void> => {
       if (commitSha == null) return;
-      await addComment({
-        file: formData.file,
-        line: formData.line,
-        side: formData.side,
-        body: formData.body,
-        author: 'reviewer',
-      });
-      setActiveLine(null);
+      try {
+        await addComment({
+          file: formData.file,
+          line: formData.line,
+          side: formData.side,
+          body: formData.body,
+          author: 'reviewer',
+        });
+        setActiveLine(null);
+      } catch (err) {
+        // Keep the form open so the user does not lose their comment text.
+        const message =
+          err instanceof ApiError ? err.message : 'Failed to submit comment. Please try again.';
+        setMutationError(message);
+      }
     },
     [addComment, commitSha],
   );
 
   const handleCommentResolve = useCallback(
     async (commentId: string, resolved: boolean): Promise<void> => {
-      await resolveComment(commentId, resolved);
+      try {
+        await resolveComment(commentId, resolved);
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.message : 'Failed to update comment. Please try again.';
+        setMutationError(message);
+      }
     },
     [resolveComment],
   );
@@ -445,6 +464,10 @@ export function SessionDetailPage() {
       setStatusUpdating(true);
       try {
         await updateStatus(status);
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.message : 'Failed to update status. Please try again.';
+        setMutationError(message);
       } finally {
         setStatusUpdating(false);
       }
@@ -607,6 +630,15 @@ export function SessionDetailPage() {
           />
         </div>
       </div>
+
+      {mutationError !== null && (
+        <div className="mutation-error-banner" role="alert">
+          <span className="mutation-error-banner__message">{mutationError}</span>
+          <Button size="sm" onClick={handleDismissMutationError} aria-label="Dismiss error">
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       {hasNewCommits && (
         <RefreshBanner

@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { SessionDetailPage } from './SessionDetailPage';
+import { ApiError } from '../api/client';
 import type { ReviewData, DiffFile } from '../types/review';
 import type { ShortcutDescriptor } from '../hooks/useKeyboardShortcuts';
 
@@ -890,6 +891,141 @@ describe('SessionDetailPage', () => {
       });
 
       expect(screen.getByText('Focus next file')).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Mutation error banner
+  // -------------------------------------------------------------------------
+
+  describe('mutation error banner', () => {
+    it('does not render the mutation error banner on initial render', () => {
+      renderPage();
+
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
+
+    it('shows a generic error banner when handleStatusChange fails', async () => {
+      mockUpdateStatus.mockRejectedValue(new Error('Network error'));
+
+      renderPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getByText('Failed to update status. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    it('shows the ApiError message when handleStatusChange fails with ApiError', async () => {
+      mockUpdateStatus.mockRejectedValue(new ApiError(500, { error: 'Internal server error' }));
+
+      renderPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Internal server error')).toBeInTheDocument();
+      });
+    });
+
+    it('re-enables status buttons after a failed status update', async () => {
+      mockUpdateStatus.mockRejectedValue(new Error('Network error'));
+
+      renderPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Approve' })).not.toBeDisabled();
+      });
+    });
+
+    it('shows an error banner when handleCommentResolve fails', async () => {
+      mockResolveComment.mockRejectedValue(new Error('Server error'));
+
+      mockUseReviewSession.mockReturnValue({
+        session: {
+          ...SAMPLE_SESSION,
+          comments: [
+            {
+              id: 'comment-1',
+              file: 'src/auth.ts',
+              line: 2,
+              side: 'right' as const,
+              body: 'Fix this.',
+              author: 'reviewer',
+              createdAt: '2026-03-25T10:00:00Z',
+              resolved: false,
+            },
+          ],
+        },
+        loading: false,
+        error: null,
+        ...sessionMockBase,
+      });
+
+      renderPage();
+
+      const resolveBtn = await screen.findByRole('button', { name: 'Resolve' });
+      fireEvent.click(resolveBtn);
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getByText('Failed to update comment. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    it('shows an error banner when handleCommentSubmit fails', async () => {
+      mockAddComment.mockRejectedValue(new Error('Server error'));
+
+      renderPage();
+
+      fireEvent.click(screen.getByTestId('diff-line'));
+
+      const textarea = screen.getByPlaceholderText(/Leave a comment/);
+      fireEvent.change(textarea, { target: { value: 'My comment' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getByText('Failed to submit comment. Please try again.')).toBeInTheDocument();
+      });
+    });
+
+    it('keeps the comment form open when handleCommentSubmit fails', async () => {
+      mockAddComment.mockRejectedValue(new Error('Server error'));
+
+      renderPage();
+
+      fireEvent.click(screen.getByTestId('diff-line'));
+
+      const textarea = screen.getByPlaceholderText(/Leave a comment/);
+      fireEvent.change(textarea, { target: { value: 'My comment' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Comment' }));
+
+      await waitFor(() => {
+        // Error banner is shown but the form is still visible
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/Leave a comment/)).toBeInTheDocument();
+      });
+    });
+
+    it('dismisses the error banner when the Dismiss button is clicked', async () => {
+      mockUpdateStatus.mockRejectedValue(new Error('Network error'));
+
+      renderPage();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+
+      await waitFor(() => {
+        expect(screen.getByRole('alert')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: 'Dismiss error' }));
+
+      expect(screen.queryByRole('alert')).toBeNull();
     });
   });
 });
