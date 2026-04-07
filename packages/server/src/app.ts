@@ -68,7 +68,8 @@ const globalErrorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   const isDev = process.env['NODE_ENV'] !== 'production';
   const message = isDev && err instanceof Error ? err.message : 'Internal server error';
 
-  res.status(500).json({ error: message });
+  const status = typeof err.status === 'number' ? err.status : 500;
+  res.status(status).json({ error: message });
 };
 
 export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
