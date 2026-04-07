@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router-dom';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { SessionListPage } from './pages/SessionListPage';
 import { SessionCreatePage } from './pages/SessionCreatePage';
@@ -10,13 +11,22 @@ export function App() {
   useInitialSession();
 
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route index element={<SessionListPage />} />
-        <Route path="new" element={<SessionCreatePage />} />
-        <Route path="session/:commitSha" element={<SessionDetailPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-      </Route>
-    </Routes>
+    <ErrorBoundary>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route index element={<SessionListPage />} />
+          <Route path="new" element={<SessionCreatePage />} />
+          <Route
+            path="session/:commitSha"
+            element={
+              <ErrorBoundary label="session">
+                <SessionDetailPage />
+              </ErrorBoundary>
+            }
+          />
+          <Route path="settings" element={<SettingsPage />} />
+        </Route>
+      </Routes>
+    </ErrorBoundary>
   );
 }

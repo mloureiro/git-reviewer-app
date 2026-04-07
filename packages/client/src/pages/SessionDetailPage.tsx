@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { AutoMarkSettings } from '../components/AutoMarkSettings';
 import { LinkButton } from '../components/ui';
 import { CommentThread } from '../components/CommentThread';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { ColorSchemeType } from 'diff2html/lib-esm/types';
 import { DiffView, filePathToId } from '../components/DiffView';
 import { DiffViewToggle } from '../components/DiffViewToggle';
@@ -643,21 +644,23 @@ export function SessionDetailPage() {
           {diffLoading && <div className="loading">Loading diff...</div>}
           {diffError && <div className="error">Error loading diff: {diffError}</div>}
           {!diffLoading && !diffError && diff != null && (
-            <DiffView
-              diffText={diff}
-              colorScheme={colorScheme}
-              viewMode={activeDiffViewMode}
-              focusedFile={focusedFilePath}
-              focusedLine={focusedLine}
-              onLineClick={handleLineClick}
-              renderAfterLine={renderAfterLine}
-              hasCommentOnLine={hasCommentOnLine}
-              viewedFiles={viewedFilesSet}
-              changedSinceViewed={changedSinceViewedSet}
-              onToggleViewed={handleToggleViewed}
-              collapsedFiles={collapsedFiles}
-              onToggleCollapsed={handleToggleCollapsed}
-            />
+            <ErrorBoundary label="diff view">
+              <DiffView
+                diffText={diff}
+                colorScheme={colorScheme}
+                viewMode={activeDiffViewMode}
+                focusedFile={focusedFilePath}
+                focusedLine={focusedLine}
+                onLineClick={handleLineClick}
+                renderAfterLine={renderAfterLine}
+                hasCommentOnLine={hasCommentOnLine}
+                viewedFiles={viewedFilesSet}
+                changedSinceViewed={changedSinceViewedSet}
+                onToggleViewed={handleToggleViewed}
+                collapsedFiles={collapsedFiles}
+                onToggleCollapsed={handleToggleCollapsed}
+              />
+            </ErrorBoundary>
           )}
           {!diffLoading && !diffError && diff == null && (
             <div className="empty">No changes to review.</div>
