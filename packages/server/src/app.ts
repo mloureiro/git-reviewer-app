@@ -1,5 +1,10 @@
 import cors from 'cors';
-import express, { type Express, type Request, type Response } from 'express';
+import express, {
+  type ErrorRequestHandler,
+  type Express,
+  type Request,
+  type Response,
+} from 'express';
 import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -46,6 +51,26 @@ function resolveStaticDir(staticDir: string | undefined): string | undefined {
   return existsSync(candidate) ? candidate : undefined;
 }
 
+/**
+ * Global Express error-handling middleware.
+ *
+ * Must have exactly 4 parameters so Express recognises it as an error handler.
+ * Registered last in the middleware chain so it catches errors forwarded by any
+ * route or middleware above it (e.g. malformed JSON from `express.json()`).
+ *
+ * In development (`NODE_ENV !== 'production'`) the original error message is
+ * included in the response to aid debugging.  In production only a generic
+ * message is returned to avoid leaking implementation details.
+ */
+const globalErrorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  console.error('Unhandled server error:', err);
+
+  const isDev = process.env['NODE_ENV'] !== 'production';
+  const message = isDev && err instanceof Error ? err.message : 'Internal server error';
+
+  res.status(500).json({ error: message });
+};
+
 export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
   const registry = new RepoRegistry();
   registry.registerRepo(repoPath);
@@ -84,6 +109,10 @@ export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
       res.sendFile(path.join(resolvedStaticDir, 'index.html'));
     });
   }
+
+  // Global error handler — must be registered last, after all routes and
+  // middleware, so that errors forwarded via next(err) reach it.
+  app.use(globalErrorHandler);
 
   return app;
 }
