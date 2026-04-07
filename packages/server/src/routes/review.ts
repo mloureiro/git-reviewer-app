@@ -17,6 +17,12 @@ import {
 } from '../git/notes.js';
 import { evaluateAutoMarkRules } from '../git/auto-mark.js';
 import type { RepoRegistry } from '../git/repo-registry.js';
+import {
+  validateCommitSha,
+  validateCommitHash,
+  resolveRepo,
+  type ResolvedRepoLocals,
+} from './middleware.js';
 import type {
   AutoMarkRule,
   DiffFile,
@@ -28,11 +34,11 @@ import type {
   ViewedFile,
 } from '@git-reviewer/shared';
 
-// Matches a valid git commit SHA (4–40 lowercase hex characters)
-const COMMIT_SHA_RE = /^[a-f0-9]{4,40}$/;
+// Allowlist for git ref characters: letters, digits, hyphen, underscore, dot, slash
+const VALID_REF_RE = /^[a-zA-Z0-9_\-./]+$/;
 
-// Characters that are dangerous in shell contexts
-const SHELL_DANGEROUS_RE = /[;&|`$()<>\r\n\0 ]|\.\./;
+// Sentinel value used for uncommitted (working-tree) sessions — not a real git ref
+const WORKING_TREE_SENTINEL = 'working tree';
 
 const VALID_STATUSES: ReadonlyArray<ReviewStatus> = ['pending', 'approved', 'changes_requested'];
 
@@ -44,8 +50,21 @@ const VALID_AUTO_MARK_RULES: ReadonlyArray<AutoMarkRule> = [
   'generated',
 ];
 
-function isValidRef(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && !SHELL_DANGEROUS_RE.test(value);
+/**
+ * Returns true when `value` is a string that is safe to pass to git as a ref.
+ *
+ * Uses an allowlist of characters permitted in git ref names (letters, digits,
+ * hyphen, underscore, dot, slash) and additionally blocks `..` sequences to
+ * prevent path traversal. The literal string 'working tree' is also accepted
+ * because it is the sentinel value used for uncommitted sessions — it is never
+ * passed to git commands, but must survive the validation gate so that the
+ * endpoint can return an appropriate response.
+ */
+export function isValidRef(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length === 0) return false;
+  if (value === WORKING_TREE_SENTINEL) return true;
+  if (value.includes('..')) return false;
+  return VALID_REF_RE.test(value);
 }
 
 /**
@@ -92,42 +111,10 @@ export function createReviewRouter(git: SimpleGit): Router {
   return createMultiRepoReviewRouter(singleRepoRegistry);
 }
 
-async function resolveRepoForSession(
-  registry: RepoRegistry,
-  repoParam: unknown,
-  commitSha: string,
-): Promise<[SimpleGit, string] | null> {
-  // If repo is explicitly provided, use it directly
-  if (typeof repoParam === 'string' && repoParam.length > 0) {
-    try {
-      return registry.resolve(repoParam);
-    } catch {
-      return null;
-    }
-  }
-
-  const paths = registry.listPaths();
-
-  // Single repo: use the default directly (no search needed)
-  if (paths.length <= 1) {
-    try {
-      return registry.resolve(undefined);
-    } catch {
-      return null;
-    }
-  }
-
-  // Multiple repos: search for the session across all repos
-  for (const repoPath of paths) {
-    const git = registry.getRepo(repoPath);
-    const data = await readReviewNote(git, commitSha);
-    if (data) return [git, repoPath];
-  }
-  return null;
-}
-
 export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   const router = Router();
+
+  const sessionMiddleware = [validateCommitSha, resolveRepo(registry)] as const;
 
   // List registered repos
   router.get('/repos', (_req, res) => {
@@ -413,21 +400,12 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Get a specific review session
-  router.get('/sessions/:commitSha', async (req, res) => {
+  router.get('/sessions/:commitSha', ...sessionMiddleware, async (req, res) => {
     try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
-      }
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
-
-      const data = await readReviewNote(git, req.params.commitSha);
+      const data = await readReviewNote(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -439,21 +417,12 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Get commits for a session's base..head range
-  router.get('/sessions/:commitSha/commits', async (req, res) => {
+  router.get('/sessions/:commitSha/commits', ...sessionMiddleware, async (req, res) => {
     try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
-      }
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
-
-      const data = await readReviewNote(git, req.params.commitSha);
+      const data = await readReviewNote(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -467,17 +436,11 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Get diff for a single commit
-  router.get('/commits/:commitHash/diff', async (req, res) => {
+  router.get('/commits/:commitHash/diff', validateCommitHash, async (req, res) => {
     try {
       const [git] = registry.resolve(req.query.repo);
-      if (!COMMIT_SHA_RE.test(req.params.commitHash)) {
-        res
-          .status(400)
-          .json({ error: 'Invalid commitHash: must be 4–40 lowercase hex characters' });
-        return;
-      }
-
-      const diff = await getCommitDiffText(git, req.params.commitHash);
+      const commitHash = req.params.commitHash ?? '';
+      const diff = await getCommitDiffText(git, commitHash);
       res.json({ diff });
     } catch (error) {
       res.status(500).json({ error: String(error) });
@@ -485,18 +448,12 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Get changed files for a single commit
-  router.get('/commits/:commitHash/files', async (req, res) => {
+  router.get('/commits/:commitHash/files', validateCommitHash, async (req, res) => {
     try {
       const [git] = registry.resolve(req.query.repo);
-      if (!COMMIT_SHA_RE.test(req.params.commitHash)) {
-        res
-          .status(400)
-          .json({ error: 'Invalid commitHash: must be 4–40 lowercase hex characters' });
-        return;
-      }
-
-      const files = await getCommitChangedFiles(git, req.params.commitHash);
-      const diffText = await getCommitDiffText(git, req.params.commitHash);
+      const commitHash = req.params.commitHash ?? '';
+      const files = await getCommitChangedFiles(git, commitHash);
+      const diffText = await getCommitDiffText(git, commitHash);
       const diffHashes = getFileDiffHashes(diffText);
 
       res.json({ files, diffHashes });
@@ -557,19 +514,10 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Add a comment to a session
-  router.post('/sessions/:commitSha/comments', async (req, res) => {
+  router.post('/sessions/:commitSha/comments', ...sessionMiddleware, async (req, res) => {
     try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
-      }
-
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
       const { file, line, side, body, author } = req.body as Omit<
         ReviewComment,
@@ -597,7 +545,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const data = await readReviewNote(git, req.params.commitSha);
+      const data = await readReviewNote(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -616,7 +564,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
 
       data.comments.push(comment);
       data.session.updatedAt = new Date().toISOString();
-      await writeReviewNote(git, req.params.commitSha, data);
+      await writeReviewNote(git, commitSha, data);
 
       res.status(201).json(comment);
     } catch (error) {
@@ -625,66 +573,48 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Resolve/unresolve a comment
-  router.patch('/sessions/:commitSha/comments/:commentId', async (req, res) => {
-    try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
+  router.patch(
+    '/sessions/:commitSha/comments/:commentId',
+    ...sessionMiddleware,
+    async (req, res) => {
+      try {
+        const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+        const commitSha = req.params.commitSha ?? '';
+
+        const { resolved } = req.body as { resolved: boolean };
+        if (typeof resolved !== 'boolean') {
+          res.status(400).json({ error: 'Invalid body: resolved must be a boolean' });
+          return;
+        }
+
+        const data = await readReviewNote(git, commitSha);
+        if (!data) {
+          res.status(404).json({ error: 'Review session not found' });
+          return;
+        }
+
+        const comment = data.comments.find(({ id }) => id === req.params.commentId);
+        if (!comment) {
+          res.status(404).json({ error: 'Comment not found' });
+          return;
+        }
+
+        comment.resolved = resolved;
+        data.session.updatedAt = new Date().toISOString();
+        await writeReviewNote(git, commitSha, data);
+
+        res.json(comment);
+      } catch (error) {
+        res.status(500).json({ error: String(error) });
       }
-
-      const repoResult = await resolveRepoForSession(
-        registry,
-        req.query.repo,
-        req.params.commitSha,
-      );
-      if (!repoResult) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = repoResult;
-
-      const { resolved } = req.body as { resolved: boolean };
-      if (typeof resolved !== 'boolean') {
-        res.status(400).json({ error: 'Invalid body: resolved must be a boolean' });
-        return;
-      }
-
-      const data = await readReviewNote(git, req.params.commitSha);
-      if (!data) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-
-      const comment = data.comments.find(({ id }) => id === req.params.commentId);
-      if (!comment) {
-        res.status(404).json({ error: 'Comment not found' });
-        return;
-      }
-
-      comment.resolved = resolved;
-      data.session.updatedAt = new Date().toISOString();
-      await writeReviewNote(git, req.params.commitSha, data);
-
-      res.json(comment);
-    } catch (error) {
-      res.status(500).json({ error: String(error) });
-    }
-  });
+    },
+  );
 
   // Mark a file as viewed
-  router.post('/sessions/:commitSha/viewed-files', async (req, res) => {
+  router.post('/sessions/:commitSha/viewed-files', ...sessionMiddleware, async (req, res) => {
     try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
-      }
-
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
       const { path } = req.body as { path: string };
       if (typeof path !== 'string' || path.trim().length === 0) {
@@ -692,7 +622,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const data = await readReviewNote(git, req.params.commitSha);
+      const data = await readReviewNote(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -719,7 +649,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       }
       data.viewedFiles = viewedFiles;
       data.session.updatedAt = new Date().toISOString();
-      await writeReviewNote(git, req.params.commitSha, data);
+      await writeReviewNote(git, commitSha, data);
 
       res.status(201).json(viewedFile);
     } catch (error) {
@@ -728,53 +658,39 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Unmark a file as viewed
-  router.delete('/sessions/:commitSha/viewed-files/:filePath', async (req, res) => {
-    try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
+  router.delete(
+    '/sessions/:commitSha/viewed-files/:filePath',
+    ...sessionMiddleware,
+    async (req, res) => {
+      try {
+        const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+        const commitSha = req.params.commitSha ?? '';
+
+        const filePath = decodeURIComponent(req.params.filePath ?? '');
+
+        const data = await readReviewNote(git, commitSha);
+        if (!data) {
+          res.status(404).json({ error: 'Review session not found' });
+          return;
+        }
+
+        const viewedFiles = data.viewedFiles ?? [];
+        data.viewedFiles = viewedFiles.filter((vf) => vf.path !== filePath);
+        data.session.updatedAt = new Date().toISOString();
+        await writeReviewNote(git, commitSha, data);
+
+        res.status(204).send();
+      } catch (error) {
+        res.status(500).json({ error: String(error) });
       }
-
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
-
-      const filePath = decodeURIComponent(req.params.filePath);
-
-      const data = await readReviewNote(git, req.params.commitSha);
-      if (!data) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-
-      const viewedFiles = data.viewedFiles ?? [];
-      data.viewedFiles = viewedFiles.filter((vf) => vf.path !== filePath);
-      data.session.updatedAt = new Date().toISOString();
-      await writeReviewNote(git, req.params.commitSha, data);
-
-      res.status(204).send();
-    } catch (error) {
-      res.status(500).json({ error: String(error) });
-    }
-  });
+    },
+  );
 
   // Update auto-mark rules and immediately apply them
-  router.put('/sessions/:commitSha/auto-mark-rules', async (req, res) => {
+  router.put('/sessions/:commitSha/auto-mark-rules', ...sessionMiddleware, async (req, res) => {
     try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
-      }
-
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
       const { rules } = req.body as { rules: AutoMarkRule[] };
       if (!Array.isArray(rules) || !rules.every((r) => VALID_AUTO_MARK_RULES.includes(r))) {
@@ -784,7 +700,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const data = await readReviewNote(git, req.params.commitSha);
+      const data = await readReviewNote(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -815,7 +731,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
       data.viewedFiles = [...kept, ...autoMarked];
       data.session.updatedAt = now;
-      await writeReviewNote(git, req.params.commitSha, data);
+      await writeReviewNote(git, commitSha, data);
 
       res.json({ rules, autoMarked });
     } catch (error) {
@@ -824,21 +740,12 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Re-apply existing auto-mark rules against current files
-  router.post('/sessions/:commitSha/auto-mark-apply', async (req, res) => {
+  router.post('/sessions/:commitSha/auto-mark-apply', ...sessionMiddleware, async (req, res) => {
     try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
-      }
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
-
-      const data = await readReviewNote(git, req.params.commitSha);
+      const data = await readReviewNote(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -865,7 +772,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
       const kept = manuallyViewed.filter((vf) => !autoMarkedPaths.has(vf.path));
       data.viewedFiles = [...kept, ...autoMarked];
       data.session.updatedAt = now;
-      await writeReviewNote(git, req.params.commitSha, data);
+      await writeReviewNote(git, commitSha, data);
 
       res.json({ autoMarked });
     } catch (error) {
@@ -874,27 +781,18 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Delete a review session
-  router.delete('/sessions/:commitSha', async (req, res) => {
+  router.delete('/sessions/:commitSha', ...sessionMiddleware, async (req, res) => {
     try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
-      }
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
-
-      const data = await readReviewNote(git, req.params.commitSha);
+      const data = await readReviewNote(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
       }
 
-      await removeReviewNote(git, req.params.commitSha);
+      await removeReviewNote(git, commitSha);
       res.status(204).send();
     } catch (error) {
       res.status(500).json({ error: String(error) });
@@ -902,19 +800,10 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
   });
 
   // Update session status (approve / request changes)
-  router.patch('/sessions/:commitSha', async (req, res) => {
+  router.patch('/sessions/:commitSha', ...sessionMiddleware, async (req, res) => {
     try {
-      if (!COMMIT_SHA_RE.test(req.params.commitSha)) {
-        res.status(400).json({ error: 'Invalid commitSha: must be 4–40 lowercase hex characters' });
-        return;
-      }
-
-      const resolved = await resolveRepoForSession(registry, req.query.repo, req.params.commitSha);
-      if (!resolved) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-      const [git] = resolved;
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
       const { status } = req.body as { status: ReviewData['session']['status'] };
       if (!VALID_STATUSES.includes(status as ReviewStatus)) {
@@ -924,7 +813,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      const data = await readReviewNote(git, req.params.commitSha);
+      const data = await readReviewNote(git, commitSha);
       if (!data) {
         res.status(404).json({ error: 'Review session not found' });
         return;
@@ -932,7 +821,7 @@ export function createMultiRepoReviewRouter(registry: RepoRegistry): Router {
 
       data.session.status = status;
       data.session.updatedAt = new Date().toISOString();
-      await writeReviewNote(git, req.params.commitSha, data);
+      await writeReviewNote(git, commitSha, data);
 
       res.json(data.session);
     } catch (error) {
