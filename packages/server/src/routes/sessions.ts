@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { SimpleGit } from 'simple-git';
 import { getCommitList } from '../git/commits.js';
 import { getUncommittedChangedFiles } from '../git/diff.js';
 import { listReviewNotes, readReviewNote } from '../git/notes.js';
@@ -17,7 +18,6 @@ import {
 } from '../services/session-service.js';
 import type {
   AutoMarkRule,
-  ReviewData,
   ReviewStatus,
   SessionHealth,
   SessionStats,
@@ -44,24 +44,31 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
   // List all review sessions (aggregated across all registered repos)
   router.get('/sessions', async (_req, res) => {
     try {
-      const sessions: ReviewData[] = [];
       const repoPaths = registry.listPaths();
 
-      for (const repoPath of repoPaths) {
-        const [git] = registry.resolve(repoPath);
-        const notes = await listReviewNotes(git);
+      // Fetch notes for all repos in parallel, then read each note in parallel.
+      // readReviewNote returns null on error so Promise.all is safe here.
+      const perRepoSessions = await Promise.all(
+        repoPaths.map(async (repoPath) => {
+          const [git] = registry.resolve(repoPath);
+          const notes = await listReviewNotes(git);
 
-        for (const { commitHash } of notes) {
-          const data = await readReviewNote(git, commitHash);
-          if (data) {
+          const dataList = await Promise.all(
+            notes.map(({ commitHash }) => readReviewNote(git, commitHash)),
+          );
+
+          return dataList.flatMap((data) => {
+            if (!data) return [];
             // Ensure repoPath is set on the session for grouping
             if (data.session.repoPath == null) {
               data.session.repoPath = repoPath;
             }
-            sessions.push(data);
-          }
-        }
-      }
+            return [data];
+          });
+        }),
+      );
+
+      const sessions = perRepoSessions.flat();
 
       res.json({ sessions });
     } catch (error) {
@@ -77,92 +84,121 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       const stats: Record<string, SessionStats> = {};
       const repoPaths = registry.listPaths();
 
-      for (const repoPath of repoPaths) {
-        const [git] = registry.resolve(repoPath);
-        const notes = await listReviewNotes(git);
+      type NoteValidationResult = {
+        commitHash: string;
+        health: SessionHealth;
+        stats?: SessionStats;
+      };
 
-        for (const { commitHash } of notes) {
-          const data = await readReviewNote(git, commitHash);
-          if (!data) continue;
+      /**
+       * Validate a single note and return its health + optional stats.
+       * All git errors are caught internally so Promise.all stays stable.
+       */
+      async function validateNote(
+        git: SimpleGit,
+        commitHash: string,
+      ): Promise<NoteValidationResult | null> {
+        const data = await readReviewNote(git, commitHash);
+        if (!data) return null;
 
-          const { baseRef, headRef } = data.session;
+        const { baseRef, headRef } = data.session;
 
-          if (isUncommittedSession(headRef)) {
-            // For uncommitted sessions, 'working tree' is not a git ref.
-            // Validate by checking if the base ref resolves and whether
-            // there are any uncommitted changes in the working tree.
-            let baseResolved: string | null = null;
-            try {
-              baseResolved = await git.revparse([baseRef]);
-            } catch {
-              // baseRef no longer exists
+        if (isUncommittedSession(headRef)) {
+          // For uncommitted sessions, 'working tree' is not a git ref.
+          // Validate by checking if the base ref resolves and whether
+          // there are any uncommitted changes in the working tree.
+          let baseResolved: string | null = null;
+          try {
+            baseResolved = await git.revparse([baseRef]);
+          } catch {
+            // baseRef no longer exists
+          }
+
+          if (baseResolved == null) {
+            return { commitHash, health: { status: 'stale', reason: 'base-ref-missing' } };
+          }
+
+          // Check whether there are uncommitted changes to review
+          try {
+            const files = await getUncommittedChangedFiles(git);
+            if (files.length === 0) {
+              return { commitHash, health: { status: 'stale', reason: 'no-changes' } };
             }
-
-            if (baseResolved == null) {
-              health[commitHash] = { status: 'stale', reason: 'base-ref-missing' };
-            } else {
-              // Check whether there are uncommitted changes to review
-              try {
-                const files = await getUncommittedChangedFiles(git);
-                if (files.length === 0) {
-                  health[commitHash] = { status: 'stale', reason: 'no-changes' };
-                } else {
-                  health[commitHash] = { status: 'ok' };
-                  stats[commitHash] = {
-                    files: files.length,
-                    additions: files.reduce((sum, f) => sum + f.additions, 0),
-                    deletions: files.reduce((sum, f) => sum + f.deletions, 0),
-                  };
-                }
-              } catch {
-                // If we can't determine changes, treat as ok to avoid false stale warnings
-                health[commitHash] = { status: 'ok' };
-              }
-            }
-          } else {
-            let baseResolved: string | null = null;
-            let headResolved: string | null = null;
-
-            try {
-              baseResolved = await git.revparse([baseRef]);
-            } catch {
-              // baseRef no longer exists
-            }
-
-            try {
-              headResolved = await git.revparse([headRef]);
-            } catch {
-              // headRef no longer exists
-            }
-
-            if (baseResolved == null && headResolved == null) {
-              health[commitHash] = { status: 'stale', reason: 'both-refs-missing' };
-            } else if (baseResolved == null) {
-              health[commitHash] = { status: 'stale', reason: 'base-ref-missing' };
-            } else if (headResolved == null) {
-              health[commitHash] = { status: 'stale', reason: 'head-ref-missing' };
-            } else if (baseResolved.trim() === headResolved.trim()) {
-              health[commitHash] = { status: 'stale', reason: 'no-changes' };
-            } else {
-              health[commitHash] = { status: 'ok' };
-
-              // Compute lightweight diff stats for healthy sessions
-              try {
-                const summary = await git.diffSummary([
-                  `${baseResolved.trim()}...${headResolved.trim()}`,
-                ]);
-                stats[commitHash] = {
-                  files: summary.changed,
-                  additions: summary.insertions,
-                  deletions: summary.deletions,
-                };
-              } catch {
-                // Stats are best-effort
-              }
-            }
+            return {
+              commitHash,
+              health: { status: 'ok' },
+              stats: {
+                files: files.length,
+                additions: files.reduce((sum, f) => sum + f.additions, 0),
+                deletions: files.reduce((sum, f) => sum + f.deletions, 0),
+              },
+            };
+          } catch {
+            // If we can't determine changes, treat as ok to avoid false stale warnings
+            return { commitHash, health: { status: 'ok' } };
           }
         }
+
+        // Committed session: resolve both refs in parallel
+        const [baseResult, headResult] = await Promise.all([
+          git
+            .revparse([baseRef])
+            .then((v) => v)
+            .catch(() => null),
+          git
+            .revparse([headRef])
+            .then((v) => v)
+            .catch(() => null),
+        ]);
+
+        if (baseResult == null && headResult == null) {
+          return { commitHash, health: { status: 'stale', reason: 'both-refs-missing' } };
+        }
+        if (baseResult == null) {
+          return { commitHash, health: { status: 'stale', reason: 'base-ref-missing' } };
+        }
+        if (headResult == null) {
+          return { commitHash, health: { status: 'stale', reason: 'head-ref-missing' } };
+        }
+        if (baseResult.trim() === headResult.trim()) {
+          return { commitHash, health: { status: 'stale', reason: 'no-changes' } };
+        }
+
+        // Compute lightweight diff stats for healthy sessions
+        let noteStats: SessionStats | undefined;
+        try {
+          const summary = await git.diffSummary([`${baseResult.trim()}...${headResult.trim()}`]);
+          noteStats = {
+            files: summary.changed,
+            additions: summary.insertions,
+            deletions: summary.deletions,
+          };
+        } catch {
+          // Stats are best-effort
+        }
+
+        return { commitHash, health: { status: 'ok' }, stats: noteStats };
       }
+
+      // Fetch notes for all repos in parallel, then validate each note in parallel.
+      await Promise.all(
+        repoPaths.map(async (repoPath) => {
+          const [git] = registry.resolve(repoPath);
+          const notes = await listReviewNotes(git);
+
+          const results = await Promise.all(
+            notes.map(({ commitHash }) => validateNote(git, commitHash)),
+          );
+
+          for (const result of results) {
+            if (!result) continue;
+            health[result.commitHash] = result.health;
+            if (result.stats != null) {
+              stats[result.commitHash] = result.stats;
+            }
+          }
+        }),
+      );
 
       res.json({ health, stats });
     } catch (error) {
