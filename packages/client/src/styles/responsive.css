@@ -1,0 +1,33 @@
+/* ── Responsive: narrow screens ────────────────────────────────────────── */
+
+/* Below 900 px the two-column review layout shifts to a single column
+   so the file tree no longer consumes horizontal space. */
+@media (max-width: 900px) {
+  .review-layout {
+    flex-direction: column;
+  }
+
+  .review-layout__sidebar {
+    width: 100%;
+    position: static;
+    max-height: none;
+  }
+
+  /* Collapse the file-tree list so it doesn't dominate the screen */
+  .review-layout__sidebar .file-tree__list {
+    max-height: 200px;
+  }
+}
+
+/* Below 640 px the session header controls wrap more gracefully */
+@media (max-width: 640px) {
+  .session-detail__review-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  /* The .main padding is too generous on small screens */
+  .main {
+    padding: var(--space-4);
+  }
+}

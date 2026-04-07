@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './App';
 import './tokens.css';
 import './hljs-themes.css';
-import './styles.css';
+import './styles/index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) throw new Error('Root element not found');

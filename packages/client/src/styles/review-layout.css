@@ -1,0 +1,23 @@
+/* ── Review Layout (two-column: sidebar + diff) ────────────────────────── */
+
+.review-layout {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+.review-layout__sidebar {
+  flex-shrink: 0;
+  width: 260px;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.review-layout__main {
+  flex: 1;
+  min-width: 0;
+}

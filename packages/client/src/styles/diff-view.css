@@ -1,0 +1,236 @@
+.diff-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.diff-file-section {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  /* overflow left visible to allow position:sticky on the header */
+  transition:
+    border-color var(--duration-normal) ease,
+    box-shadow var(--duration-normal) ease;
+}
+
+/* Keyboard-focus highlight applied when n/p navigation lands on this file. */
+.diff-file-section--focused {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+/* Line-level keyboard focus highlight applied when j/k navigation lands on this row. */
+.diff-file-section .diff-line--focused {
+  outline: 2px solid var(--color-accent-focus-ring);
+  outline-offset: -2px;
+  position: relative;
+  z-index: var(--z-base);
+}
+
+.diff-file-section__header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  cursor: pointer;
+  user-select: none;
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+}
+
+.diff-file-section__header:hover {
+  background-color: var(--color-bg-primary);
+}
+
+.diff-file-section__collapse-toggle {
+  margin-right: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  flex-shrink: 0;
+  width: 12px;
+  text-align: center;
+}
+
+.diff-file-section__filename {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;
+  text-align: left;
+}
+
+.diff-file-section__stats {
+  display: flex;
+  gap: var(--space-1-5);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+
+.diff-file-section__additions {
+  color: var(--color-success);
+}
+
+.diff-file-section__deletions {
+  color: var(--color-danger);
+}
+
+/* ── Controlled diff table (replaces dangerouslySetInnerHTML) ──────────── */
+
+.diff-file-section .d2h-file-diff {
+  overflow-x: auto;
+}
+
+.diff-file-section .d2h-diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  tab-size: 4;
+}
+
+.diff-file-section .d2h-diff-tr {
+  line-height: var(--leading-normal);
+}
+
+.diff-file-section .d2h-diff-tr:hover {
+  filter: brightness(1.08);
+}
+
+/* Line number cell */
+.diff-file-section .d2h-code-linenumber {
+  width: 80px;
+  min-width: 80px;
+  padding: 0 var(--space-2);
+  vertical-align: top;
+  white-space: nowrap;
+  user-select: none;
+  border-right: 1px solid var(--color-border-subtle);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-muted);
+  text-align: right;
+  cursor: pointer;
+  position: relative;
+}
+
+.diff-file-section .d2h-code-linenumber .line-num1,
+.diff-file-section .d2h-code-linenumber .line-num2 {
+  display: inline-block;
+  width: 32px;
+  text-align: right;
+  overflow: visible;
+  text-overflow: clip;
+  float: none;
+  padding: 0;
+  box-sizing: content-box;
+}
+
+/* ── Hover "+" affordance ──────────────────────────────────────────────── */
+
+/* Hidden by default; shown when hovering a clickable row */
+.diff-file-section .diff-line--clickable .diff-line__plus-icon {
+  display: none;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  line-height: var(--leading-none);
+  color: var(--color-accent);
+  pointer-events: none;
+}
+
+.diff-file-section .diff-line--clickable:hover .diff-line__plus-icon {
+  display: block;
+}
+
+/* ── Comment indicator dot ─────────────────────────────────────────────── */
+
+.diff-file-section .diff-line__comment-dot {
+  display: inline-block;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--color-accent);
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* When hovering a line that already has a comment, the "+" replaces the dot */
+.diff-file-section .diff-line--has-comment.diff-line--clickable:hover .diff-line__comment-dot {
+  display: none;
+}
+
+/* +/- prefix cell */
+.diff-file-section .d2h-code-line-prefix {
+  width: 14px;
+  min-width: 14px;
+  padding: 0 var(--space-1);
+  text-align: center;
+  vertical-align: top;
+  user-select: none;
+  border-right: 1px solid var(--color-border-subtle);
+  color: var(--color-text-muted);
+}
+
+/* Content cell */
+.diff-file-section .d2h-code-line {
+  padding: 0 var(--space-3);
+  vertical-align: top;
+  white-space: pre;
+}
+
+.diff-file-section .d2h-code-line-ctn {
+  white-space: pre;
+}
+
+/* Row type backgrounds — uses blue-violet for deletions (color-blind friendly) */
+.diff-file-section .d2h-ins,
+.diff-file-section .d2h-auto-color-scheme .d2h-ins,
+.diff-file-section .d2h-dark-color-scheme .d2h-ins {
+  background-color: var(--color-diff-ins-bg);
+}
+
+.diff-file-section .d2h-ins .d2h-code-line-prefix {
+  color: var(--color-diff-ins-prefix);
+}
+
+.diff-file-section .d2h-del,
+.diff-file-section .d2h-auto-color-scheme .d2h-del,
+.diff-file-section .d2h-dark-color-scheme .d2h-del {
+  background-color: var(--color-diff-del-bg);
+}
+
+.diff-file-section .d2h-del .d2h-code-line-prefix {
+  color: var(--color-diff-del-prefix);
+}
+
+.diff-file-section .d2h-info {
+  background-color: var(--color-info-bg);
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.diff-container {
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.diff-file-section .diff-container {
+  border: none;
+  border-radius: 0;
+}

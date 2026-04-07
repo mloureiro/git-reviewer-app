@@ -1,0 +1,29 @@
+/* ── Status Badge ──────────────────────────────────────────────────────── */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-normal);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.status-badge--pending {
+  background-color: var(--color-warning-bg-subtle);
+  color: var(--color-warning);
+  border: 1px solid var(--color-warning-border);
+}
+
+.status-badge--approved {
+  background-color: var(--color-success-bg-subtle);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-border);
+}
+
+.status-badge--changes_requested {
+  background-color: var(--color-danger-bg-subtle);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
+}

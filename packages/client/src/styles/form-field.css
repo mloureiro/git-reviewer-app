@@ -1,0 +1,49 @@
+/* ── Form Field ────────────────────────────────────────────────────────── */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.form-field__label {
+  font-size: var(--text-md);
+  font-weight: var(--font-normal);
+  color: var(--color-text-primary);
+}
+
+.form-field__input {
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-md);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  outline: none;
+  transition: border-color var(--duration-normal) ease;
+  font-family: inherit;
+}
+
+.form-field__input::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+.form-field__input:focus {
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.form-field__input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.form-field__hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.form-field__current-branch code {
+  font-size: var(--text-sm);
+  color: var(--color-accent);
+}

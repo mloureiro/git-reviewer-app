@@ -1,0 +1,68 @@
+/* ── Commit Selector ───────────────────────────────────────────────────── */
+
+.commit-selector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-3);
+}
+
+.commit-selector__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1-5);
+}
+
+.commit-selector__nav-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-lg);
+  line-height: var(--leading-none);
+}
+
+.commit-selector__dropdown {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-base);
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  appearance: auto;
+}
+
+.commit-selector__dropdown:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px var(--color-accent-focus-shadow);
+}
+
+.commit-selector__info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-left: 34px;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.commit-selector__position {
+  font-weight: var(--font-normal);
+}
+
+.commit-selector__author {
+  color: var(--color-text-muted);
+}

@@ -1,0 +1,65 @@
+/* ── Review Actions ────────────────────────────────────────────────────── */
+
+.review-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.review-actions__btn {
+  font-size: var(--text-base);
+  padding: var(--space-1) var(--space-3);
+}
+
+/* Approve — green */
+.review-actions__btn--approve {
+  background-color: var(--color-success-emphasis);
+  color: var(--color-text-white);
+  border-color: var(--color-btn-dark-border);
+}
+
+.review-actions__btn--approve:hover:not(:disabled) {
+  background-color: var(--color-success-emphasis-hover);
+}
+
+.review-actions__btn--approve:disabled {
+  background-color: var(--color-success-emphasis);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Request Changes — red */
+.review-actions__btn--request-changes {
+  background-color: var(--color-danger-bg-subtle);
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+
+.review-actions__btn--request-changes:hover:not(:disabled) {
+  background-color: var(--color-danger-bg-hover);
+  border-color: var(--color-danger-border-strong);
+}
+
+.review-actions__btn--request-changes:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Revert to Pending — neutral */
+.review-actions__btn--revert {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-default);
+}
+
+.review-actions__btn--revert:hover:not(:disabled) {
+  background-color: var(--color-neutral-hover);
+  border-color: var(--color-text-secondary);
+  color: var(--color-text-primary);
+}
+
+.review-actions__btn--revert:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

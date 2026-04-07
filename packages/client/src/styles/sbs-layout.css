@@ -1,0 +1,94 @@
+/* ── Side-by-side diff table layout ───────────────────────────────────── */
+
+/* Enable horizontal scroll for the wide split view.
+   scrollbar-gutter: stable reserves space so the layout doesn't jump
+   when a scrollbar appears/disappears. */
+.diff-file-section .d2h-file-diff--sbs {
+  overflow-x: auto;
+  scrollbar-gutter: stable;
+}
+
+.diff-file-section .d2h-file-diff--sbs .d2h-diff-table {
+  /* Allow the table to grow past the container so long lines trigger
+     horizontal scroll rather than wrapping.
+     800 px is the practical minimum for a readable two-column layout. */
+  min-width: max(100%, 800px);
+  width: 100%;
+  /* Fixed layout ensures the two code cells split remaining space evenly
+     after fixed-width cells (linenumber, prefix, divider) are accounted for. */
+  table-layout: fixed;
+}
+
+/* Thin vertical divider between left and right panes */
+.diff-file-section .d2h-sbs-divider {
+  width: 2px;
+  min-width: 2px;
+  padding: 0;
+  background-color: var(--color-border-subtle);
+}
+
+/* Side-by-side line number cells — single number per side */
+.diff-file-section .d2h-sbs-linenumber {
+  width: 50px;
+  min-width: 50px;
+}
+
+/* The +/- prefix cell in side-by-side rows */
+.diff-file-section .d2h-diff-tr--sbs .d2h-code-line-prefix {
+  width: 14px;
+  min-width: 14px;
+}
+
+/* Each side's code content cell: no wrapping — long lines extend the table
+   horizontally which is handled by the scrollable wrapper above. */
+.diff-file-section .d2h-diff-tr--sbs .d2h-code-line {
+  white-space: pre;
+}
+
+/* Empty half-row cells (when one side has more lines than the other) */
+.diff-file-section .d2h-sbs-empty {
+  background-color: var(--color-neutral-bg-faint);
+}
+
+.diff-file-section .d2h-sbs-linenumber--empty {
+  background-color: var(--color-neutral-bg-faint);
+  border-right: 1px solid var(--color-border-subtle);
+}
+
+/* Side-by-side placeholder for added/deleted files */
+.diff-sbs-wrapper {
+  position: relative;
+}
+
+.diff-sbs-placeholder {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  background-color: var(--color-neutral-bg-faint);
+  color: var(--color-text-muted);
+  z-index: var(--z-base);
+  pointer-events: none;
+}
+
+.diff-sbs-placeholder--left {
+  left: 0;
+}
+
+.diff-sbs-placeholder--right {
+  right: 0;
+}
+
+.diff-sbs-placeholder__icon {
+  opacity: 0.5;
+}
+
+.diff-sbs-placeholder__text {
+  font-size: var(--text-base);
+  font-weight: var(--font-normal);
+}

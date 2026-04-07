@@ -1,0 +1,33 @@
+/* ── Refresh Banner ────────────────────────────────────────────────────── */
+
+.refresh-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background-color: var(--color-warning-bg-subtle);
+  border: 1px solid var(--color-warning-bg-muted);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-3);
+}
+
+.refresh-banner__message {
+  flex: 1;
+  font-size: var(--text-base);
+  color: var(--color-text-primary);
+}
+
+.refresh-banner__message code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background-color: var(--color-neutral-bg-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+
+.refresh-banner__dismiss {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-default);
+}

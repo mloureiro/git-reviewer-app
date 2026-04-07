@@ -1,0 +1,106 @@
+/* ── Viewed File Indicators ──────────────────────────────────────────── */
+
+/* File tree: viewed toggle icon */
+.file-tree__viewed-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  font-size: var(--text-sm);
+  line-height: var(--leading-none);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--duration-normal) ease,
+    background-color var(--duration-normal) ease;
+}
+
+.file-tree__viewed-toggle:hover {
+  color: var(--color-text-primary);
+  background-color: var(--color-neutral-bg-subtle);
+}
+
+.file-tree__viewed-toggle--viewed {
+  color: var(--color-success);
+}
+
+.file-tree__viewed-toggle--viewed:hover {
+  color: var(--color-success);
+  background-color: var(--color-success-bg-subtle);
+}
+
+.file-tree__viewed-toggle--changed {
+  color: var(--color-warning);
+}
+
+.file-tree__viewed-toggle--changed:hover {
+  color: var(--color-warning);
+  background-color: var(--color-warning-bg-subtle);
+}
+
+/* Dim viewed files in the file tree */
+.file-tree__item--viewed {
+  opacity: 0.55;
+}
+
+.file-tree__item--viewed:hover {
+  opacity: 0.8;
+}
+
+/* Diff header: viewed toggle button */
+.diff-file-section__viewed-btn {
+  margin-left: var(--space-2);
+  padding: var(--space-0-5) var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--font-normal);
+  color: var(--color-text-secondary);
+  background-color: transparent;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--duration-normal) ease,
+    border-color var(--duration-normal) ease,
+    color var(--duration-normal) ease;
+}
+
+.diff-file-section__viewed-btn:hover {
+  background-color: var(--color-neutral-hover);
+  border-color: var(--color-text-secondary);
+  color: var(--color-text-primary);
+}
+
+.diff-file-section__viewed-btn--viewed {
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+  background-color: var(--color-success-bg-subtle);
+}
+
+.diff-file-section__viewed-btn--viewed:hover {
+  background-color: var(--color-success-bg-muted);
+}
+
+.diff-file-section__viewed-btn--changed {
+  color: var(--color-warning);
+  border-color: var(--color-warning-border);
+  background-color: var(--color-warning-bg-subtle);
+}
+
+.diff-file-section__viewed-btn--changed:hover {
+  background-color: var(--color-warning-bg-muted);
+}
+
+/* ── Auto-mark file indicator (file tree) ──────────────────────────────── */
+
+.file-tree__viewed-toggle--auto {
+  color: var(--color-accent);
+}
+
+.file-tree__viewed-toggle--auto:hover {
+  color: var(--color-accent);
+  background-color: var(--color-accent-bg-subtle);
+}
