@@ -24,10 +24,10 @@
   background-color: var(--color-bg-primary);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-md);
-  outline: none;
 }
 
-.search-bar__input:focus {
+.search-bar__input:focus-visible {
+  outline: none;
   border-color: var(--color-accent);
   box-shadow: var(--shadow-focus);
 }

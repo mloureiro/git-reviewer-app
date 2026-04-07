@@ -27,8 +27,8 @@
   color: var(--color-text-primary);
 }
 
-/* Suppress the default browser outline on <dialog> */
-.shortcuts-modal:focus {
+/* Suppress the default browser outline on <dialog> — not an interactive control */
+.shortcuts-modal:focus-visible {
   outline: none;
 }
 

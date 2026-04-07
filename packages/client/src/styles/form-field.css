@@ -19,7 +19,6 @@
   background-color: var(--color-bg-primary);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-lg);
-  outline: none;
   transition: border-color var(--duration-normal) ease;
   font-family: inherit;
 }
@@ -28,7 +27,8 @@
   color: var(--color-text-placeholder);
 }
 
-.form-field__input:focus {
+.form-field__input:focus-visible {
+  outline: none;
   border-color: var(--color-accent);
   box-shadow: var(--shadow-focus);
 }

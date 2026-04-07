@@ -44,10 +44,10 @@
   appearance: auto;
 }
 
-.commit-selector__dropdown:focus {
+.commit-selector__dropdown:focus-visible {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 2px var(--color-accent-focus-shadow);
+  box-shadow: var(--shadow-focus);
 }
 
 .commit-selector__info {
