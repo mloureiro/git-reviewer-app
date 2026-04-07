@@ -14,6 +14,7 @@ import {
   writeReviewNote,
 } from '../git/notes.js';
 import { evaluateAutoMarkRules } from '../git/auto-mark.js';
+import { withSessionLock } from './session-lock.js';
 import type {
   AutoMarkRule,
   DiffFile,
@@ -171,14 +172,16 @@ export async function updateStatus(
   commitSha: string,
   status: ReviewStatus,
 ): Promise<ReviewData['session'] | null> {
-  const data = await readReviewNote(git, commitSha);
-  if (!data) return null;
+  return withSessionLock(commitSha, async () => {
+    const data = await readReviewNote(git, commitSha);
+    if (!data) return null;
 
-  data.session.status = status;
-  data.session.updatedAt = new Date().toISOString();
-  await writeReviewNote(git, commitSha, data);
+    data.session.status = status;
+    data.session.updatedAt = new Date().toISOString();
+    await writeReviewNote(git, commitSha, data);
 
-  return data.session;
+    return data.session;
+  });
 }
 
 /**
@@ -190,25 +193,27 @@ export async function addComment(
   commitSha: string,
   input: AddCommentInput,
 ): Promise<ReviewComment | null> {
-  const data = await readReviewNote(git, commitSha);
-  if (!data) return null;
+  return withSessionLock(commitSha, async () => {
+    const data = await readReviewNote(git, commitSha);
+    if (!data) return null;
 
-  const comment: ReviewComment = {
-    id: uuid(),
-    file: input.file,
-    line: input.line,
-    side: input.side,
-    body: input.body,
-    author: input.author,
-    createdAt: new Date().toISOString(),
-    resolved: false,
-  };
+    const comment: ReviewComment = {
+      id: uuid(),
+      file: input.file,
+      line: input.line,
+      side: input.side,
+      body: input.body,
+      author: input.author,
+      createdAt: new Date().toISOString(),
+      resolved: false,
+    };
 
-  data.comments.push(comment);
-  data.session.updatedAt = new Date().toISOString();
-  await writeReviewNote(git, commitSha, data);
+    data.comments.push(comment);
+    data.session.updatedAt = new Date().toISOString();
+    await writeReviewNote(git, commitSha, data);
 
-  return comment;
+    return comment;
+  });
 }
 
 /**
@@ -222,17 +227,19 @@ export async function resolveComment(
   commentId: string,
   resolved: boolean,
 ): Promise<ReviewComment | null | 'comment-not-found'> {
-  const data = await readReviewNote(git, commitSha);
-  if (!data) return null;
+  return withSessionLock(commitSha, async () => {
+    const data = await readReviewNote(git, commitSha);
+    if (!data) return null;
 
-  const comment = data.comments.find(({ id }) => id === commentId);
-  if (!comment) return 'comment-not-found';
+    const comment = data.comments.find(({ id }) => id === commentId);
+    if (!comment) return 'comment-not-found';
 
-  comment.resolved = resolved;
-  data.session.updatedAt = new Date().toISOString();
-  await writeReviewNote(git, commitSha, data);
+    comment.resolved = resolved;
+    data.session.updatedAt = new Date().toISOString();
+    await writeReviewNote(git, commitSha, data);
 
-  return comment;
+    return comment;
+  });
 }
 
 /**
@@ -245,31 +252,33 @@ export async function markFileViewed(
   commitSha: string,
   filePath: string,
 ): Promise<ViewedFile | null> {
-  const data = await readReviewNote(git, commitSha);
-  if (!data) return null;
+  return withSessionLock(commitSha, async () => {
+    const data = await readReviewNote(git, commitSha);
+    if (!data) return null;
 
-  const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
-  const diffHashes = getFileDiffHashes(diffText);
+    const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
+    const diffHashes = getFileDiffHashes(diffText);
 
-  const viewedFile: ViewedFile = {
-    path: filePath,
-    viewedAt: new Date().toISOString(),
-    diffHash: diffHashes[filePath] ?? '',
-  };
+    const viewedFile: ViewedFile = {
+      path: filePath,
+      viewedAt: new Date().toISOString(),
+      diffHash: diffHashes[filePath] ?? '',
+    };
 
-  const viewedFiles = data.viewedFiles ?? [];
-  const existingIndex = viewedFiles.findIndex((vf) => vf.path === filePath);
-  if (existingIndex >= 0) {
-    viewedFiles[existingIndex] = viewedFile;
-  } else {
-    viewedFiles.push(viewedFile);
-  }
+    const viewedFiles = data.viewedFiles ?? [];
+    const existingIndex = viewedFiles.findIndex((vf) => vf.path === filePath);
+    if (existingIndex >= 0) {
+      viewedFiles[existingIndex] = viewedFile;
+    } else {
+      viewedFiles.push(viewedFile);
+    }
 
-  data.viewedFiles = viewedFiles;
-  data.session.updatedAt = new Date().toISOString();
-  await writeReviewNote(git, commitSha, data);
+    data.viewedFiles = viewedFiles;
+    data.session.updatedAt = new Date().toISOString();
+    await writeReviewNote(git, commitSha, data);
 
-  return viewedFile;
+    return viewedFile;
+  });
 }
 
 /**
@@ -281,14 +290,16 @@ export async function unmarkFileViewed(
   commitSha: string,
   filePath: string,
 ): Promise<boolean> {
-  const data = await readReviewNote(git, commitSha);
-  if (!data) return false;
+  return withSessionLock(commitSha, async () => {
+    const data = await readReviewNote(git, commitSha);
+    if (!data) return false;
 
-  data.viewedFiles = (data.viewedFiles ?? []).filter((vf) => vf.path !== filePath);
-  data.session.updatedAt = new Date().toISOString();
-  await writeReviewNote(git, commitSha, data);
+    data.viewedFiles = (data.viewedFiles ?? []).filter((vf) => vf.path !== filePath);
+    data.session.updatedAt = new Date().toISOString();
+    await writeReviewNote(git, commitSha, data);
 
-  return true;
+    return true;
+  });
 }
 
 export interface ApplyAutoMarkResult {
@@ -306,29 +317,31 @@ export async function setAutoMarkRules(
   commitSha: string,
   rules: AutoMarkRule[],
 ): Promise<ApplyAutoMarkResult | null> {
-  const data = await readReviewNote(git, commitSha);
-  if (!data) return null;
+  return withSessionLock(commitSha, async () => {
+    const data = await readReviewNote(git, commitSha);
+    if (!data) return null;
 
-  data.autoMarkRules = rules;
+    data.autoMarkRules = rules;
 
-  const files = await getSessionChangedFiles(git, data.session.baseRef, data.session.headRef);
-  const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
-  const diffHashes = getFileDiffHashes(diffText);
-  const matches = evaluateAutoMarkRules(files, diffText, rules);
+    const files = await getSessionChangedFiles(git, data.session.baseRef, data.session.headRef);
+    const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
+    const diffHashes = getFileDiffHashes(diffText);
+    const matches = evaluateAutoMarkRules(files, diffText, rules);
 
-  const now = new Date().toISOString();
-  const autoMarked: ViewedFile[] = matches.map((m) => ({
-    path: m.path,
-    viewedAt: now,
-    diffHash: diffHashes[m.path] ?? '',
-    autoMarkedBy: m.rule,
-  }));
+    const now = new Date().toISOString();
+    const autoMarked: ViewedFile[] = matches.map((m) => ({
+      path: m.path,
+      viewedAt: now,
+      diffHash: diffHashes[m.path] ?? '',
+      autoMarkedBy: m.rule,
+    }));
 
-  data.viewedFiles = mergeAutoMarked(data.viewedFiles ?? [], autoMarked);
-  data.session.updatedAt = now;
-  await writeReviewNote(git, commitSha, data);
+    data.viewedFiles = mergeAutoMarked(data.viewedFiles ?? [], autoMarked);
+    data.session.updatedAt = now;
+    await writeReviewNote(git, commitSha, data);
 
-  return { rules, autoMarked };
+    return { rules, autoMarked };
+  });
 }
 
 /**
@@ -339,26 +352,28 @@ export async function applyAutoMarkRules(
   git: SimpleGit,
   commitSha: string,
 ): Promise<Pick<ApplyAutoMarkResult, 'autoMarked'> | null> {
-  const data = await readReviewNote(git, commitSha);
-  if (!data) return null;
+  return withSessionLock(commitSha, async () => {
+    const data = await readReviewNote(git, commitSha);
+    if (!data) return null;
 
-  const rules = data.autoMarkRules ?? [];
-  const files = await getSessionChangedFiles(git, data.session.baseRef, data.session.headRef);
-  const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
-  const diffHashes = getFileDiffHashes(diffText);
-  const matches = evaluateAutoMarkRules(files, diffText, rules);
+    const rules = data.autoMarkRules ?? [];
+    const files = await getSessionChangedFiles(git, data.session.baseRef, data.session.headRef);
+    const diffText = await getSessionDiffText(git, data.session.baseRef, data.session.headRef);
+    const diffHashes = getFileDiffHashes(diffText);
+    const matches = evaluateAutoMarkRules(files, diffText, rules);
 
-  const now = new Date().toISOString();
-  const autoMarked: ViewedFile[] = matches.map((m) => ({
-    path: m.path,
-    viewedAt: now,
-    diffHash: diffHashes[m.path] ?? '',
-    autoMarkedBy: m.rule,
-  }));
+    const now = new Date().toISOString();
+    const autoMarked: ViewedFile[] = matches.map((m) => ({
+      path: m.path,
+      viewedAt: now,
+      diffHash: diffHashes[m.path] ?? '',
+      autoMarkedBy: m.rule,
+    }));
 
-  data.viewedFiles = mergeAutoMarked(data.viewedFiles ?? [], autoMarked);
-  data.session.updatedAt = now;
-  await writeReviewNote(git, commitSha, data);
+    data.viewedFiles = mergeAutoMarked(data.viewedFiles ?? [], autoMarked);
+    data.session.updatedAt = now;
+    await writeReviewNote(git, commitSha, data);
 
-  return { autoMarked };
+    return { autoMarked };
+  });
 }
