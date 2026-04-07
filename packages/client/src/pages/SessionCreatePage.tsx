@@ -33,6 +33,8 @@ export function SessionCreatePage() {
         }
       })
       .catch(() => {});
+    // Intentionally run only once on mount — selectedRepo is read as initial value only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (!selectedRepo && repos.length === 0) return;
@@ -56,6 +58,8 @@ export function SessionCreatePage() {
       .catch(() => {
         // Refs unavailable — user can still type manually
       });
+    // repos.length is intentionally excluded — this effect is driven by selectedRepo changes only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRepo]);
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();

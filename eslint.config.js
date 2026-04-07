@@ -1,5 +1,6 @@
 import eslint from '@eslint/js';
 import tseslint from 'typescript-eslint';
+import reactHooks from 'eslint-plugin-react-hooks';
 import dsPlugin from './packages/client/eslint-plugin-ds/index.js';
 
 export default tseslint.config(
@@ -15,9 +16,12 @@ export default tseslint.config(
   {
     files: ['packages/client/src/**/*.{ts,tsx}'],
     plugins: {
+      'react-hooks': reactHooks,
       ds: dsPlugin,
     },
     rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'warn',
       'ds/no-raw-button': 'warn',
       'ds/no-raw-input': 'warn',
       'ds/no-raw-select': 'warn',

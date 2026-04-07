@@ -316,7 +316,9 @@ export function useDiffSearch({
       cancelAnimationFrame(raf);
       cancelIndexRef.current?.();
     };
-    // Only react to collapsedFiles changes (not query/isSearchOpen to avoid loops)
+    // Only react to collapsedFiles changes — query/isSearchOpen are intentionally
+    // excluded to avoid loops (a separate effect handles search-on-query-change).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [collapsedFiles, containerRef]);
 
   // ---------- Search on query change (already debounced by SearchBar) ----------
