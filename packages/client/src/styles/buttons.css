@@ -1,5 +1,20 @@
 /* ── Button ────────────────────────────────────────────────────────────── */
 
+/**
+ * @deprecated Use `.ds-btn` from components/ui/Button instead
+ * @TODO remove after 2026-05-20 @mloureiro
+ *
+ * Migration guide:
+ *   Old: <button class="btn btn--primary">Click me</button>
+ *   New: <Button variant="primary">Click me</Button>
+ *
+ * The new Button component from @git-reviewer/client/components/ui provides:
+ * - Built-in focus-visible styling
+ * - Proper ARIA attributes
+ * - Consistent sizing and variants
+ * - Automatic theme support
+ */
+
 .btn {
   display: inline-flex;
   align-items: center;

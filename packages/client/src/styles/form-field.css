@@ -1,5 +1,20 @@
 /* ── Form Field ────────────────────────────────────────────────────────── */
 
+/**
+ * @deprecated Use components from components/ui (TextInput, Textarea, Select, Checkbox) instead
+ * @TODO remove after 2026-05-20 @mloureiro
+ *
+ * Migration guide:
+ *   Old: <div class="form-field"><input class="form-field__input" /></div>
+ *   New: <TextInput />
+ *
+ * The new form components provide:
+ * - Consistent styling and sizing
+ * - Built-in focus-visible and disabled states
+ * - Proper ARIA attributes
+ * - Automatic theme support
+ */
+
 .form-field {
   display: flex;
   flex-direction: column;
