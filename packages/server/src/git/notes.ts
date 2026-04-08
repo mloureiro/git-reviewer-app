@@ -1,5 +1,6 @@
 import type { SimpleGit } from 'simple-git';
 import type { ReviewData } from '@git-reviewer/shared';
+import { validateReviewData } from '@git-reviewer/shared';
 
 const NOTES_REF = 'git-reviewer';
 
@@ -9,7 +10,9 @@ export async function readReviewNote(
 ): Promise<ReviewData | null> {
   try {
     const raw = await git.raw(['notes', '--ref', NOTES_REF, 'show', commitSha]);
-    return JSON.parse(raw) as ReviewData;
+    const parsed: unknown = JSON.parse(raw);
+    validateReviewData(parsed);
+    return parsed as ReviewData;
   } catch {
     return null;
   }
