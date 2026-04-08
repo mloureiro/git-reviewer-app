@@ -175,10 +175,14 @@ export function validateSessionListResponse(val: unknown): void {
   (val.sessions as unknown[]).forEach((s, i) =>
     validateReviewData(s, `SessionListResponse.sessions[${i}]`),
   );
+  assertNumber(val.total, 'SessionListResponse.total');
+  assertNumber(val.page, 'SessionListResponse.page');
+  assertNumber(val.limit, 'SessionListResponse.limit');
 }
 
 export function validateSessionResponse(val: unknown): void {
-  validateReviewData(val, 'SessionResponse');
+  assertObject(val, 'SessionResponse');
+  validateReviewData(val.session, 'SessionResponse.session');
 }
 
 export function validateCreateCommentResponse(val: unknown): void {
@@ -190,7 +194,8 @@ export function validateUpdateCommentResponse(val: unknown): void {
 }
 
 export function validateUpdateSessionStatusResponse(val: unknown): void {
-  validateReviewSession(val, 'UpdateSessionStatusResponse');
+  assertObject(val, 'UpdateSessionStatusResponse');
+  validateReviewSession(val.session, 'UpdateSessionStatusResponse.session');
 }
 
 export function validateViewedFileResponse(val: unknown): void {
