@@ -7,6 +7,7 @@ import type {
   ReviewComment,
   SessionResponse,
   UpdateSessionStatusResponse,
+  ViewedFile,
 } from '../types/review';
 
 vi.mock('../api/reviews');
@@ -15,6 +16,8 @@ const mockFetchSession = vi.mocked(reviewsApi.fetchSession);
 const mockUpdateSessionStatus = vi.mocked(reviewsApi.updateSessionStatus);
 const mockPostComment = vi.mocked(reviewsApi.postComment);
 const mockPatchComment = vi.mocked(reviewsApi.patchComment);
+const mockMarkFileViewed = vi.mocked(reviewsApi.markFileViewed);
+const mockUnmarkFileViewed = vi.mocked(reviewsApi.unmarkFileViewed);
 
 const baseSession: ReviewData = {
   version: 1,
@@ -30,6 +33,7 @@ const baseSession: ReviewData = {
     updatedAt: '2026-03-19T00:00:00Z',
   },
   comments: [],
+  viewedFiles: [],
 };
 
 const baseComment: ReviewComment = {
@@ -185,5 +189,120 @@ describe('useReviewSession', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.error).toBe('Failed to fetch review session');
+  });
+
+  describe('markViewed (useOptimistic)', () => {
+    const serverViewedFile: ViewedFile = {
+      path: 'src/index.ts',
+      viewedAt: '2026-03-19T02:00:00Z',
+      diffHash: 'abc123hash',
+    };
+
+    it('adds an optimistic entry and then commits the server response', async () => {
+      mockFetchSession.mockResolvedValue({ session: baseSession } as unknown as SessionResponse);
+      mockMarkFileViewed.mockResolvedValue(serverViewedFile);
+
+      const { result } = renderHook(() => useReviewSession('def456'));
+      await waitFor(() => expect(result.current.session).toEqual(baseSession));
+
+      await act(async () => {
+        await result.current.markViewed('src/index.ts');
+      });
+
+      expect(mockMarkFileViewed).toHaveBeenCalledWith('def456', 'src/index.ts', undefined);
+      expect(result.current.session?.viewedFiles).toHaveLength(1);
+      expect(result.current.session?.viewedFiles?.[0]).toEqual(serverViewedFile);
+    });
+
+    it('reverts the optimistic update when the server call fails', async () => {
+      mockFetchSession.mockResolvedValue({ session: baseSession } as unknown as SessionResponse);
+      mockMarkFileViewed.mockRejectedValue(new Error('Server error'));
+
+      const { result } = renderHook(() => useReviewSession('def456'));
+      await waitFor(() => expect(result.current.session).toEqual(baseSession));
+
+      await act(async () => {
+        await expect(result.current.markViewed('src/index.ts')).rejects.toThrow('Server error');
+      });
+
+      // After the failed transition, optimistic state reverts to the original viewedFiles
+      expect(result.current.session?.viewedFiles).toEqual([]);
+    });
+
+    it('replaces an existing entry when re-marking an already-viewed file', async () => {
+      const existingEntry: ViewedFile = {
+        path: 'src/index.ts',
+        viewedAt: '2026-03-19T01:00:00Z',
+        diffHash: 'oldhash',
+      };
+      const sessionWithViewed: ReviewData = {
+        ...baseSession,
+        viewedFiles: [existingEntry],
+      };
+      mockFetchSession.mockResolvedValue({
+        session: sessionWithViewed,
+      } as unknown as SessionResponse);
+      mockMarkFileViewed.mockResolvedValue(serverViewedFile);
+
+      const { result } = renderHook(() => useReviewSession('def456'));
+      await waitFor(() => expect(result.current.session).toEqual(sessionWithViewed));
+
+      await act(async () => {
+        await result.current.markViewed('src/index.ts');
+      });
+
+      expect(result.current.session?.viewedFiles).toHaveLength(1);
+      expect(result.current.session?.viewedFiles?.[0]).toEqual(serverViewedFile);
+    });
+  });
+
+  describe('unmarkViewed (useOptimistic)', () => {
+    const existingEntry: ViewedFile = {
+      path: 'src/index.ts',
+      viewedAt: '2026-03-19T01:00:00Z',
+      diffHash: 'abc123hash',
+    };
+
+    it('removes the entry optimistically and commits removal on success', async () => {
+      const sessionWithViewed: ReviewData = {
+        ...baseSession,
+        viewedFiles: [existingEntry],
+      };
+      mockFetchSession.mockResolvedValue({
+        session: sessionWithViewed,
+      } as unknown as SessionResponse);
+      mockUnmarkFileViewed.mockResolvedValue(undefined);
+
+      const { result } = renderHook(() => useReviewSession('def456'));
+      await waitFor(() => expect(result.current.session).toEqual(sessionWithViewed));
+
+      await act(async () => {
+        await result.current.unmarkViewed('src/index.ts');
+      });
+
+      expect(mockUnmarkFileViewed).toHaveBeenCalledWith('def456', 'src/index.ts', undefined);
+      expect(result.current.session?.viewedFiles).toEqual([]);
+    });
+
+    it('reverts the optimistic removal when the server call fails', async () => {
+      const sessionWithViewed: ReviewData = {
+        ...baseSession,
+        viewedFiles: [existingEntry],
+      };
+      mockFetchSession.mockResolvedValue({
+        session: sessionWithViewed,
+      } as unknown as SessionResponse);
+      mockUnmarkFileViewed.mockRejectedValue(new Error('Server error'));
+
+      const { result } = renderHook(() => useReviewSession('def456'));
+      await waitFor(() => expect(result.current.session).toEqual(sessionWithViewed));
+
+      await act(async () => {
+        await expect(result.current.unmarkViewed('src/index.ts')).rejects.toThrow('Server error');
+      });
+
+      // After the failed transition, optimistic state reverts to the original viewedFiles
+      expect(result.current.session?.viewedFiles).toEqual([existingEntry]);
+    });
   });
 });

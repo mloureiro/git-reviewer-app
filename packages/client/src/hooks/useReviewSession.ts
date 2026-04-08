@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useOptimistic, useState, useTransition } from 'react';
 import {
   fetchSession,
   updateSessionStatus,
@@ -29,6 +29,28 @@ export interface UseReviewSessionResult {
   unmarkViewed: (path: string) => Promise<void>;
   setAutoMarkRules: (rules: AutoMarkRule[]) => Promise<void>;
   reapplyAutoMarkRules: () => Promise<void>;
+}
+
+type ViewedFilesAction = { type: 'mark'; path: string } | { type: 'unmark'; path: string };
+
+function viewedFilesReducer(current: ViewedFile[], action: ViewedFilesAction): ViewedFile[] {
+  if (action.type === 'unmark') {
+    return current.filter((vf) => vf.path !== action.path);
+  }
+  // 'mark': insert or replace the entry for the path
+  const optimistic: ViewedFile = {
+    path: action.path,
+    viewedAt: new Date().toISOString(),
+    diffHash: '',
+  };
+  const existing = current.findIndex((vf) => vf.path === action.path);
+  const next = [...current];
+  if (existing >= 0) {
+    next[existing] = optimistic;
+  } else {
+    next.push(optimistic);
+  }
+  return next;
 }
 
 /**
@@ -71,6 +93,16 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
 
   const repo = session?.session.repoPath;
 
+  // useOptimistic for viewed-file mutations. While a mark/unmark transition is
+  // pending, optimisticViewedFiles shows the expected result; it automatically
+  // reverts to session?.viewedFiles if the transition fails.
+  const [optimisticViewedFiles, dispatchOptimisticViewedFiles] = useOptimistic(
+    session?.viewedFiles ?? [],
+    viewedFilesReducer,
+  );
+
+  const [, startViewedTransition] = useTransition();
+
   const handleUpdateStatus = useCallback(
     async (status: ReviewStatus): Promise<void> => {
       const response = await updateSessionStatus(commitSha, { status }, repo);
@@ -107,80 +139,59 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
   );
 
   const handleMarkViewed = useCallback(
-    async (path: string): Promise<void> => {
-      // Capture previous state before the optimistic update so we can roll
-      // back if the server request fails.
-      let prevViewedFiles: ViewedFile[] | undefined;
-
-      // Optimistic update
-      setSession((prev) => {
-        if (prev === null) return prev;
-        prevViewedFiles = prev.viewedFiles ?? [];
-        const optimistic: ViewedFile = {
-          path,
-          viewedAt: new Date().toISOString(),
-          diffHash: '',
-        };
-        const existing = prevViewedFiles.findIndex((vf) => vf.path === path);
-        const next = [...prevViewedFiles];
-        if (existing >= 0) {
-          next[existing] = optimistic;
-        } else {
-          next.push(optimistic);
-        }
-        return { ...prev, viewedFiles: next };
-      });
-
-      try {
-        const viewedFile = await markFileViewed(commitSha, path, repo);
-        // Update with server response (has correct diffHash)
-        setSession((prev) => {
-          if (prev === null) return prev;
-          const viewedFiles = (prev.viewedFiles ?? []).map((vf) =>
-            vf.path === path ? viewedFile : vf,
-          );
-          return { ...prev, viewedFiles };
+    (path: string): Promise<void> =>
+      new Promise((resolve, reject) => {
+        startViewedTransition(async () => {
+          dispatchOptimisticViewedFiles({ type: 'mark', path });
+          try {
+            const viewedFile = await markFileViewed(commitSha, path, repo);
+            // Commit the server response (includes the real diffHash) to state.
+            setSession((prev) => {
+              if (prev === null) return prev;
+              const viewedFiles = (prev.viewedFiles ?? []).map((vf) =>
+                vf.path === path ? viewedFile : vf,
+              );
+              // If the file wasn't in viewedFiles yet, append it.
+              if (!viewedFiles.some((vf) => vf.path === path)) {
+                viewedFiles.push(viewedFile);
+              }
+              return { ...prev, viewedFiles };
+            });
+            resolve();
+          } catch (err) {
+            // useOptimistic reverts to session?.viewedFiles automatically when
+            // the transition settles with an error.
+            reject(err);
+          }
         });
-      } catch (err) {
-        // Roll back to the state before the optimistic update
-        setSession((prev) => {
-          if (prev === null) return prev;
-          return { ...prev, viewedFiles: prevViewedFiles ?? prev.viewedFiles ?? [] };
-        });
-        throw err;
-      }
-    },
-    [commitSha, repo],
+      }),
+    [commitSha, repo, dispatchOptimisticViewedFiles],
   );
 
   const handleUnmarkViewed = useCallback(
-    async (path: string): Promise<void> => {
-      // Capture previous state before the optimistic update so we can roll
-      // back if the server request fails.
-      let prevViewedFiles: ViewedFile[] | undefined;
-
-      // Optimistic update
-      setSession((prev) => {
-        if (prev === null) return prev;
-        prevViewedFiles = prev.viewedFiles ?? [];
-        return {
-          ...prev,
-          viewedFiles: prevViewedFiles.filter((vf) => vf.path !== path),
-        };
-      });
-
-      try {
-        await unmarkFileViewed(commitSha, path, repo);
-      } catch (err) {
-        // Roll back to the state before the optimistic update
-        setSession((prev) => {
-          if (prev === null) return prev;
-          return { ...prev, viewedFiles: prevViewedFiles ?? prev.viewedFiles ?? [] };
+    (path: string): Promise<void> =>
+      new Promise((resolve, reject) => {
+        startViewedTransition(async () => {
+          dispatchOptimisticViewedFiles({ type: 'unmark', path });
+          try {
+            await unmarkFileViewed(commitSha, path, repo);
+            // Commit the removal to the real session state.
+            setSession((prev) => {
+              if (prev === null) return prev;
+              return {
+                ...prev,
+                viewedFiles: (prev.viewedFiles ?? []).filter((vf) => vf.path !== path),
+              };
+            });
+            resolve();
+          } catch (err) {
+            // useOptimistic reverts to session?.viewedFiles automatically when
+            // the transition settles with an error.
+            reject(err);
+          }
         });
-        throw err;
-      }
-    },
-    [commitSha, repo],
+      }),
+    [commitSha, repo, dispatchOptimisticViewedFiles],
   );
 
   const handleSetAutoMarkRules = useCallback(
@@ -225,8 +236,13 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     }
   }, [commitSha, repo]);
 
+  // Merge the optimistic viewedFiles into the returned session so consumers
+  // see the pending UI update without changing the public API shape.
+  const sessionWithOptimistic =
+    session === null ? null : { ...session, viewedFiles: optimisticViewedFiles };
+
   return {
-    session,
+    session: sessionWithOptimistic,
     loading,
     error,
     updateStatus: handleUpdateStatus,
