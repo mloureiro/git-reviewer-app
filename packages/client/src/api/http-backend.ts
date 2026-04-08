@@ -75,14 +75,16 @@ export class HttpBackend implements Backend {
     return apiGet<ValidateSessionsResponse>('/api/sessions/validate');
   }
 
-  fetchSession(commitSha: string, repo?: string): Promise<SessionResponse> {
+  async fetchSession(commitSha: string, repo?: string): Promise<SessionResponse> {
     const qs = buildQueryString({ repo });
-    return apiGet<SessionResponse>(`/api/sessions/${commitSha}${qs}`);
+    const response = await apiGet<SessionResponse>(`/api/sessions/${commitSha}${qs}`);
+    return response;
   }
 
-  createSession(data: CreateSessionRequest, repo?: string): Promise<SessionResponse> {
+  async createSession(data: CreateSessionRequest, repo?: string): Promise<SessionResponse> {
     const qs = buildQueryString({ repo });
-    return apiPost<SessionResponse>(`/api/sessions${qs}`, data);
+    const response = await apiPost<SessionResponse>(`/api/sessions${qs}`, data);
+    return response;
   }
 
   deleteSession(commitSha: string, repo?: string): Promise<void> {
@@ -90,13 +92,17 @@ export class HttpBackend implements Backend {
     return apiDelete(`/api/sessions/${commitSha}${qs}`);
   }
 
-  updateSessionStatus(
+  async updateSessionStatus(
     commitSha: string,
     data: UpdateSessionStatusRequest,
     repo?: string,
   ): Promise<UpdateSessionStatusResponse> {
     const qs = buildQueryString({ repo });
-    return apiPatch<UpdateSessionStatusResponse>(`/api/sessions/${commitSha}${qs}`, data);
+    const response = await apiPatch<UpdateSessionStatusResponse>(
+      `/api/sessions/${commitSha}${qs}`,
+      data,
+    );
+    return response;
   }
 
   // Comments

@@ -164,7 +164,7 @@ describe('HttpBackend', () => {
 
   describe('fetchSession', () => {
     it('calls apiGet for /api/sessions/:sha without repo', async () => {
-      mockApiGet.mockResolvedValue({ version: 1, session: {}, comments: [] });
+      mockApiGet.mockResolvedValue({ session: { version: 1, session: {}, comments: [] } });
 
       await backend.fetchSession(SHA);
 
@@ -172,7 +172,7 @@ describe('HttpBackend', () => {
     });
 
     it('appends repo query param when provided', async () => {
-      mockApiGet.mockResolvedValue({ version: 1, session: {}, comments: [] });
+      mockApiGet.mockResolvedValue({ session: { version: 1, session: {}, comments: [] } });
 
       await backend.fetchSession(SHA, REPO);
 
@@ -184,7 +184,7 @@ describe('HttpBackend', () => {
 
   describe('createSession', () => {
     it('calls apiPost for /api/sessions with the request body', async () => {
-      mockApiPost.mockResolvedValue({ version: 1, session: {}, comments: [] });
+      mockApiPost.mockResolvedValue({ session: { version: 1, session: {}, comments: [] } });
       const data = { title: 'Test Review', baseRef: 'main', headRef: 'HEAD' };
 
       await backend.createSession(data);
@@ -193,7 +193,7 @@ describe('HttpBackend', () => {
     });
 
     it('appends repo query param when provided', async () => {
-      mockApiPost.mockResolvedValue({ version: 1, session: {}, comments: [] });
+      mockApiPost.mockResolvedValue({ session: { version: 1, session: {}, comments: [] } });
       const data = { title: 'Test', baseRef: 'main', headRef: 'HEAD' };
 
       await backend.createSession(data, REPO);

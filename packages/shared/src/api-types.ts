@@ -86,7 +86,9 @@ export interface CreateSessionRequest {
 }
 
 /** Response for POST /api/sessions (201) and GET /api/sessions/:commitSha (200) */
-export type SessionResponse = ReviewData;
+export interface SessionResponse {
+  session: ReviewData;
+}
 
 // ---------------------------------------------------------------------------
 // POST /api/sessions/:commitSha/comments
@@ -126,7 +128,9 @@ export interface UpdateSessionStatusRequest {
 }
 
 /** Response for PATCH /api/sessions/:commitSha */
-export type UpdateSessionStatusResponse = ReviewData['session'];
+export interface UpdateSessionStatusResponse {
+  session: ReviewData;
+}
 
 // ---------------------------------------------------------------------------
 // PUT /api/sessions/:commitSha/auto-mark-rules

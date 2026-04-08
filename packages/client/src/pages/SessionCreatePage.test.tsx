@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { SessionCreatePage } from './SessionCreatePage';
 import * as reviewsApi from '../api/reviews';
 import { ApiError } from '../api/client';
-import type { ReviewData } from '../types/review';
+import type { ReviewData, SessionResponse } from '../types/review';
 
 vi.mock('../api/reviews');
 // useNavigate needs a router — we wrap in MemoryRouter.
@@ -65,7 +65,7 @@ describe('SessionCreatePage', () => {
   });
 
   it('submits the form and navigates to the new session on success', async () => {
-    mockCreateSession.mockResolvedValue(sampleSession);
+    mockCreateSession.mockResolvedValue({ session: sampleSession } as unknown as SessionResponse);
 
     renderPage();
 

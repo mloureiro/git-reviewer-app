@@ -2,7 +2,12 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { useReviewSession } from './useReviewSession';
 import * as reviewsApi from '../api/reviews';
-import type { ReviewData, ReviewComment } from '../types/review';
+import type {
+  ReviewData,
+  ReviewComment,
+  SessionResponse,
+  UpdateSessionStatusResponse,
+} from '../types/review';
 
 vi.mock('../api/reviews');
 
@@ -54,7 +59,7 @@ describe('useReviewSession', () => {
   });
 
   it('returns session data on success', async () => {
-    mockFetchSession.mockResolvedValue(baseSession);
+    mockFetchSession.mockResolvedValue({ session: baseSession } as unknown as SessionResponse);
 
     const { result } = renderHook(() => useReviewSession('def456'));
 
@@ -81,8 +86,10 @@ describe('useReviewSession', () => {
       session: { ...baseSession.session, headCommit: 'aaa111' },
     };
 
-    mockFetchSession.mockResolvedValueOnce(baseSession);
-    mockFetchSession.mockResolvedValueOnce(secondSession);
+    mockFetchSession.mockResolvedValueOnce({ session: baseSession } as unknown as SessionResponse);
+    mockFetchSession.mockResolvedValueOnce({
+      session: secondSession,
+    } as unknown as SessionResponse);
 
     const { result, rerender } = renderHook((sha) => useReviewSession(sha), {
       initialProps: 'def456',
@@ -98,9 +105,14 @@ describe('useReviewSession', () => {
   });
 
   it('updateStatus updates session state after API response', async () => {
-    const updatedSessionMeta = { ...baseSession.session, status: 'approved' as const };
-    mockFetchSession.mockResolvedValue(baseSession);
-    mockUpdateSessionStatus.mockResolvedValue(updatedSessionMeta);
+    const updatedSession: ReviewData = {
+      ...baseSession,
+      session: { ...baseSession.session, status: 'approved' as const },
+    };
+    mockFetchSession.mockResolvedValue({ session: baseSession } as unknown as SessionResponse);
+    mockUpdateSessionStatus.mockResolvedValue({
+      session: updatedSession,
+    } as unknown as UpdateSessionStatusResponse);
 
     const { result } = renderHook(() => useReviewSession('def456'));
     await waitFor(() => expect(result.current.session).toEqual(baseSession));
@@ -118,7 +130,7 @@ describe('useReviewSession', () => {
   });
 
   it('addComment appends new comment to session state', async () => {
-    mockFetchSession.mockResolvedValue(baseSession);
+    mockFetchSession.mockResolvedValue({ session: baseSession } as unknown as SessionResponse);
     mockPostComment.mockResolvedValue(baseComment);
 
     const { result } = renderHook(() => useReviewSession('def456'));
@@ -144,7 +156,9 @@ describe('useReviewSession', () => {
     const sessionWithComment: ReviewData = { ...baseSession, comments: [baseComment] };
     const resolvedComment: ReviewComment = { ...baseComment, resolved: true };
 
-    mockFetchSession.mockResolvedValue(sessionWithComment);
+    mockFetchSession.mockResolvedValue({
+      session: sessionWithComment,
+    } as unknown as SessionResponse);
     mockPatchComment.mockResolvedValue(resolvedComment);
 
     const { result } = renderHook(() => useReviewSession('def456'));

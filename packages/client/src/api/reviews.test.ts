@@ -121,12 +121,12 @@ describe('fetchSession', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('calls apiGet for /api/sessions/:sha and returns the session', async () => {
-    mockApiGet.mockResolvedValue(sampleSession);
+    mockApiGet.mockResolvedValue({ session: sampleSession });
 
     const result = await fetchSession(SESSION_SHA);
 
     expect(mockApiGet).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}`);
-    expect(result).toEqual(sampleSession);
+    expect(result).toEqual({ session: sampleSession });
   });
 });
 
@@ -134,7 +134,7 @@ describe('createSession', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('calls apiPost for /api/sessions with the request body', async () => {
-    mockApiPost.mockResolvedValue(sampleSession);
+    mockApiPost.mockResolvedValue({ session: sampleSession });
 
     const result = await createSession({ title: 'Test', baseRef: 'main', headRef: 'HEAD' });
 
@@ -143,7 +143,7 @@ describe('createSession', () => {
       baseRef: 'main',
       headRef: 'HEAD',
     });
-    expect(result).toEqual(sampleSession);
+    expect(result).toEqual({ session: sampleSession });
   });
 });
 
@@ -166,7 +166,7 @@ describe('fetchComments', () => {
         },
       ],
     };
-    mockApiGet.mockResolvedValue(sessionWithComments);
+    mockApiGet.mockResolvedValue({ session: sessionWithComments });
 
     const result = await fetchComments(SESSION_SHA);
 
@@ -175,7 +175,7 @@ describe('fetchComments', () => {
   });
 
   it('returns empty comments array when session has none', async () => {
-    mockApiGet.mockResolvedValue(sampleSession);
+    mockApiGet.mockResolvedValue({ session: sampleSession });
 
     const result = await fetchComments(SESSION_SHA);
 
@@ -247,14 +247,17 @@ describe('updateSessionStatus', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('calls apiPatch for /api/sessions/:sha with status update', async () => {
-    const updatedMeta = { ...sampleSession.session, status: 'approved' as const };
-    mockApiPatch.mockResolvedValue(updatedMeta);
+    const updatedSession = {
+      ...sampleSession,
+      session: { ...sampleSession.session, status: 'approved' as const },
+    };
+    mockApiPatch.mockResolvedValue({ session: updatedSession });
 
     const result = await updateSessionStatus(SESSION_SHA, { status: 'approved' });
 
     expect(mockApiPatch).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}`, {
       status: 'approved',
     });
-    expect(result).toEqual(updatedMeta);
+    expect(result).toEqual({ session: updatedSession });
   });
 });

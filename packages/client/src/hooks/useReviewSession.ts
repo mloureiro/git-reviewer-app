@@ -47,9 +47,10 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     setError(null);
 
     fetchSession(commitSha)
-      .then((data) => {
+      .then((response: unknown) => {
         if (!cancelled) {
-          setSession(data);
+          const resp = response as { session: ReviewData };
+          setSession(resp.session);
         }
       })
       .catch((err: unknown) => {
@@ -72,10 +73,12 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
 
   const handleUpdateStatus = useCallback(
     async (status: ReviewStatus): Promise<void> => {
-      const updatedSessionMeta = await updateSessionStatus(commitSha, { status }, repo);
+      const response = (await updateSessionStatus(commitSha, { status }, repo)) as unknown as {
+        session: ReviewData;
+      };
       setSession((prev) => {
         if (prev === null) return prev;
-        return { ...prev, session: updatedSessionMeta };
+        return response.session;
       });
     },
     [commitSha, repo],

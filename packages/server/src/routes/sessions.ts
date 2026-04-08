@@ -223,7 +223,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
         res.status(404).json({ error: 'Review session not found' });
         return;
       }
-      res.json(data);
+      res.json({ session: data });
     } catch (error) {
       next(error);
     }
@@ -276,7 +276,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       }
 
       const data = await createSession(git, { title, baseRef, headRef, repoPath });
-      res.status(201).json(data);
+      res.status(201).json({ session: data });
     } catch (error) {
       next(error);
     }
@@ -420,7 +420,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      res.json(session);
+      res.json({ session });
     } catch (error) {
       next(error);
     }
