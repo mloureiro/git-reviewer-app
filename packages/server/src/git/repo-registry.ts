@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import type { SimpleGit } from 'simple-git';
 import { createGitClient } from './diff.js';
 
@@ -10,25 +11,27 @@ export class RepoRegistry {
   private defaultPath: string | null = null;
 
   registerRepo(repoPath: string): SimpleGit {
-    const existing = this.repos.get(repoPath);
+    const normalizedPath = resolve(repoPath);
+    const existing = this.repos.get(normalizedPath);
     if (existing) {
       return existing;
     }
 
-    const git = createGitClient(repoPath);
-    this.repos.set(repoPath, git);
+    const git = createGitClient(normalizedPath);
+    this.repos.set(normalizedPath, git);
 
     if (this.defaultPath == null) {
-      this.defaultPath = repoPath;
+      this.defaultPath = normalizedPath;
     }
 
     return git;
   }
 
   getRepo(repoPath: string): SimpleGit {
-    const git = this.repos.get(repoPath);
+    const normalizedPath = resolve(repoPath);
+    const git = this.repos.get(normalizedPath);
     if (!git) {
-      throw new Error(`Repository not registered: ${repoPath}`);
+      throw new Error(`Repository not registered: ${normalizedPath}`);
     }
     return git;
   }
@@ -54,7 +57,8 @@ export class RepoRegistry {
    */
   resolve(repoParam: unknown): [SimpleGit, string] {
     if (typeof repoParam === 'string' && repoParam.length > 0) {
-      return [this.getRepo(repoParam), repoParam];
+      const normalizedPath = resolve(repoParam);
+      return [this.getRepo(normalizedPath), normalizedPath];
     }
     const defaultPath = this.getDefaultPath();
     return [this.getDefaultRepo(), defaultPath];
@@ -65,12 +69,13 @@ export class RepoRegistry {
   }
 
   has(repoPath: string): boolean {
-    return this.repos.has(repoPath);
+    return this.repos.has(resolve(repoPath));
   }
 
   unregisterRepo(repoPath: string): boolean {
-    const deleted = this.repos.delete(repoPath);
-    if (deleted && this.defaultPath === repoPath) {
+    const normalizedPath = resolve(repoPath);
+    const deleted = this.repos.delete(normalizedPath);
+    if (deleted && this.defaultPath === normalizedPath) {
       const firstKey = this.repos.keys().next();
       this.defaultPath = firstKey.done ? null : firstKey.value;
     }

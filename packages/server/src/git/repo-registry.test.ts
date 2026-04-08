@@ -65,6 +65,21 @@ describe('RepoRegistry', () => {
 
       expect(mockCreateGitClient).toHaveBeenCalledTimes(2);
     });
+
+    it('treats a trailing-slash path as the same repo as the canonical path', () => {
+      const first = registry.registerRepo('/repo/a');
+      const second = registry.registerRepo('/repo/a/');
+
+      expect(mockCreateGitClient).toHaveBeenCalledOnce();
+      expect(second).toBe(first);
+    });
+
+    it('normalizes dotdot segments so they register under the resolved path', () => {
+      registry.registerRepo('/repo/a/../a');
+
+      expect(mockCreateGitClient).toHaveBeenCalledOnce();
+      expect(mockCreateGitClient).toHaveBeenCalledWith('/repo/a');
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -230,6 +245,12 @@ describe('RepoRegistry', () => {
       registry.unregisterRepo('/repo/a');
 
       expect(registry.has('/repo/a')).toBe(false);
+    });
+
+    it('finds a repo registered under the canonical path when queried with a trailing slash', () => {
+      registry.registerRepo('/repo/a');
+
+      expect(registry.has('/repo/a/')).toBe(true);
     });
   });
 
