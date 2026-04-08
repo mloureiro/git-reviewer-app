@@ -166,7 +166,7 @@ describe('fetchComments', () => {
         },
       ],
     };
-    mockApiGet.mockResolvedValue(sessionWithComments);
+    mockApiGet.mockResolvedValue({ session: sessionWithComments });
 
     const result = await fetchComments(SESSION_SHA);
 
@@ -175,7 +175,7 @@ describe('fetchComments', () => {
   });
 
   it('returns empty comments array when session has none', async () => {
-    mockApiGet.mockResolvedValue(sampleSession);
+    mockApiGet.mockResolvedValue({ session: sampleSession });
 
     const result = await fetchComments(SESSION_SHA);
 
