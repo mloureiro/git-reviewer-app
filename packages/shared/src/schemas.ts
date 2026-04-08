@@ -84,6 +84,7 @@ export function validateDiffFile(val: unknown, label = 'DiffFile'): void {
   assertNumber(val.additions, `${label}.additions`);
   assertNumber(val.deletions, `${label}.deletions`);
   assertOptional(val.oldPath, `${label}.oldPath`, assertString);
+  assertOptional(val.binary, `${label}.binary`, assertBoolean);
 }
 
 export function validateCommitInfo(val: unknown, label = 'CommitInfo'): void {
