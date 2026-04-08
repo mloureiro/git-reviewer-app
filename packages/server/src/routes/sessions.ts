@@ -42,7 +42,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
   const sessionMiddleware = [validateCommitSha, resolveRepo(registry)] as const;
 
   // List all review sessions (aggregated across all registered repos)
-  router.get('/sessions', async (_req, res) => {
+  router.get('/sessions', async (_req, res, next) => {
     try {
       const repoPaths = registry.listPaths();
 
@@ -72,13 +72,13 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
 
       res.json({ sessions });
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
   // Validate all review sessions (check if refs still exist, detect empty diffs)
   // Also returns diff stats (files, additions, deletions) for healthy sessions.
-  router.get('/sessions/validate', async (_req, res) => {
+  router.get('/sessions/validate', async (_req, res, next) => {
     try {
       const health: Record<string, SessionHealth> = {};
       const stats: Record<string, SessionStats> = {};
@@ -202,12 +202,12 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
 
       res.json({ health, stats });
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
   // Get a specific review session
-  router.get('/sessions/:commitSha', ...sessionMiddleware, async (req, res) => {
+  router.get('/sessions/:commitSha', ...sessionMiddleware, async (req, res, next) => {
     try {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
@@ -219,12 +219,12 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       }
       res.json(data);
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
   // Get commits for a session's base..head range
-  router.get('/sessions/:commitSha/commits', ...sessionMiddleware, async (req, res) => {
+  router.get('/sessions/:commitSha/commits', ...sessionMiddleware, async (req, res, next) => {
     try {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
@@ -238,12 +238,12 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       const commits = await getCommitList(git, data.session.baseCommit, data.session.headCommit);
       res.json({ commits });
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
   // Create a new review session
-  router.post('/sessions', async (req, res) => {
+  router.post('/sessions', async (req, res, next) => {
     try {
       const [git, repoPath] = registry.resolve(req.query.repo);
       const { title, baseRef, headRef } = req.body as CreateSessionRequest;
@@ -272,12 +272,12 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       const data = await createSession(git, { title, baseRef, headRef, repoPath });
       res.status(201).json(data);
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
   // Mark a file as viewed
-  router.post('/sessions/:commitSha/viewed-files', ...sessionMiddleware, async (req, res) => {
+  router.post('/sessions/:commitSha/viewed-files', ...sessionMiddleware, async (req, res, next) => {
     try {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
@@ -296,7 +296,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
 
       res.status(201).json(viewedFile);
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
@@ -304,7 +304,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
   router.delete(
     '/sessions/:commitSha/viewed-files/:filePath',
     ...sessionMiddleware,
-    async (req, res) => {
+    async (req, res, next) => {
       try {
         const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
         const commitSha = req.params.commitSha ?? '';
@@ -319,57 +319,65 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
 
         res.status(204).send();
       } catch (error) {
-        res.status(500).json({ error: String(error) });
+        next(error);
       }
     },
   );
 
   // Update auto-mark rules and immediately apply them
-  router.put('/sessions/:commitSha/auto-mark-rules', ...sessionMiddleware, async (req, res) => {
-    try {
-      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
-      const commitSha = req.params.commitSha ?? '';
+  router.put(
+    '/sessions/:commitSha/auto-mark-rules',
+    ...sessionMiddleware,
+    async (req, res, next) => {
+      try {
+        const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+        const commitSha = req.params.commitSha ?? '';
 
-      const { rules } = req.body as AutoMarkRulesRequest;
-      if (!Array.isArray(rules) || !rules.every((r) => VALID_AUTO_MARK_RULES.includes(r))) {
-        res.status(400).json({
-          error: `Invalid body: rules must be an array of valid rule types (${VALID_AUTO_MARK_RULES.join(', ')})`,
-        });
-        return;
+        const { rules } = req.body as AutoMarkRulesRequest;
+        if (!Array.isArray(rules) || !rules.every((r) => VALID_AUTO_MARK_RULES.includes(r))) {
+          res.status(400).json({
+            error: `Invalid body: rules must be an array of valid rule types (${VALID_AUTO_MARK_RULES.join(', ')})`,
+          });
+          return;
+        }
+
+        const result = await setAutoMarkRules(git, commitSha, rules);
+        if (!result) {
+          res.status(404).json({ error: 'Review session not found' });
+          return;
+        }
+
+        res.json(result);
+      } catch (error) {
+        next(error);
       }
-
-      const result = await setAutoMarkRules(git, commitSha, rules);
-      if (!result) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: String(error) });
-    }
-  });
+    },
+  );
 
   // Re-apply existing auto-mark rules against current files
-  router.post('/sessions/:commitSha/auto-mark-apply', ...sessionMiddleware, async (req, res) => {
-    try {
-      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
-      const commitSha = req.params.commitSha ?? '';
+  router.post(
+    '/sessions/:commitSha/auto-mark-apply',
+    ...sessionMiddleware,
+    async (req, res, next) => {
+      try {
+        const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+        const commitSha = req.params.commitSha ?? '';
 
-      const result = await applyAutoMarkRules(git, commitSha);
-      if (!result) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
+        const result = await applyAutoMarkRules(git, commitSha);
+        if (!result) {
+          res.status(404).json({ error: 'Review session not found' });
+          return;
+        }
+
+        res.json(result);
+      } catch (error) {
+        next(error);
       }
-
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: String(error) });
-    }
-  });
+    },
+  );
 
   // Delete a review session
-  router.delete('/sessions/:commitSha', ...sessionMiddleware, async (req, res) => {
+  router.delete('/sessions/:commitSha', ...sessionMiddleware, async (req, res, next) => {
     try {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
@@ -382,12 +390,12 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
 
       res.status(204).send();
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
   // Update session status (approve / request changes)
-  router.patch('/sessions/:commitSha', ...sessionMiddleware, async (req, res) => {
+  router.patch('/sessions/:commitSha', ...sessionMiddleware, async (req, res, next) => {
     try {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
@@ -408,7 +416,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
 
       res.json(session);
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 

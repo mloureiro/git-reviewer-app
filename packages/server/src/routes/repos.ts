@@ -27,7 +27,7 @@ export function createReposRouter(registry: RepoRegistry): Router {
   });
 
   // Register a new repo
-  router.post('/repos', (req, res) => {
+  router.post('/repos', (req, res, next) => {
     const { path: repoPath } = req.body as { path: string };
     if (typeof repoPath !== 'string' || repoPath.trim().length === 0) {
       res.status(400).json({ error: 'Invalid body: path must be a non-empty string' });
@@ -37,7 +37,7 @@ export function createReposRouter(registry: RepoRegistry): Router {
       registry.registerRepo(repoPath);
       res.status(201).json({ path: repoPath });
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 

@@ -6,7 +6,7 @@ export function createRefsRouter(registry: RepoRegistry): Router {
   const router = Router();
 
   // List branches and tags for the repo
-  router.get('/refs', async (req, res) => {
+  router.get('/refs', async (req, res, next) => {
     try {
       const [git] = registry.resolve(req.query.repo);
       const [branchResult, tagResult] = await Promise.all([git.branchLocal(), git.tag()]);
@@ -20,12 +20,12 @@ export function createRefsRouter(registry: RepoRegistry): Router {
 
       res.json({ branches, tags, currentBranch });
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
   // Resolve ref names to commit hashes (lightweight poll endpoint)
-  router.get('/resolve-refs', async (req, res) => {
+  router.get('/resolve-refs', async (req, res, next) => {
     try {
       const [git] = registry.resolve(req.query.repo);
       const refsParam = req.query.refs;
@@ -52,7 +52,7 @@ export function createRefsRouter(registry: RepoRegistry): Router {
 
       res.json({ refs });
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 

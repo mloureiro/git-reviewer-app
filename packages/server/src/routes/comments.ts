@@ -10,7 +10,7 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
   const sessionMiddleware = [validateCommitSha, resolveRepo(registry)] as const;
 
   // Add a comment to a session
-  router.post('/sessions/:commitSha/comments', ...sessionMiddleware, async (req, res) => {
+  router.post('/sessions/:commitSha/comments', ...sessionMiddleware, async (req, res, next) => {
     try {
       const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
       const commitSha = req.params.commitSha ?? '';
@@ -52,7 +52,7 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
 
       res.status(201).json(comment);
     } catch (error) {
-      res.status(500).json({ error: String(error) });
+      next(error);
     }
   });
 
@@ -60,7 +60,7 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
   router.patch(
     '/sessions/:commitSha/comments/:commentId',
     ...sessionMiddleware,
-    async (req, res) => {
+    async (req, res, next) => {
       try {
         const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
         const commitSha = req.params.commitSha ?? '';
@@ -83,7 +83,7 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
 
         res.json(result);
       } catch (error) {
-        res.status(500).json({ error: String(error) });
+        next(error);
       }
     },
   );
