@@ -154,13 +154,18 @@ function resolveTextPosition(
 ): { node: Text; offset: number } | null {
   const walker = document.createTreeWalker(ctnSpan, NodeFilter.SHOW_TEXT);
   let accumulated = 0;
-  let textNode: Text | null;
-  while ((textNode = walker.nextNode() as Text | null)) {
-    const len = textNode.textContent?.length ?? 0;
+  let node = walker.nextNode();
+  while (node !== null) {
+    if (!(node instanceof Text)) {
+      node = walker.nextNode();
+      continue;
+    }
+    const len = node.textContent?.length ?? 0;
     if (accumulated + len > charOffset) {
-      return { node: textNode, offset: charOffset - accumulated };
+      return { node, offset: charOffset - accumulated };
     }
     accumulated += len;
+    node = walker.nextNode();
   }
   return null;
 }
