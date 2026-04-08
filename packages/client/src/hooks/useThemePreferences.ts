@@ -83,12 +83,15 @@ export function useThemePreferences(): UseThemePreferencesReturn {
     (update: ThemePreferences | ((prev: ThemePreferences) => ThemePreferences)) => {
       setPrefsState((prev) => {
         const next = typeof update === 'function' ? update(prev) : update;
-        persistPreferences(next);
         return next;
       });
     },
     [],
   );
+
+  useEffect(() => {
+    persistPreferences(prefs);
+  }, [prefs]);
 
   // Apply the active scheme whenever preferences change
   useEffect(() => {

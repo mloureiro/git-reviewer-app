@@ -134,7 +134,7 @@ describe('HttpBackend', () => {
   // ---------------------------------------------------------------------------
 
   describe('fetchSessions', () => {
-    it('calls apiGet for /api/v1/v1/sessions', async () => {
+    it('calls apiGet for /api/v1/sessions', async () => {
       mockApiGet.mockResolvedValue({ sessions: [], total: 0, page: 1, limit: 20 });
 
       await backend.fetchSessions();
@@ -153,7 +153,7 @@ describe('HttpBackend', () => {
   });
 
   describe('validateSessions', () => {
-    it('calls apiGet for /api/v1/v1/sessions/validate', async () => {
+    it('calls apiGet for /api/v1/sessions/validate', async () => {
       mockApiGet.mockResolvedValue({ health: {}, stats: {} });
 
       await backend.validateSessions();
@@ -163,7 +163,7 @@ describe('HttpBackend', () => {
   });
 
   describe('fetchSession', () => {
-    it('calls apiGet for /api/v1/v1/sessions/:sha without repo', async () => {
+    it('calls apiGet for /api/v1/sessions/:sha without repo', async () => {
       mockApiGet.mockResolvedValue({
         session: {
           version: 1,
@@ -215,7 +215,7 @@ describe('HttpBackend', () => {
   });
 
   describe('createSession', () => {
-    it('calls apiPost for /api/v1/v1/sessions with the request body', async () => {
+    it('calls apiPost for /api/v1/sessions with the request body', async () => {
       mockApiPost.mockResolvedValue({
         session: {
           version: 1,
@@ -270,7 +270,7 @@ describe('HttpBackend', () => {
   });
 
   describe('deleteSession', () => {
-    it('calls apiDelete for /api/v1/v1/sessions/:sha', async () => {
+    it('calls apiDelete for /api/v1/sessions/:sha', async () => {
       mockApiDelete.mockResolvedValue(undefined);
 
       await backend.deleteSession(SHA);
@@ -290,7 +290,7 @@ describe('HttpBackend', () => {
   });
 
   describe('updateSessionStatus', () => {
-    it('calls apiPatch for /api/v1/v1/sessions/:sha with status data', async () => {
+    it('calls apiPatch for /api/v1/sessions/:sha with status data', async () => {
       mockApiPatch.mockResolvedValue({
         session: {
           id: 'session-1',
@@ -340,7 +340,7 @@ describe('HttpBackend', () => {
   // ---------------------------------------------------------------------------
 
   describe('postComment', () => {
-    it('calls apiPost for /api/v1/v1/sessions/:sha/comments', async () => {
+    it('calls apiPost for /api/v1/sessions/:sha/comments', async () => {
       mockApiPost.mockResolvedValue({ id: COMMENT_ID });
       const data = {
         file: 'src/foo.ts',
@@ -375,7 +375,7 @@ describe('HttpBackend', () => {
   });
 
   describe('patchComment', () => {
-    it('calls apiPatch for /api/v1/v1/sessions/:sha/comments/:id', async () => {
+    it('calls apiPatch for /api/v1/sessions/:sha/comments/:id', async () => {
       mockApiPatch.mockResolvedValue({ id: COMMENT_ID, resolved: true });
       const data = { resolved: true };
 
@@ -404,7 +404,7 @@ describe('HttpBackend', () => {
   // ---------------------------------------------------------------------------
 
   describe('markFileViewed', () => {
-    it('calls apiPut for /api/v1/v1/sessions/:sha/viewed-files/:filePath', async () => {
+    it('calls apiPut for /api/v1/sessions/:sha/viewed-files/:filePath', async () => {
       mockApiPut.mockResolvedValue({ path: 'src/foo.ts' });
 
       await backend.markFileViewed(SHA, 'src/foo.ts');
@@ -428,7 +428,7 @@ describe('HttpBackend', () => {
   });
 
   describe('unmarkFileViewed', () => {
-    it('calls apiDelete for /api/v1/v1/sessions/:sha/viewed-files/:encodedPath', async () => {
+    it('calls apiDelete for /api/v1/sessions/:sha/viewed-files/:encodedPath', async () => {
       mockApiDelete.mockResolvedValue(undefined);
 
       await backend.unmarkFileViewed(SHA, 'src/foo.ts');
@@ -464,7 +464,7 @@ describe('HttpBackend', () => {
   // ---------------------------------------------------------------------------
 
   describe('updateAutoMarkRules', () => {
-    it('calls apiPut for /api/v1/v1/sessions/:sha/auto-mark-rules with rules array', async () => {
+    it('calls apiPut for /api/v1/sessions/:sha/auto-mark-rules with rules array', async () => {
       mockApiPut.mockResolvedValue({ rules: [], autoMarked: [] });
       const rules: AutoMarkRule[] = ['lockfile', 'generated'];
 
@@ -486,7 +486,7 @@ describe('HttpBackend', () => {
   });
 
   describe('applyAutoMarkRules', () => {
-    it('calls apiPost for /api/v1/v1/sessions/:sha/auto-mark-apply with empty body', async () => {
+    it('calls apiPost for /api/v1/sessions/:sha/auto-mark-apply with empty body', async () => {
       mockApiPost.mockResolvedValue({ autoMarked: [] });
 
       await backend.applyAutoMarkRules(SHA);
@@ -511,7 +511,7 @@ describe('HttpBackend', () => {
   // ---------------------------------------------------------------------------
 
   describe('fetchRefs', () => {
-    it('calls apiGet for /api/v1/v1/refs without repo', async () => {
+    it('calls apiGet for /api/v1/refs without repo', async () => {
       mockApiGet.mockResolvedValue({ branches: [], tags: [], currentBranch: 'main' });
 
       await backend.fetchRefs();
@@ -529,7 +529,7 @@ describe('HttpBackend', () => {
   });
 
   describe('resolveRefs', () => {
-    it('calls apiGet for /api/v1/v1/resolve-refs with refs joined by comma', async () => {
+    it('calls apiGet for /api/v1/resolve-refs with refs joined by comma', async () => {
       mockApiGet.mockResolvedValue({ refs: {} });
 
       await backend.resolveRefs(['main', 'HEAD']);
@@ -561,7 +561,7 @@ describe('HttpBackend', () => {
   // ---------------------------------------------------------------------------
 
   describe('fetchRepos', () => {
-    it('calls apiGet for /api/v1/v1/repos', async () => {
+    it('calls apiGet for /api/v1/repos', async () => {
       mockApiGet.mockResolvedValue({ repos: [] });
 
       await backend.fetchRepos();
@@ -571,7 +571,7 @@ describe('HttpBackend', () => {
   });
 
   describe('removeRepo', () => {
-    it('calls apiDelete for /api/v1/v1/repos with path query param', async () => {
+    it('calls apiDelete for /api/v1/repos with path query param', async () => {
       mockApiDelete.mockResolvedValue(undefined);
 
       await backend.removeRepo(REPO);
@@ -585,7 +585,7 @@ describe('HttpBackend', () => {
   // ---------------------------------------------------------------------------
 
   describe('fetchCommits', () => {
-    it('calls apiGet for /api/v1/v1/sessions/:sha/commits', async () => {
+    it('calls apiGet for /api/v1/sessions/:sha/commits', async () => {
       mockApiGet.mockResolvedValue({ commits: [] });
 
       await backend.fetchCommits(SHA);
@@ -605,7 +605,7 @@ describe('HttpBackend', () => {
   });
 
   describe('fetchCommitDiff', () => {
-    it('calls apiGet for /api/v1/v1/commits/:hash/diff', async () => {
+    it('calls apiGet for /api/v1/commits/:hash/diff', async () => {
       mockApiGet.mockResolvedValue({ diff: '' });
 
       await backend.fetchCommitDiff(SHA);
@@ -625,7 +625,7 @@ describe('HttpBackend', () => {
   });
 
   describe('fetchCommitFiles', () => {
-    it('calls apiGet for /api/v1/v1/commits/:hash/files', async () => {
+    it('calls apiGet for /api/v1/commits/:hash/files', async () => {
       mockApiGet.mockResolvedValue({ files: [] });
 
       await backend.fetchCommitFiles(SHA);
