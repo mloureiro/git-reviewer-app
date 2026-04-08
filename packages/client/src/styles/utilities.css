@@ -1,0 +1,27 @@
+/* ── Utility Classes ────────────────────────────────────────────────────── */
+
+/**
+ * Shared styling for inline code elements.
+ * Applies monospace font, subtle background, border, and padding
+ * to make code text visually distinct from prose.
+ */
+code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background-color: var(--color-neutral-bg-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}
+
+/**
+ * Alias utility class for when BEM-style class names are preferred.
+ */
+.code-inline {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  background-color: var(--color-neutral-bg-subtle);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-sm);
+  padding: 1px 5px;
+}

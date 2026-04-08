@@ -1,5 +1,6 @@
 @import './reset.css';
 @import './layout.css';
+@import './utilities.css';
 @import './diff-view.css';
 @import './session-list.css';
 @import './install-cli.css';
