@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ApiError, apiGet, apiPost, apiPatch } from './client';
+import { ApiError, apiGet, apiPost, apiPatch, apiDelete } from './client';
 
 // Use vitest's built-in fetch mock
 const mockFetch = vi.fn();
@@ -10,6 +10,15 @@ function makeResponse(status: number, body: unknown): Response {
     ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(body),
+  } as unknown as Response;
+}
+
+function makeNonJsonResponse(status: number, statusText: string): Response {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    statusText,
+    json: () => Promise.reject(new SyntaxError('Unexpected token < in JSON')),
   } as unknown as Response;
 }
 
@@ -70,6 +79,34 @@ describe('apiGet', () => {
     mockFetch.mockResolvedValue(makeResponse(500, { error: 'Internal error' }));
 
     await expect(apiGet('/api/diff')).rejects.toBeInstanceOf(ApiError);
+  });
+
+  it('falls back to statusText when error response is non-JSON', async () => {
+    mockFetch.mockResolvedValue(makeNonJsonResponse(502, 'Bad Gateway'));
+
+    try {
+      await apiGet('/api/diff');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      if (err instanceof ApiError) {
+        expect(err.status).toBe(502);
+        expect(err.message).toBe('Bad Gateway');
+      }
+    }
+  });
+
+  it('throws ApiError when success response is non-JSON', async () => {
+    mockFetch.mockResolvedValue(makeNonJsonResponse(200, 'OK'));
+
+    try {
+      await apiGet('/api/diff');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      if (err instanceof ApiError) {
+        expect(err.status).toBe(200);
+        expect(err.message).toBe('Server returned a non-JSON response');
+      }
+    }
   });
 });
 
@@ -134,5 +171,45 @@ describe('apiPatch', () => {
     await expect(apiPatch('/api/sessions/sha', { status: 'approved' })).rejects.toBeInstanceOf(
       ApiError,
     );
+  });
+});
+
+describe('apiDelete', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it('resolves without error on 204 response', async () => {
+    mockFetch.mockResolvedValue(makeResponse(204, null));
+
+    await expect(apiDelete('/api/sessions/sha')).resolves.toBeUndefined();
+  });
+
+  it('throws ApiError on non-2xx JSON response', async () => {
+    mockFetch.mockResolvedValue(makeResponse(404, { error: 'Not found' }));
+
+    try {
+      await apiDelete('/api/sessions/sha');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      if (err instanceof ApiError) {
+        expect(err.status).toBe(404);
+        expect(err.message).toBe('Not found');
+      }
+    }
+  });
+
+  it('falls back to statusText when error response is non-JSON', async () => {
+    mockFetch.mockResolvedValue(makeNonJsonResponse(503, 'Service Unavailable'));
+
+    try {
+      await apiDelete('/api/sessions/sha');
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiError);
+      if (err instanceof ApiError) {
+        expect(err.status).toBe(503);
+        expect(err.message).toBe('Service Unavailable');
+      }
+    }
   });
 });
