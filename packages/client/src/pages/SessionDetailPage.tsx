@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { AutoMarkSettings } from '../components/AutoMarkSettings';
 import { ApiError } from '../api/client.js';
@@ -66,7 +66,7 @@ export function SessionDetailPage(): React.ReactNode {
   const colorScheme = theme === 'dark' ? ColorSchemeType.DARK : ColorSchemeType.LIGHT;
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
   const [activeLine, setActiveLine] = useState<DiffLineData | null>(null);
-  const [isStatusPending, startStatusTransition] = useTransition();
+  const [isStatusPending, setIsStatusPending] = useState(false);
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   // The user's stored preference (persisted to localStorage).
@@ -460,18 +460,19 @@ export function SessionDetailPage(): React.ReactNode {
   );
 
   const handleStatusChange = useCallback(
-    (status: ReviewStatus): void => {
-      startStatusTransition(async () => {
-        try {
-          await updateStatus(status);
-        } catch (err) {
-          const message =
-            err instanceof ApiError ? err.message : 'Failed to update status. Please try again.';
-          setMutationError(message);
-        }
-      });
+    async (status: ReviewStatus): Promise<void> => {
+      setIsStatusPending(true);
+      try {
+        await updateStatus(status);
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.message : 'Failed to update status. Please try again.';
+        setMutationError(message);
+      } finally {
+        setIsStatusPending(false);
+      }
     },
-    [updateStatus, startStatusTransition],
+    [updateStatus],
   );
 
   const comments = useMemo(() => reviewData?.comments ?? [], [reviewData?.comments]);
