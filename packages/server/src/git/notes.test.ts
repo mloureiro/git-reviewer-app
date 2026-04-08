@@ -1,12 +1,31 @@
+import { EventEmitter } from 'node:events';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SimpleGit } from 'simple-git';
 import type { ReviewData } from '@git-reviewer/shared';
 import { readReviewNote, writeReviewNote, listReviewNotes, removeReviewNote } from './notes.js';
 
+vi.mock('node:child_process', () => ({ spawn: vi.fn() }));
+
+import { spawn } from 'node:child_process';
+
+const mockSpawn = vi.mocked(spawn);
+
+/** Creates a fake ChildProcess-like EventEmitter that resolves with exit code 0. */
+function makeFakeChild(exitCode = 0) {
+  const child = new EventEmitter() as ReturnType<typeof spawn>;
+  const stdinMock = { end: vi.fn() };
+  const stderrMock = new EventEmitter();
+  Object.assign(child, { stdin: stdinMock, stderr: stderrMock, stdout: new EventEmitter() });
+  setTimeout(() => child.emit('close', exitCode), 0);
+  return child;
+}
+
 const mockRaw = vi.fn();
+const mockRevparse = vi.fn();
 
 const mockGit = {
   raw: mockRaw,
+  revparse: mockRevparse,
 } as unknown as SimpleGit;
 
 const COMMIT_SHA = 'abc123def456';
@@ -53,44 +72,59 @@ describe('git/notes.ts', () => {
 
   describe('writeReviewNote', () => {
     it('uses add without -f flag when no existing note is present', async () => {
-      // First call: readReviewNote internally → no note
+      // readReviewNote internally → no note
       mockRaw.mockRejectedValueOnce(new Error('error: no note found'));
-      // Second call: the actual write
-      mockRaw.mockResolvedValueOnce('');
+      mockRevparse.mockResolvedValueOnce('/repo/path\n');
+      mockSpawn.mockReturnValueOnce(makeFakeChild(0));
 
       await writeReviewNote(mockGit, COMMIT_SHA, sampleReviewData);
 
-      expect(mockRaw).toHaveBeenCalledTimes(2);
-      expect(mockRaw).toHaveBeenNthCalledWith(2, [
-        'notes',
-        '--ref',
-        'git-reviewer',
-        'add',
-        '-m',
-        JSON.stringify(sampleReviewData, null, 2),
-        COMMIT_SHA,
-      ]);
+      expect(mockSpawn).toHaveBeenCalledOnce();
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'git',
+        ['notes', '--ref', 'git-reviewer', 'add', '-F', '-', COMMIT_SHA],
+        { cwd: '/repo/path', stdio: ['pipe', 'ignore', 'pipe'] },
+      );
     });
 
     it('uses add with -f flag when an existing note is present', async () => {
-      // First call: readReviewNote internally → returns existing data
+      // readReviewNote internally → returns existing data
       mockRaw.mockResolvedValueOnce(JSON.stringify(sampleReviewData));
-      // Second call: the actual write
-      mockRaw.mockResolvedValueOnce('');
+      mockRevparse.mockResolvedValueOnce('/repo/path\n');
+      mockSpawn.mockReturnValueOnce(makeFakeChild(0));
 
       await writeReviewNote(mockGit, COMMIT_SHA, sampleReviewData);
 
-      expect(mockRaw).toHaveBeenCalledTimes(2);
-      expect(mockRaw).toHaveBeenNthCalledWith(2, [
-        'notes',
-        '--ref',
-        'git-reviewer',
-        'add',
-        '-f',
-        '-m',
+      expect(mockSpawn).toHaveBeenCalledOnce();
+      expect(mockSpawn).toHaveBeenCalledWith(
+        'git',
+        ['notes', '--ref', 'git-reviewer', 'add', '-f', '-F', '-', COMMIT_SHA],
+        { cwd: '/repo/path', stdio: ['pipe', 'ignore', 'pipe'] },
+      );
+    });
+
+    it('writes the JSON content to stdin', async () => {
+      mockRaw.mockRejectedValueOnce(new Error('error: no note found'));
+      mockRevparse.mockResolvedValueOnce('/repo/path\n');
+      const fakeChild = makeFakeChild(0);
+      mockSpawn.mockReturnValueOnce(fakeChild);
+
+      await writeReviewNote(mockGit, COMMIT_SHA, sampleReviewData);
+
+      expect(fakeChild.stdin.end).toHaveBeenCalledWith(
         JSON.stringify(sampleReviewData, null, 2),
-        COMMIT_SHA,
-      ]);
+        'utf8',
+      );
+    });
+
+    it('rejects when git exits with a non-zero code', async () => {
+      mockRaw.mockRejectedValueOnce(new Error('error: no note found'));
+      mockRevparse.mockResolvedValueOnce('/repo/path\n');
+      mockSpawn.mockReturnValueOnce(makeFakeChild(1));
+
+      await expect(writeReviewNote(mockGit, COMMIT_SHA, sampleReviewData)).rejects.toThrow(
+        'git notes failed',
+      );
     });
   });
 
