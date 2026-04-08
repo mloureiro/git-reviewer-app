@@ -243,6 +243,31 @@ export async function resolveComment(
 }
 
 /**
+ * Delete a comment from a session.
+ * Returns true if the comment was deleted, 'comment-not-found' if the comment
+ * doesn't exist, or null if the session doesn't exist.
+ */
+export async function deleteComment(
+  git: SimpleGit,
+  commitSha: string,
+  commentId: string,
+): Promise<boolean | null | 'comment-not-found'> {
+  return withSessionLock(commitSha, async () => {
+    const data = await readReviewNote(git, commitSha);
+    if (!data) return null;
+
+    const index = data.comments.findIndex(({ id }) => id === commentId);
+    if (index === -1) return 'comment-not-found';
+
+    data.comments.splice(index, 1);
+    data.session.updatedAt = new Date().toISOString();
+    await writeReviewNote(git, commitSha, data);
+
+    return true;
+  });
+}
+
+/**
  * Mark a file as viewed in a session. Computes the current diff hash for the
  * file so that stale-view detection works later.
  * Returns the created `ViewedFile` entry, or `null` when the session is not found.

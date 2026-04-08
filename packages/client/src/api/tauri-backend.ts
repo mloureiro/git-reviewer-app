@@ -132,6 +132,11 @@ export class TauriBackend implements Backend {
     }) as Promise<UpdateCommentResponse>;
   }
 
+  async deleteComment(commitSha: string, commentId: string, repo?: string): Promise<void> {
+    const invoke = await getInvoke();
+    return invoke('delete_comment', { commitSha, commentId, repo }) as Promise<void>;
+  }
+
   // Viewed files
 
   async markFileViewed(commitSha: string, path: string, repo?: string): Promise<ViewedFile> {

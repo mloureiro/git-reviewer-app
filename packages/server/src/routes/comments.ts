@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { RepoRegistry } from '../git/repo-registry.js';
 import { validateCommitSha, resolveRepo, type ResolvedRepoLocals } from './middleware.js';
-import { addComment, resolveComment } from '../services/session-service.js';
+import { addComment, resolveComment, deleteComment } from '../services/session-service.js';
 import type { CreateCommentRequest, UpdateCommentRequest } from '@git-reviewer/shared';
 
 export function createCommentsRouter(registry: RepoRegistry): Router {
@@ -82,6 +82,33 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
         }
 
         res.json(result);
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
+
+  // Delete a comment from a session
+  router.delete(
+    '/sessions/:commitSha/comments/:commentId',
+    ...sessionMiddleware,
+    async (req, res, next) => {
+      try {
+        const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+        const commitSha = req.params.commitSha ?? '';
+        const commentId = req.params.commentId ?? '';
+
+        const result = await deleteComment(git, commitSha, commentId);
+        if (result === null) {
+          res.status(404).json({ error: 'Review session not found' });
+          return;
+        }
+        if (result === 'comment-not-found') {
+          res.status(404).json({ error: 'Comment not found' });
+          return;
+        }
+
+        res.status(204).send();
       } catch (error) {
         next(error);
       }

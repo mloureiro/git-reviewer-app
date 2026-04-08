@@ -91,7 +91,12 @@ export function patchComment(
   return getBackend().patchComment(commitSha, commentId, data, repo);
 }
 
-/** POST /api/sessions/:commitSha/viewed-files — Mark a file as viewed. */
+/** DELETE /api/sessions/:commitSha/comments/:commentId — Delete a comment. */
+export function deleteComment(commitSha: string, commentId: string, repo?: string): Promise<void> {
+  return getBackend().deleteComment(commitSha, commentId, repo);
+}
+
+/** PUT /api/sessions/:commitSha/viewed-files/:filePath — Mark a file as viewed. */
 export function markFileViewed(
   commitSha: string,
   path: string,

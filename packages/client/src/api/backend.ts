@@ -58,6 +58,7 @@ export interface Backend {
     data: UpdateCommentRequest,
     repo?: string,
   ): Promise<UpdateCommentResponse>;
+  deleteComment(commitSha: string, commentId: string, repo?: string): Promise<void>;
 
   // Viewed files
   markFileViewed(commitSha: string, path: string, repo?: string): Promise<ViewedFile>;

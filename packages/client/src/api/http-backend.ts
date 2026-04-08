@@ -129,6 +129,11 @@ export class HttpBackend implements Backend {
     );
   }
 
+  deleteComment(commitSha: string, commentId: string, repo?: string): Promise<void> {
+    const qs = buildQueryString({ repo });
+    return apiDelete(`/api/sessions/${commitSha}/comments/${commentId}${qs}`);
+  }
+
   // Viewed files
 
   markFileViewed(commitSha: string, path: string, repo?: string): Promise<ViewedFile> {
