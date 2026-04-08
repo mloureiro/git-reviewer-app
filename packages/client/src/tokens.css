@@ -73,6 +73,17 @@
   --shadow-md: 0 4px 12px var(--color-shadow-strong), 0 0 1px var(--color-shadow-highlight);
 }
 
+/* ── Accessibility: Reduce Motion ──────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
 /* ── Color tokens — Dark Theme ─────────────────────────────────────────── */
 
 [data-theme='dark'] {
