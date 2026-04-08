@@ -9,7 +9,7 @@ import {
 } from './parse-utils.js';
 
 export function createGitClient(repoPath: string): SimpleGit {
-  return simpleGit(repoPath);
+  return simpleGit(repoPath, { timeout: { block: 30_000 } });
 }
 
 export async function getDiffText(git: SimpleGit, base: string, head: string): Promise<string> {
