@@ -5,7 +5,7 @@
   "description": "Local code review tool with GitHub PR-like experience, powered by git-notes",
   "scripts": {
     "dev": "pnpm --filter @git-reviewer/shared dev & pnpm --filter @git-reviewer/server dev & pnpm --filter @git-reviewer/client dev",
-    "build": "pnpm --filter @git-reviewer/shared build && pnpm --filter @git-reviewer/server build && pnpm --filter @git-reviewer/client build && pnpm --filter @git-reviewer/cli build",
+    "build": "pnpm --filter @git-reviewer/shared build && pnpm --filter @git-reviewer/server --filter @git-reviewer/client build && pnpm --filter @git-reviewer/cli build",
     "start": "pnpm build && node packages/cli/dist/index.js serve",
     "test": "pnpm --filter @git-reviewer/server test -- --run && pnpm --filter @git-reviewer/client test -- --run && pnpm --filter @git-reviewer/shared test -- --run",
     "test:coverage": "pnpm --filter @git-reviewer/server test -- --run --coverage && pnpm --filter @git-reviewer/client test -- --run --coverage && pnpm --filter @git-reviewer/shared test -- --run --coverage",
