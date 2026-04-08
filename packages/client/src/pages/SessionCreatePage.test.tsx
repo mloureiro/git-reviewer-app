@@ -65,7 +65,7 @@ describe('SessionCreatePage', () => {
   });
 
   it('submits the form and navigates to the new session on success', async () => {
-    mockCreateSession.mockResolvedValue({ session: sampleSession } as unknown as SessionResponse);
+    mockCreateSession.mockResolvedValue(sampleSession as unknown as SessionResponse);
 
     renderPage();
 

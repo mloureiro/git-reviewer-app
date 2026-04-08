@@ -44,9 +44,6 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
   // List all review sessions (aggregated across all registered repos)
   router.get('/sessions', async (req, res, next) => {
     try {
-      const page = Math.max(1, Number(req.query.page) || 1);
-      const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 20));
-
       const repoPaths = registry.listPaths();
 
       // Fetch notes for all repos in parallel, then read each note in parallel.
@@ -71,12 +68,9 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
         }),
       );
 
-      const allSessions = perRepoSessions.flat();
-      const total = allSessions.length;
-      const offset = (page - 1) * limit;
-      const sessions = allSessions.slice(offset, offset + limit);
+      const sessions = perRepoSessions.flat();
 
-      res.json({ sessions, total, page, limit });
+      res.json({ sessions });
     } catch (error) {
       next(error);
     }
@@ -223,7 +217,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
         res.status(404).json({ error: 'Review session not found' });
         return;
       }
-      res.json({ session: data });
+      res.json(data);
     } catch (error) {
       next(error);
     }
@@ -276,39 +270,35 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
       }
 
       const data = await createSession(git, { title, baseRef, headRef, repoPath });
-      res.status(201).json({ session: data });
+      res.status(201).json(data);
     } catch (error) {
       next(error);
     }
   });
 
   // Mark a file as viewed (idempotent upsert)
-  router.put(
-    '/sessions/:commitSha/viewed-files/:filePath',
-    ...sessionMiddleware,
-    async (req, res, next) => {
-      try {
-        const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
-        const commitSha = req.params.commitSha ?? '';
+  router.post('/sessions/:commitSha/viewed-files', ...sessionMiddleware, async (req, res, next) => {
+    try {
+      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+      const commitSha = req.params.commitSha ?? '';
 
-        const filePath = decodeURIComponent(req.params.filePath ?? '');
-        if (typeof filePath !== 'string' || filePath.trim().length === 0) {
-          res.status(400).json({ error: 'Invalid path: must be a non-empty string' });
-          return;
-        }
-
-        const viewedFile = await markFileViewed(git, commitSha, filePath);
-        if (!viewedFile) {
-          res.status(404).json({ error: 'Review session not found' });
-          return;
-        }
-
-        res.json(viewedFile);
-      } catch (error) {
-        next(error);
+      const { path: filePath } = req.body as { path?: unknown };
+      if (typeof filePath !== 'string' || filePath.trim().length === 0) {
+        res.status(400).json({ error: 'Invalid path: must be a non-empty string' });
+        return;
       }
-    },
-  );
+
+      const viewedFile = await markFileViewed(git, commitSha, filePath);
+      if (!viewedFile) {
+        res.status(404).json({ error: 'Review session not found' });
+        return;
+      }
+
+      res.status(201).json(viewedFile);
+    } catch (error) {
+      next(error);
+    }
+  });
 
   // Unmark a file as viewed
   router.delete(
@@ -424,7 +414,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
         return;
       }
 
-      res.json({ session });
+      res.json(session);
     } catch (error) {
       next(error);
     }

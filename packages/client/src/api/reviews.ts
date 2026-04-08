@@ -68,8 +68,8 @@ export function deleteSession(commitSha: string, repo?: string): Promise<void> {
  * from the full session response rather than a dedicated endpoint.
  */
 export async function fetchComments(commitSha: string, repo?: string): Promise<CommentsResponse> {
-  const session = await fetchSession(commitSha, repo);
-  return { comments: session.comments };
+  const reviewData = await fetchSession(commitSha, repo);
+  return { comments: reviewData.comments };
 }
 
 /** POST /api/sessions/:commitSha/comments — Add a comment to a review session. */

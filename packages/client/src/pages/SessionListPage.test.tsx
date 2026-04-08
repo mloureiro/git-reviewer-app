@@ -200,10 +200,14 @@ describe('SessionListPage', () => {
       expect(screen.getByText('Approved')).toBeInTheDocument();
     });
 
-    it('renders the remove button for each session', () => {
-      setupDefaultMocks({ sessions: [makeSession()] });
+    it('renders the remove button for stale sessions', () => {
+      const session = makeSession({ headCommit: 'stale111' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { stale111: { status: 'stale', reason: 'no-changes' } },
+      });
       renderPage();
-      expect(screen.getByRole('button', { name: 'Remove session' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Remove empty review' })).toBeInTheDocument();
     });
 
     it('renders session stats when stats are provided', () => {
@@ -288,54 +292,68 @@ describe('SessionListPage', () => {
 
   describe('session deletion', () => {
     it('calls deleteSession when the user confirms removal', async () => {
-      vi.mocked(window.confirm).mockReturnValue(true);
       mockDeleteSession.mockResolvedValue(undefined);
 
-      const session = makeSession({ headCommit: 'head222', repoPath: '/repo/path' });
-      setupDefaultMocks({ sessions: [session] });
+      const session = makeSession({ headCommit: 'stale222', repoPath: '/repo/path' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { stale222: { status: 'stale', reason: 'no-changes' } },
+      });
       renderPage();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Remove session' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Remove empty review' }));
 
       await waitFor(() => {
-        expect(mockDeleteSession).toHaveBeenCalledWith('head222', '/repo/path');
+        expect(mockDeleteSession).toHaveBeenCalledWith('stale222', '/repo/path');
       });
     });
 
     it('calls refetch after a successful deletion', async () => {
-      vi.mocked(window.confirm).mockReturnValue(true);
       mockDeleteSession.mockResolvedValue(undefined);
 
-      setupDefaultMocks({ sessions: [makeSession()] });
+      const session = makeSession({ headCommit: 'stale333' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { stale333: { status: 'stale', reason: 'no-changes' } },
+      });
       renderPage();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Remove session' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Remove empty review' }));
 
       await waitFor(() => {
         expect(mockRefetch).toHaveBeenCalled();
       });
     });
 
-    it('does not call deleteSession when the user cancels the confirmation', async () => {
-      vi.mocked(window.confirm).mockReturnValue(false);
+    it('immediately calls deleteSession when the user clicks remove (no confirmation)', async () => {
+      mockDeleteSession.mockResolvedValue(undefined);
 
-      setupDefaultMocks({ sessions: [makeSession()] });
+      const session = makeSession({ headCommit: 'stale444' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { stale444: { status: 'stale', reason: 'no-changes' } },
+      });
       renderPage();
 
-      fireEvent.click(screen.getByRole('button', { name: 'Remove session' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Remove empty review' }));
 
-      expect(mockDeleteSession).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockDeleteSession).toHaveBeenCalledWith('stale444', undefined);
+      });
     });
 
     it('disables the remove button while deletion is in progress', async () => {
-      vi.mocked(window.confirm).mockReturnValue(true);
       // Never-resolving promise simulates in-flight delete
       mockDeleteSession.mockReturnValue(new Promise(() => undefined));
 
-      setupDefaultMocks({ sessions: [makeSession()] });
+      const session = makeSession({ headCommit: 'stale555' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { stale555: { status: 'stale', reason: 'no-changes' } },
+      });
       renderPage();
 
-      const removeBtn = screen.getByRole('button', { name: 'Remove session' });
+      const removeBtn = screen.getByRole('button', { name: 'Remove empty review' });
       fireEvent.click(removeBtn);
 
       await waitFor(() => {
@@ -344,13 +362,16 @@ describe('SessionListPage', () => {
     });
 
     it('shows an alert and re-enables the button when deletion fails', async () => {
-      vi.mocked(window.confirm).mockReturnValue(true);
       mockDeleteSession.mockRejectedValue(new Error('Delete failed'));
 
-      setupDefaultMocks({ sessions: [makeSession()] });
+      const session = makeSession({ headCommit: 'stale666' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { stale666: { status: 'stale', reason: 'no-changes' } },
+      });
       renderPage();
 
-      const removeBtn = screen.getByRole('button', { name: 'Remove session' });
+      const removeBtn = screen.getByRole('button', { name: 'Remove empty review' });
       fireEvent.click(removeBtn);
 
       await waitFor(() => {

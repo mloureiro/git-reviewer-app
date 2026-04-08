@@ -11,6 +11,7 @@ import type {
   DiffFile,
   ReviewComment,
   ReviewData,
+  ReviewSession,
   ReviewStatus,
   AutoMarkRule,
   ViewedFile,
@@ -70,9 +71,6 @@ export interface DiffResponse {
 
 export interface SessionListResponse {
   sessions: ReviewData[];
-  total: number;
-  page: number;
-  limit: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -86,9 +84,7 @@ export interface CreateSessionRequest {
 }
 
 /** Response for POST /api/sessions (201) and GET /api/sessions/:commitSha (200) */
-export interface SessionResponse {
-  session: ReviewData;
-}
+export type SessionResponse = ReviewData;
 
 // ---------------------------------------------------------------------------
 // POST /api/sessions/:commitSha/comments
@@ -128,9 +124,7 @@ export interface UpdateSessionStatusRequest {
 }
 
 /** Response for PATCH /api/sessions/:commitSha */
-export interface UpdateSessionStatusResponse {
-  session: ReviewData;
-}
+export type UpdateSessionStatusResponse = ReviewSession;
 
 // ---------------------------------------------------------------------------
 // PUT /api/sessions/:commitSha/auto-mark-rules

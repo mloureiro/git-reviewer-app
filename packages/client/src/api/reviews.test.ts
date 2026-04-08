@@ -121,12 +121,12 @@ describe('fetchSession', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('calls apiGet for /api/sessions/:sha and returns the session', async () => {
-    mockApiGet.mockResolvedValue({ session: sampleSession });
+    mockApiGet.mockResolvedValue(sampleSession);
 
     const result = await fetchSession(SESSION_SHA);
 
     expect(mockApiGet).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}`);
-    expect(result).toEqual({ session: sampleSession });
+    expect(result).toEqual(sampleSession);
   });
 });
 
@@ -134,7 +134,7 @@ describe('createSession', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('calls apiPost for /api/sessions with the request body', async () => {
-    mockApiPost.mockResolvedValue({ session: sampleSession });
+    mockApiPost.mockResolvedValue(sampleSession);
 
     const result = await createSession({ title: 'Test', baseRef: 'main', headRef: 'HEAD' });
 
@@ -143,7 +143,7 @@ describe('createSession', () => {
       baseRef: 'main',
       headRef: 'HEAD',
     });
-    expect(result).toEqual({ session: sampleSession });
+    expect(result).toEqual(sampleSession);
   });
 });
 
@@ -166,7 +166,7 @@ describe('fetchComments', () => {
         },
       ],
     };
-    mockApiGet.mockResolvedValue({ session: sessionWithComments });
+    mockApiGet.mockResolvedValue(sessionWithComments);
 
     const result = await fetchComments(SESSION_SHA);
 
@@ -175,7 +175,7 @@ describe('fetchComments', () => {
   });
 
   it('returns empty comments array when session has none', async () => {
-    mockApiGet.mockResolvedValue({ session: sampleSession });
+    mockApiGet.mockResolvedValue(sampleSession);
 
     const result = await fetchComments(SESSION_SHA);
 
