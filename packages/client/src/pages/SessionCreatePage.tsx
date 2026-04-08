@@ -68,8 +68,8 @@ export function SessionCreatePage() {
 
     try {
       const repo = selectedRepo || undefined;
-      const reviewData = await createSession({ title, baseRef, headRef }, repo);
-      navigate(`/session/${reviewData.session.headCommit}`);
+      const response = await createSession({ title, baseRef, headRef }, repo);
+      navigate(`/session/${response.session.session.headCommit}`);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

@@ -33,6 +33,7 @@ export type {
   UpdateSessionStatusResponse,
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
+  ViewedFileResponse,
   ResolveRefsResponse,
   RefsResponse,
   CommitsResponse,

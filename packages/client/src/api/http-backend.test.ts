@@ -135,7 +135,7 @@ describe('HttpBackend', () => {
 
   describe('fetchSessions', () => {
     it('calls apiGet for /api/sessions', async () => {
-      mockApiGet.mockResolvedValue({ sessions: [] });
+      mockApiGet.mockResolvedValue({ sessions: [], total: 0, page: 1, limit: 20 });
 
       await backend.fetchSessions();
 
@@ -143,7 +143,7 @@ describe('HttpBackend', () => {
     });
 
     it('returns the resolved value from apiGet', async () => {
-      const response = { sessions: [] };
+      const response = { sessions: [], total: 0, page: 1, limit: 20 };
       mockApiGet.mockResolvedValue(response);
 
       const result = await backend.fetchSessions();
@@ -164,7 +164,23 @@ describe('HttpBackend', () => {
 
   describe('fetchSession', () => {
     it('calls apiGet for /api/sessions/:sha without repo', async () => {
-      mockApiGet.mockResolvedValue({ session: { version: 1, session: {}, comments: [] } });
+      mockApiGet.mockResolvedValue({
+        session: {
+          version: 1,
+          session: {
+            id: 'session-1',
+            title: 'Test',
+            baseRef: 'main',
+            headRef: 'feature',
+            baseCommit: 'abc',
+            headCommit: 'def',
+            status: 'pending',
+            createdAt: '2026-03-19T00:00:00Z',
+            updatedAt: '2026-03-19T00:00:00Z',
+          },
+          comments: [],
+        },
+      });
 
       await backend.fetchSession(SHA);
 
@@ -172,7 +188,23 @@ describe('HttpBackend', () => {
     });
 
     it('appends repo query param when provided', async () => {
-      mockApiGet.mockResolvedValue({ session: { version: 1, session: {}, comments: [] } });
+      mockApiGet.mockResolvedValue({
+        session: {
+          version: 1,
+          session: {
+            id: 'session-1',
+            title: 'Test',
+            baseRef: 'main',
+            headRef: 'feature',
+            baseCommit: 'abc',
+            headCommit: 'def',
+            status: 'pending',
+            createdAt: '2026-03-19T00:00:00Z',
+            updatedAt: '2026-03-19T00:00:00Z',
+          },
+          comments: [],
+        },
+      });
 
       await backend.fetchSession(SHA, REPO);
 
@@ -184,7 +216,23 @@ describe('HttpBackend', () => {
 
   describe('createSession', () => {
     it('calls apiPost for /api/sessions with the request body', async () => {
-      mockApiPost.mockResolvedValue({ session: { version: 1, session: {}, comments: [] } });
+      mockApiPost.mockResolvedValue({
+        session: {
+          version: 1,
+          session: {
+            id: 'session-1',
+            title: 'Test Review',
+            baseRef: 'main',
+            headRef: 'HEAD',
+            baseCommit: 'abc',
+            headCommit: 'def',
+            status: 'pending',
+            createdAt: '2026-03-19T00:00:00Z',
+            updatedAt: '2026-03-19T00:00:00Z',
+          },
+          comments: [],
+        },
+      });
       const data = { title: 'Test Review', baseRef: 'main', headRef: 'HEAD' };
 
       await backend.createSession(data);
@@ -193,7 +241,23 @@ describe('HttpBackend', () => {
     });
 
     it('appends repo query param when provided', async () => {
-      mockApiPost.mockResolvedValue({ session: { version: 1, session: {}, comments: [] } });
+      mockApiPost.mockResolvedValue({
+        session: {
+          version: 1,
+          session: {
+            id: 'session-1',
+            title: 'Test',
+            baseRef: 'main',
+            headRef: 'HEAD',
+            baseCommit: 'abc',
+            headCommit: 'def',
+            status: 'pending',
+            createdAt: '2026-03-19T00:00:00Z',
+            updatedAt: '2026-03-19T00:00:00Z',
+          },
+          comments: [],
+        },
+      });
       const data = { title: 'Test', baseRef: 'main', headRef: 'HEAD' };
 
       await backend.createSession(data, REPO);
@@ -227,7 +291,19 @@ describe('HttpBackend', () => {
 
   describe('updateSessionStatus', () => {
     it('calls apiPatch for /api/sessions/:sha with status data', async () => {
-      mockApiPatch.mockResolvedValue({ id: 'session-1', status: 'approved' });
+      mockApiPatch.mockResolvedValue({
+        session: {
+          id: 'session-1',
+          title: 'Test',
+          baseRef: 'main',
+          headRef: 'feature',
+          baseCommit: 'abc',
+          headCommit: 'def',
+          status: 'approved',
+          createdAt: '2026-03-19T00:00:00Z',
+          updatedAt: '2026-03-19T00:00:00Z',
+        },
+      });
       const data = { status: 'approved' as const };
 
       await backend.updateSessionStatus(SHA, data);
@@ -236,7 +312,19 @@ describe('HttpBackend', () => {
     });
 
     it('appends repo query param when provided', async () => {
-      mockApiPatch.mockResolvedValue({ id: 'session-1', status: 'approved' });
+      mockApiPatch.mockResolvedValue({
+        session: {
+          id: 'session-1',
+          title: 'Test',
+          baseRef: 'main',
+          headRef: 'feature',
+          baseCommit: 'abc',
+          headCommit: 'def',
+          status: 'approved',
+          createdAt: '2026-03-19T00:00:00Z',
+          updatedAt: '2026-03-19T00:00:00Z',
+        },
+      });
 
       await backend.updateSessionStatus(SHA, { status: 'approved' }, REPO);
 

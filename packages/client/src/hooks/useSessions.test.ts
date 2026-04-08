@@ -46,7 +46,7 @@ describe('useSessions', () => {
 
   it('returns sessions on success', async () => {
     const session = makeSession();
-    mockFetchSessions.mockResolvedValue({ sessions: [session] });
+    mockFetchSessions.mockResolvedValue({ sessions: [session], total: 1, page: 1, limit: 20 });
 
     const { result } = renderHook(() => useSessions());
 
@@ -57,7 +57,7 @@ describe('useSessions', () => {
   });
 
   it('returns empty array when no sessions exist', async () => {
-    mockFetchSessions.mockResolvedValue({ sessions: [] });
+    mockFetchSessions.mockResolvedValue({ sessions: [], total: 0, page: 1, limit: 20 });
 
     const { result } = renderHook(() => useSessions());
 
