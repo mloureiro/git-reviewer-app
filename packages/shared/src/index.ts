@@ -12,6 +12,8 @@ export type {
   ViewedFile,
 } from './types.js';
 
+export { MAX_SESSION_TITLE_LENGTH, MAX_COMMENT_BODY_LENGTH } from './schemas.js';
+
 export {
   validateDiffFile,
   validateCommitInfo,

@@ -52,6 +52,13 @@ function assertOptional(val: unknown, label: string, check: (v: unknown, l: stri
 }
 
 // ---------------------------------------------------------------------------
+// Length limit constants (exported for use in route handlers)
+// ---------------------------------------------------------------------------
+
+export const MAX_SESSION_TITLE_LENGTH = 200;
+export const MAX_COMMENT_BODY_LENGTH = 10_000;
+
+// ---------------------------------------------------------------------------
 // Enum constants
 // ---------------------------------------------------------------------------
 

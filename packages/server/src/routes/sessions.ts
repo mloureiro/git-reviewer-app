@@ -25,6 +25,7 @@ import type {
   UpdateSessionStatusRequest,
   AutoMarkRulesRequest,
 } from '@git-reviewer/shared';
+import { MAX_SESSION_TITLE_LENGTH } from '@git-reviewer/shared';
 
 const VALID_STATUSES: ReadonlyArray<ReviewStatus> = ['pending', 'approved', 'changes_requested'];
 
@@ -265,6 +266,14 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
 
       if (typeof title !== 'string' || title.trim().length === 0) {
         res.status(400).json({ error: 'Invalid body: title must be a non-empty string' });
+        return;
+      }
+      if (title.length > MAX_SESSION_TITLE_LENGTH) {
+        res
+          .status(400)
+          .json({
+            error: `Invalid body: title must not exceed ${MAX_SESSION_TITLE_LENGTH} characters`,
+          });
         return;
       }
       if (typeof baseRef !== 'string' || baseRef.trim().length === 0) {

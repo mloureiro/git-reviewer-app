@@ -3,6 +3,7 @@ import type { RepoRegistry } from '../git/repo-registry.js';
 import { validateCommitSha, resolveRepo, type ResolvedRepoLocals } from './middleware.js';
 import { addComment, resolveComment, deleteComment } from '../services/session-service.js';
 import type { CreateCommentRequest, UpdateCommentRequest } from '@git-reviewer/shared';
+import { MAX_COMMENT_BODY_LENGTH } from '@git-reviewer/shared';
 
 export function createCommentsRouter(registry: RepoRegistry): Router {
   const router = Router();
@@ -27,6 +28,14 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
       }
       if (typeof body !== 'string' || body.trim().length === 0) {
         res.status(400).json({ error: 'Invalid body: body must be a non-empty string' });
+        return;
+      }
+      if (body.length > MAX_COMMENT_BODY_LENGTH) {
+        res
+          .status(400)
+          .json({
+            error: `Invalid body: body must not exceed ${MAX_COMMENT_BODY_LENGTH} characters`,
+          });
         return;
       }
       if (side !== undefined && side !== 'left' && side !== 'right') {
