@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 
-export function CopyPathButton({ path }: { path: string }) {
+export function CopyPathButton({ path }: { path: string }): React.ReactNode {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(

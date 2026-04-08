@@ -23,7 +23,7 @@ export function InlineCommentForm({
   onSubmit,
   onCancel,
   colSpan = 3,
-}: InlineCommentFormProps) {
+}: InlineCommentFormProps): React.ReactNode {
   const [body, setBody] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

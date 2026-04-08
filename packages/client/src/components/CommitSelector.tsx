@@ -14,7 +14,11 @@ function truncate(text: string, maxLen: number): string {
   return text.slice(0, maxLen - 1) + '\u2026';
 }
 
-export function CommitSelector({ commits, selectedIndex, onSelect }: CommitSelectorProps) {
+export function CommitSelector({
+  commits,
+  selectedIndex,
+  onSelect,
+}: CommitSelectorProps): React.ReactNode {
   if (commits.length === 0) {
     return null;
   }

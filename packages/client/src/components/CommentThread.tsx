@@ -41,7 +41,12 @@ interface CommentThreadProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function CommentThread({ comments, onResolve, onReply, colSpan = 3 }: CommentThreadProps) {
+export function CommentThread({
+  comments,
+  onResolve,
+  onReply,
+  colSpan = 3,
+}: CommentThreadProps): React.ReactNode {
   return (
     <tr className="comment-thread-row">
       <td className="comment-thread-cell" colSpan={colSpan}>

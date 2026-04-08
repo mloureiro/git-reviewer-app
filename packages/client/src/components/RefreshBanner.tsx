@@ -6,7 +6,11 @@ interface RefreshBannerProps {
   onDismiss: () => void;
 }
 
-export function RefreshBanner({ changedRefs, onRefresh, onDismiss }: RefreshBannerProps) {
+export function RefreshBanner({
+  changedRefs,
+  onRefresh,
+  onDismiss,
+}: RefreshBannerProps): React.ReactNode {
   const refList = changedRefs.map((r) => `\u200B${r}\u200B`).join(', ');
 
   return (

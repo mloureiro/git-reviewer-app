@@ -40,7 +40,7 @@ export function AutoMarkSettings({
   activeRules,
   onRulesChange,
   onApplyNow,
-}: AutoMarkSettingsProps) {
+}: AutoMarkSettingsProps): React.ReactNode {
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 

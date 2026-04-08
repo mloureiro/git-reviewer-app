@@ -14,7 +14,7 @@ interface ReviewSummaryBarProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ReviewSummaryBar({ status, stats }: ReviewSummaryBarProps) {
+export function ReviewSummaryBar({ status, stats }: ReviewSummaryBarProps): React.ReactNode {
   const { total, unresolved } = stats;
 
   return (

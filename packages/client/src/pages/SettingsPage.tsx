@@ -6,7 +6,7 @@ import { SchemeCard } from '../components/SchemeCard';
 import { DiffPreview } from '../components/DiffPreview';
 import { InstallCliButton } from '../components/InstallCliButton';
 
-export function SettingsPage() {
+export function SettingsPage(): React.ReactNode {
   const {
     mode,
     activeScheme,

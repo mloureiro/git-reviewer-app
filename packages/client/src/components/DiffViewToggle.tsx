@@ -9,7 +9,7 @@ interface DiffViewToggleProps {
 /**
  * Button group that switches between line-by-line and side-by-side diff modes.
  */
-export function DiffViewToggle({ mode, onChange }: DiffViewToggleProps) {
+export function DiffViewToggle({ mode, onChange }: DiffViewToggleProps): React.ReactNode {
   return (
     <div className="diff-view-toggle" role="group" aria-label="Diff view mode">
       <button

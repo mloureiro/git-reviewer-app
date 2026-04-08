@@ -23,7 +23,11 @@ interface ShortcutsHelpModalProps {
  * Centered overlay listing all registered keyboard shortcuts.
  * Toggled by pressing `?` and closed by pressing `Escape` or clicking the backdrop.
  */
-export function ShortcutsHelpModal({ isOpen, onClose, shortcuts }: ShortcutsHelpModalProps) {
+export function ShortcutsHelpModal({
+  isOpen,
+  onClose,
+  shortcuts,
+}: ShortcutsHelpModalProps): React.ReactNode {
   // Close when Escape or '?' is pressed while the modal is open.
   // The shortcut registry is disabled while the modal is open (enabled=false), so
   // we wire these keys directly here so the modal can close itself independently.

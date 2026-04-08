@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState, useTransition } from 'react';
 import { parse } from 'diff2html';
 import type { DiffBlock, DiffFile, DiffLine } from 'diff2html/lib-esm/types';
 import { LineType } from 'diff2html/lib-esm/types';
@@ -264,7 +264,7 @@ export const DiffLineRow = React.memo(function DiffLineRow({
   onLineClick,
   hasComment,
   isFocusedLine = false,
-}: DiffLineRowProps) {
+}: DiffLineRowProps): React.ReactNode {
   const typeClass = lineTypeClass(line.type);
   const oldNum = line.type !== LineType.INSERT ? line.oldNumber : undefined;
   const newNum = line.type !== LineType.DELETE ? line.newNumber : undefined;
@@ -503,7 +503,7 @@ export function DiffBlockComponent({
   onLineClick,
   renderAfterLine,
   hasCommentOnLine,
-}: DiffBlockProps) {
+}: DiffBlockProps): React.ReactNode {
   if (viewMode === 'side-by-side') {
     const pairs = pairLinesForSideBySide(block.lines);
 
@@ -641,7 +641,7 @@ export const DiffFileComponent = React.memo(function DiffFileComponent({
   onToggleViewed,
   isCollapsed = false,
   onToggleCollapsed,
-}: DiffFileProps) {
+}: DiffFileProps): React.ReactNode {
   const filePath = file.isRename === true ? file.newName : file.newName || file.oldName;
   const sectionId = filePathToId(filePath);
   const schemeClass = colorSchemeClass(colorScheme);
@@ -773,15 +773,26 @@ export function DiffView({
   onToggleViewed,
   collapsedFiles,
   onToggleCollapsed,
-}: DiffViewProps) {
-  const diffFiles = useMemo(() => parse(diffText), [diffText]);
+}: DiffViewProps): React.ReactNode {
+  // Keep a deferred copy of the diff text so that when a new diff arrives the
+  // previous content stays visible while the expensive parse completes.
+  const [displayedDiffText, setDisplayedDiffText] = useState(diffText);
+  const [isDiffPending, startDiffTransition] = useTransition();
 
-  if (diffFiles.length === 0) {
+  useEffect(() => {
+    startDiffTransition(() => {
+      setDisplayedDiffText(diffText);
+    });
+  }, [diffText]);
+
+  const diffFiles = useMemo(() => parse(displayedDiffText), [displayedDiffText]);
+
+  if (diffFiles.length === 0 && !isDiffPending) {
     return null;
   }
 
   return (
-    <div className="diff-view d2h-wrapper">
+    <div className={`diff-view d2h-wrapper${isDiffPending ? ' diff-view--pending' : ''}`}>
       {diffFiles.map((file) => {
         const filePath = file.isRename === true ? file.newName : file.newName || file.oldName;
         const sectionId = filePathToId(filePath);

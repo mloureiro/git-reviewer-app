@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useParams } from 'react-router-dom';
 import { AutoMarkSettings } from '../components/AutoMarkSettings';
 import { ApiError } from '../api/client.js';
@@ -60,13 +60,13 @@ function groupCommentsByLine(comments: ReviewComment[]): Map<string, ReviewComme
   return map;
 }
 
-export function SessionDetailPage() {
+export function SessionDetailPage(): React.ReactNode {
   const { commitSha } = useParams<{ commitSha: string }>();
   const { theme } = useTheme();
   const colorScheme = theme === 'dark' ? ColorSchemeType.DARK : ColorSchemeType.LIGHT;
   const [activeFile, setActiveFile] = useState<string | undefined>(undefined);
   const [activeLine, setActiveLine] = useState<DiffLineData | null>(null);
-  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [isStatusPending, startStatusTransition] = useTransition();
   const [mutationError, setMutationError] = useState<string | null>(null);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   // The user's stored preference (persisted to localStorage).
@@ -460,19 +460,18 @@ export function SessionDetailPage() {
   );
 
   const handleStatusChange = useCallback(
-    async (status: ReviewStatus): Promise<void> => {
-      setStatusUpdating(true);
-      try {
-        await updateStatus(status);
-      } catch (err) {
-        const message =
-          err instanceof ApiError ? err.message : 'Failed to update status. Please try again.';
-        setMutationError(message);
-      } finally {
-        setStatusUpdating(false);
-      }
+    (status: ReviewStatus): void => {
+      startStatusTransition(async () => {
+        try {
+          await updateStatus(status);
+        } catch (err) {
+          const message =
+            err instanceof ApiError ? err.message : 'Failed to update status. Please try again.';
+          setMutationError(message);
+        }
+      });
     },
-    [updateStatus],
+    [updateStatus, startStatusTransition],
   );
 
   const comments = useMemo(() => reviewData?.comments ?? [], [reviewData?.comments]);
@@ -629,7 +628,7 @@ export function SessionDetailPage() {
           <ReviewActions
             currentStatus={session.status}
             onStatusChange={handleStatusChange}
-            disabled={statusUpdating}
+            disabled={isStatusPending}
           />
           <DiffViewToggle mode={activeDiffViewMode} onChange={handleDiffViewModeChange} />
           <AutoMarkSettings

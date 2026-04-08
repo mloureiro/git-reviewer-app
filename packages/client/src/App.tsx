@@ -7,7 +7,7 @@ import { SessionDetailPage } from './pages/SessionDetailPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { useInitialSession } from './hooks/useInitialSession';
 
-export function App() {
+export function App(): React.ReactNode {
   useInitialSession();
 
   return (

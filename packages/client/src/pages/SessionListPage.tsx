@@ -345,7 +345,7 @@ function SessionGroups({
   );
 }
 
-export function SessionListPage() {
+export function SessionListPage(): React.ReactNode {
   const { sessions, loading, error, health, stats, refetch } = useSessions();
   const { checking, needsRepo, selectRepo } = useRepoCheck(refetch);
 

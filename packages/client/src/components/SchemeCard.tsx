@@ -23,7 +23,7 @@ export function SchemeCard({
   onSelect,
   onPreview,
   onClearPreview,
-}: SchemeCardProps) {
+}: SchemeCardProps): React.ReactNode {
   return (
     <button
       className={`scheme-card${selected ? ' scheme-card--selected' : ''}`}

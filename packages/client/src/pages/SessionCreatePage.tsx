@@ -10,7 +10,7 @@ function repoDisplayName(repoPath: string): string {
   return segments[segments.length - 1] || repoPath;
 }
 
-export function SessionCreatePage() {
+export function SessionCreatePage(): React.ReactNode {
   const navigate = useNavigate();
   const [title, setTitle] = useState('');
   const [baseRef, setBaseRef] = useState('');

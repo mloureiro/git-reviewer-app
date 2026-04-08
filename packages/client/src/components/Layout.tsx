@@ -2,7 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useTheme } from '../hooks/useTheme';
 import { useZoom } from '../hooks/useZoom';
 
-export function Layout() {
+export function Layout(): React.ReactNode {
   const { theme, toggleTheme } = useTheme();
   const { zoom, zoomIn, zoomOut, zoomReset } = useZoom();
 

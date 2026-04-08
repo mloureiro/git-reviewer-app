@@ -20,7 +20,7 @@ export function SearchBar({
   onNext,
   onPrev,
   onClose,
-}: SearchBarProps) {
+}: SearchBarProps): React.ReactNode {
   const inputRef = useRef<HTMLInputElement>(null);
   const [localValue, setLocalValue] = useState('');
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

@@ -270,7 +270,7 @@ export function FileTree({
   changedSinceViewed,
   onToggleViewed,
   autoMarkedBy,
-}: FileTreeProps) {
+}: FileTreeProps): React.ReactNode {
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const handleToggle = useCallback((path: string) => {

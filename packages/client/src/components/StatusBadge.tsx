@@ -10,7 +10,7 @@ interface StatusBadgeProps {
   status: ReviewStatus;
 }
 
-export function StatusBadge({ status }: StatusBadgeProps) {
+export function StatusBadge({ status }: StatusBadgeProps): React.ReactNode {
   const { label } = STATUS_META[status];
   return <span className={`status-badge status-badge--${status}`}>{label}</span>;
 }

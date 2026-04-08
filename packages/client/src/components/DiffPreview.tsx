@@ -9,7 +9,7 @@ interface DiffPreviewProps {
  * scheme's colors directly via inline styles. Used in the settings page
  * to give a feel for how each color scheme looks on actual code.
  */
-export function DiffPreview({ scheme }: DiffPreviewProps) {
+export function DiffPreview({ scheme }: DiffPreviewProps): React.ReactNode {
   const c = scheme.colors;
   const h = scheme.hljs;
 

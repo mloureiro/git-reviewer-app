@@ -44,7 +44,7 @@ export function ReviewActions({
   currentStatus,
   onStatusChange,
   disabled = false,
-}: ReviewActionsProps) {
+}: ReviewActionsProps): React.ReactNode {
   const actions = ACTIONS_BY_STATUS[currentStatus];
 
   return (
