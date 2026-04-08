@@ -54,6 +54,7 @@ export type {
   AutoMarkRulesRequest,
   AutoMarkRulesResponse,
   AutoMarkApplyResponse,
+  ViewedFileResponse,
   ResolveRefsResponse,
   RefsResponse,
   CommitsResponse,

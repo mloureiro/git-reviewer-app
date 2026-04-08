@@ -71,6 +71,9 @@ export interface DiffResponse {
 
 export interface SessionListResponse {
   sessions: ReviewData[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -84,7 +87,9 @@ export interface CreateSessionRequest {
 }
 
 /** Response for POST /api/sessions (201) and GET /api/sessions/:commitSha (200) */
-export type SessionResponse = ReviewData;
+export interface SessionResponse {
+  session: ReviewData;
+}
 
 // ---------------------------------------------------------------------------
 // POST /api/sessions/:commitSha/comments
@@ -124,7 +129,9 @@ export interface UpdateSessionStatusRequest {
 }
 
 /** Response for PATCH /api/sessions/:commitSha */
-export type UpdateSessionStatusResponse = ReviewSession;
+export interface UpdateSessionStatusResponse {
+  session: ReviewSession;
+}
 
 // ---------------------------------------------------------------------------
 // PUT /api/sessions/:commitSha/auto-mark-rules
@@ -138,6 +145,12 @@ export interface AutoMarkRulesResponse {
   rules: AutoMarkRule[];
   autoMarked: ViewedFile[];
 }
+
+// ---------------------------------------------------------------------------
+// PUT /api/sessions/:commitSha/viewed-files/:filePath
+// ---------------------------------------------------------------------------
+
+export type ViewedFileResponse = ViewedFile;
 
 // ---------------------------------------------------------------------------
 // POST /api/sessions/:commitSha/auto-mark-apply
