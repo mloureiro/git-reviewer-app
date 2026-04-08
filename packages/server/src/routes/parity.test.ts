@@ -144,6 +144,9 @@ describe('parity snapshots — canonical response shapes', () => {
   it('SessionListResponse — with sessions', () => {
     const response = {
       sessions: [canonicalReviewData, canonicalReviewDataMinimal],
+      total: 2,
+      page: 1,
+      limit: 20,
     };
 
     expect(() => validateSessionListResponse(response)).not.toThrow();
@@ -153,6 +156,9 @@ describe('parity snapshots — canonical response shapes', () => {
   it('SessionListResponse — empty', () => {
     const response = {
       sessions: [],
+      total: 0,
+      page: 1,
+      limit: 20,
     };
 
     expect(() => validateSessionListResponse(response)).not.toThrow();
@@ -160,13 +166,15 @@ describe('parity snapshots — canonical response shapes', () => {
   });
 
   it('SessionResponse — full ReviewData with all optional fields', () => {
-    expect(() => validateSessionResponse(canonicalReviewData)).not.toThrow();
-    expect(canonicalReviewData).toMatchSnapshot();
+    const response = { session: canonicalReviewData };
+    expect(() => validateSessionResponse(response)).not.toThrow();
+    expect(response).toMatchSnapshot();
   });
 
   it('SessionResponse — minimal ReviewData without optional fields', () => {
-    expect(() => validateSessionResponse(canonicalReviewDataMinimal)).not.toThrow();
-    expect(canonicalReviewDataMinimal).toMatchSnapshot();
+    const response = { session: canonicalReviewDataMinimal };
+    expect(() => validateSessionResponse(response)).not.toThrow();
+    expect(response).toMatchSnapshot();
   });
 
   it('CreateCommentResponse', () => {
@@ -182,10 +190,12 @@ describe('parity snapshots — canonical response shapes', () => {
   });
 
   it('UpdateSessionStatusResponse — approved session', () => {
-    const approved: ReviewSession = {
-      ...canonicalSession,
-      status: 'approved',
-      updatedAt: '2026-03-19T11:00:00.000Z',
+    const approved = {
+      session: {
+        ...canonicalSession,
+        status: 'approved' as const,
+        updatedAt: '2026-03-19T11:00:00.000Z',
+      },
     };
 
     expect(() => validateUpdateSessionStatusResponse(approved)).not.toThrow();
@@ -193,10 +203,12 @@ describe('parity snapshots — canonical response shapes', () => {
   });
 
   it('UpdateSessionStatusResponse — changes_requested', () => {
-    const changesRequested: ReviewSession = {
-      ...canonicalSession,
-      status: 'changes_requested',
-      updatedAt: '2026-03-19T11:00:00.000Z',
+    const changesRequested = {
+      session: {
+        ...canonicalSession,
+        status: 'changes_requested' as const,
+        updatedAt: '2026-03-19T11:00:00.000Z',
+      },
     };
 
     expect(() => validateUpdateSessionStatusResponse(changesRequested)).not.toThrow();
@@ -277,14 +289,18 @@ describe('schema validators — reject invalid shapes', () => {
   });
 
   it('rejects SessionListResponse with non-array sessions', () => {
-    expect(() => validateSessionListResponse({ sessions: 'nope' })).toThrow();
+    expect(() =>
+      validateSessionListResponse({ sessions: 'nope', total: 0, page: 1, limit: 20 }),
+    ).toThrow();
   });
 
   it('rejects ReviewData with wrong version', () => {
     expect(() =>
       validateSessionResponse({
-        ...canonicalReviewData,
-        version: 2,
+        session: {
+          ...canonicalReviewData,
+          version: 2,
+        },
       }),
     ).toThrow();
   });
@@ -292,8 +308,10 @@ describe('schema validators — reject invalid shapes', () => {
   it('rejects ReviewData with invalid status', () => {
     expect(() =>
       validateSessionResponse({
-        ...canonicalReviewData,
-        session: { ...canonicalSession, status: 'merged' },
+        session: {
+          ...canonicalReviewData,
+          session: { ...canonicalSession, status: 'merged' },
+        },
       }),
     ).toThrow();
   });

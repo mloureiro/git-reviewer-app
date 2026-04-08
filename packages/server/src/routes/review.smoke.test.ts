@@ -84,16 +84,16 @@ describe('E2E smoke test — full review flow', () => {
     });
 
     expect(res.status).toBe(201);
-    expect(res.body.version).toBe(1);
-    expect(res.body.session.title).toBe('E2E Smoke Review');
-    expect(res.body.session.baseRef).toBe('main');
-    expect(res.body.session.headRef).toBe('HEAD');
-    expect(res.body.session.status).toBe('pending');
-    expect(res.body.session.headCommit).toBe(HEAD_COMMIT);
-    expect(res.body.session.baseCommit).toBe(BASE_COMMIT);
-    expect(res.body.comments).toEqual([]);
+    expect(res.body.session.version).toBe(1);
+    expect(res.body.session.session.title).toBe('E2E Smoke Review');
+    expect(res.body.session.session.baseRef).toBe('main');
+    expect(res.body.session.session.headRef).toBe('HEAD');
+    expect(res.body.session.session.status).toBe('pending');
+    expect(res.body.session.session.headCommit).toBe(HEAD_COMMIT);
+    expect(res.body.session.session.baseCommit).toBe(BASE_COMMIT);
+    expect(res.body.session.comments).toEqual([]);
 
-    headCommit = res.body.session.headCommit;
+    headCommit = res.body.session.session.headCommit;
     expect(mockWriteReviewNote).toHaveBeenCalledOnce();
   });
 
@@ -104,10 +104,10 @@ describe('E2E smoke test — full review flow', () => {
     const res = await request(app).get(`/api/sessions/${headCommit}`);
 
     expect(res.status).toBe(200);
-    expect(res.body.session.title).toBe('E2E Smoke Review');
-    expect(res.body.session.status).toBe('pending');
-    expect(res.body.session.headCommit).toBe(HEAD_COMMIT);
-    expect(res.body.comments).toEqual([]);
+    expect(res.body.session.session.title).toBe('E2E Smoke Review');
+    expect(res.body.session.session.status).toBe('pending');
+    expect(res.body.session.session.headCommit).toBe(HEAD_COMMIT);
+    expect(res.body.session.comments).toEqual([]);
   });
 
   // ---------------------------------------------------------------------------
@@ -185,8 +185,8 @@ describe('E2E smoke test — full review flow', () => {
       .send({ status: 'approved' });
 
     expect(res.status).toBe(200);
-    expect(res.body.status).toBe('approved');
-    expect(res.body.id).toBe(noteStore?.session.id);
+    expect(res.body.session.status).toBe('approved');
+    expect(res.body.session.id).toBe(noteStore?.session.id);
 
     // Persisted store should reflect new status
     expect(noteStore?.session.status).toBe('approved');
@@ -201,13 +201,13 @@ describe('E2E smoke test — full review flow', () => {
     expect(res.status).toBe(200);
 
     // Session status
-    expect(res.body.session.status).toBe('approved');
-    expect(res.body.session.title).toBe('E2E Smoke Review');
+    expect(res.body.session.session.status).toBe('approved');
+    expect(res.body.session.session.title).toBe('E2E Smoke Review');
 
     // Comment is present and resolved
-    expect(res.body.comments).toHaveLength(1);
-    expect(res.body.comments[0].id).toBe(commentId);
-    expect(res.body.comments[0].resolved).toBe(true);
-    expect(res.body.comments[0].body).toBe('This does not handle expired tokens');
+    expect(res.body.session.comments).toHaveLength(1);
+    expect(res.body.session.comments[0].id).toBe(commentId);
+    expect(res.body.session.comments[0].resolved).toBe(true);
+    expect(res.body.session.comments[0].body).toBe('This does not handle expired tokens');
   });
 });

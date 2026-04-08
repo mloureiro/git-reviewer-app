@@ -267,7 +267,7 @@ describe('review API routes — integration', () => {
       const res = await request(app).get('/api/sessions');
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ sessions: [] });
+      expect(res.body).toEqual({ sessions: [], total: 0, page: 1, limit: 20 });
     });
 
     it('returns populated sessions array when notes exist', async () => {
@@ -277,7 +277,7 @@ describe('review API routes — integration', () => {
       const res = await request(app).get('/api/sessions');
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ sessions: [sampleSession] });
+      expect(res.body).toEqual({ sessions: [sampleSession], total: 1, page: 1, limit: 20 });
     });
   });
 
@@ -300,7 +300,7 @@ describe('review API routes — integration', () => {
       const res = await request(app).get(`/api/sessions/${COMMIT_SHA}`);
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual(sampleSession);
+      expect(res.body).toEqual({ session: sampleSession });
       expect(mockReadReviewNote).toHaveBeenCalledWith(mockGit, COMMIT_SHA);
     });
 
@@ -345,14 +345,14 @@ describe('review API routes — integration', () => {
       });
 
       expect(res.status).toBe(201);
-      expect(res.body.version).toBe(1);
-      expect(res.body.session.title).toBe('Test Review');
-      expect(res.body.session.baseRef).toBe('main');
-      expect(res.body.session.headRef).toBe('HEAD');
-      expect(res.body.session.status).toBe('pending');
-      expect(res.body.session.headCommit).toBe(COMMIT_SHA);
-      expect(res.body.session.baseCommit).toBe('base123');
-      expect(res.body.comments).toEqual([]);
+      expect(res.body.session.version).toBe(1);
+      expect(res.body.session.session.title).toBe('Test Review');
+      expect(res.body.session.session.baseRef).toBe('main');
+      expect(res.body.session.session.headRef).toBe('HEAD');
+      expect(res.body.session.session.status).toBe('pending');
+      expect(res.body.session.session.headCommit).toBe(COMMIT_SHA);
+      expect(res.body.session.session.baseCommit).toBe('base123');
+      expect(res.body.session.comments).toEqual([]);
       expect(mockWriteReviewNote).toHaveBeenCalledOnce();
     });
 
@@ -614,8 +614,8 @@ describe('review API routes — integration', () => {
         .send({ status: 'approved' });
 
       expect(res.status).toBe(200);
-      expect(res.body.status).toBe('approved');
-      expect(res.body.id).toBe(sampleSession.session.id);
+      expect(res.body.session.status).toBe('approved');
+      expect(res.body.session.id).toBe(sampleSession.session.id);
       expect(mockWriteReviewNote).toHaveBeenCalledOnce();
     });
 
@@ -725,19 +725,19 @@ describe('review API routes — integration', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // POST /api/sessions/:commitSha/viewed-files
+  // PUT /api/sessions/:commitSha/viewed-files/:filePath
   // ---------------------------------------------------------------------------
-  describe('POST /api/sessions/:commitSha/viewed-files', () => {
+  describe('PUT /api/sessions/:commitSha/viewed-files/:filePath', () => {
     it('marks a file as viewed for a committed session using getDiffText', async () => {
       const diffText = 'diff --git a/src/foo.ts b/src/foo.ts\n+line\n';
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
       mockGetDiffText.mockResolvedValueOnce(diffText);
 
-      const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/viewed-files`)
-        .send({ path: 'src/foo.ts' });
+      const res = await request(app).put(
+        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+      );
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(res.body.path).toBe('src/foo.ts');
       expect(mockGetDiffText).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
       expect(mockGetUncommittedDiffText).not.toHaveBeenCalled();
@@ -753,31 +753,32 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
       mockGetUncommittedDiffText.mockResolvedValueOnce(diffText);
 
-      const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/viewed-files`)
-        .send({ path: 'src/foo.ts' });
+      const res = await request(app).put(
+        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+      );
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(res.body.path).toBe('src/foo.ts');
       expect(mockGetUncommittedDiffText).toHaveBeenCalledWith(mockGit);
       expect(mockGetDiffText).not.toHaveBeenCalled();
       expect(mockWriteReviewNote).toHaveBeenCalledOnce();
     });
 
-    it('returns 400 when path is missing', async () => {
-      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/viewed-files`).send({});
+    it('returns 400 when path is whitespace only', async () => {
+      const res = await request(app).put(
+        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('   ')}`,
+      );
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
-      expect(mockReadReviewNote).not.toHaveBeenCalled();
     });
 
     it('returns 404 when session does not exist', async () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
-      const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/viewed-files`)
-        .send({ path: 'src/foo.ts' });
+      const res = await request(app).put(
+        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+      );
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });

@@ -109,12 +109,17 @@ exports[`parity snapshots — canonical response shapes > FilesResponse — with
 
 exports[`parity snapshots — canonical response shapes > SessionListResponse — empty 1`] = `
 {
+  "limit": 20,
+  "page": 1,
   "sessions": [],
+  "total": 0,
 }
 `;
 
 exports[`parity snapshots — canonical response shapes > SessionListResponse — with sessions 1`] = `
 {
+  "limit": 20,
+  "page": 1,
   "sessions": [
     {
       "autoMarkRules": [
@@ -175,70 +180,75 @@ exports[`parity snapshots — canonical response shapes > SessionListResponse �
       "version": 1,
     },
   ],
+  "total": 2,
 }
 `;
 
 exports[`parity snapshots — canonical response shapes > SessionResponse — full ReviewData with all optional fields 1`] = `
 {
-  "autoMarkRules": [
-    "lockfile",
-    "rename-only",
-  ],
-  "comments": [
-    {
-      "author": "reviewer",
-      "body": "This needs fixing",
-      "createdAt": "2026-03-19T10:05:00.000Z",
-      "file": "src/foo.ts",
-      "id": "comment-uuid-1",
-      "line": 42,
-      "resolved": false,
-      "side": "right",
-    },
-  ],
   "session": {
-    "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
-    "baseRef": "main",
-    "createdAt": "2026-03-19T10:00:00.000Z",
-    "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
-    "headRef": "feature-branch",
-    "id": "session-uuid-1",
-    "status": "pending",
-    "title": "Test Review",
-    "updatedAt": "2026-03-19T10:00:00.000Z",
+    "autoMarkRules": [
+      "lockfile",
+      "rename-only",
+    ],
+    "comments": [
+      {
+        "author": "reviewer",
+        "body": "This needs fixing",
+        "createdAt": "2026-03-19T10:05:00.000Z",
+        "file": "src/foo.ts",
+        "id": "comment-uuid-1",
+        "line": 42,
+        "resolved": false,
+        "side": "right",
+      },
+    ],
+    "session": {
+      "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+      "baseRef": "main",
+      "createdAt": "2026-03-19T10:00:00.000Z",
+      "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+      "headRef": "feature-branch",
+      "id": "session-uuid-1",
+      "status": "pending",
+      "title": "Test Review",
+      "updatedAt": "2026-03-19T10:00:00.000Z",
+    },
+    "version": 1,
+    "viewedFiles": [
+      {
+        "diffHash": "abc123hash",
+        "path": "src/bar.ts",
+        "viewedAt": "2026-03-19T10:10:00.000Z",
+      },
+      {
+        "autoMarkedBy": "lockfile",
+        "diffHash": "lock-hash-456",
+        "path": "package-lock.json",
+        "viewedAt": "2026-03-19T10:10:00.000Z",
+      },
+    ],
   },
-  "version": 1,
-  "viewedFiles": [
-    {
-      "diffHash": "abc123hash",
-      "path": "src/bar.ts",
-      "viewedAt": "2026-03-19T10:10:00.000Z",
-    },
-    {
-      "autoMarkedBy": "lockfile",
-      "diffHash": "lock-hash-456",
-      "path": "package-lock.json",
-      "viewedAt": "2026-03-19T10:10:00.000Z",
-    },
-  ],
 }
 `;
 
 exports[`parity snapshots — canonical response shapes > SessionResponse — minimal ReviewData without optional fields 1`] = `
 {
-  "comments": [],
   "session": {
-    "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
-    "baseRef": "main",
-    "createdAt": "2026-03-19T10:00:00.000Z",
-    "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
-    "headRef": "feature-branch",
-    "id": "session-uuid-1",
-    "status": "approved",
-    "title": "Test Review",
-    "updatedAt": "2026-03-19T10:00:00.000Z",
+    "comments": [],
+    "session": {
+      "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+      "baseRef": "main",
+      "createdAt": "2026-03-19T10:00:00.000Z",
+      "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+      "headRef": "feature-branch",
+      "id": "session-uuid-1",
+      "status": "approved",
+      "title": "Test Review",
+      "updatedAt": "2026-03-19T10:00:00.000Z",
+    },
+    "version": 1,
   },
-  "version": 1,
 }
 `;
 
@@ -257,29 +267,33 @@ exports[`parity snapshots — canonical response shapes > UpdateCommentResponse 
 
 exports[`parity snapshots — canonical response shapes > UpdateSessionStatusResponse — approved session 1`] = `
 {
-  "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
-  "baseRef": "main",
-  "createdAt": "2026-03-19T10:00:00.000Z",
-  "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
-  "headRef": "feature-branch",
-  "id": "session-uuid-1",
-  "status": "approved",
-  "title": "Test Review",
-  "updatedAt": "2026-03-19T11:00:00.000Z",
+  "session": {
+    "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+    "baseRef": "main",
+    "createdAt": "2026-03-19T10:00:00.000Z",
+    "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+    "headRef": "feature-branch",
+    "id": "session-uuid-1",
+    "status": "approved",
+    "title": "Test Review",
+    "updatedAt": "2026-03-19T11:00:00.000Z",
+  },
 }
 `;
 
 exports[`parity snapshots — canonical response shapes > UpdateSessionStatusResponse — changes_requested 1`] = `
 {
-  "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
-  "baseRef": "main",
-  "createdAt": "2026-03-19T10:00:00.000Z",
-  "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
-  "headRef": "feature-branch",
-  "id": "session-uuid-1",
-  "status": "changes_requested",
-  "title": "Test Review",
-  "updatedAt": "2026-03-19T11:00:00.000Z",
+  "session": {
+    "baseCommit": "aaaa1111bbbb2222cccc3333dddd4444eeee5555",
+    "baseRef": "main",
+    "createdAt": "2026-03-19T10:00:00.000Z",
+    "headCommit": "ffff6666aaaa7777bbbb8888cccc9999dddd0000",
+    "headRef": "feature-branch",
+    "id": "session-uuid-1",
+    "status": "changes_requested",
+    "title": "Test Review",
+    "updatedAt": "2026-03-19T11:00:00.000Z",
+  },
 }
 `;
 

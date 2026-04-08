@@ -326,19 +326,19 @@ describe('contract tests — response shapes match shared schemas', () => {
   });
 
   // -------------------------------------------------------------------------
-  // POST /api/sessions/:commitSha/viewed-files
+  // PUT /api/sessions/:commitSha/viewed-files/:filePath
   // -------------------------------------------------------------------------
-  describe('POST /api/sessions/:commitSha/viewed-files — ViewedFile', () => {
-    it('matches the shared ViewedFile schema', async () => {
+  describe('PUT /api/sessions/:commitSha/viewed-files/:filePath — ViewedFileResponse', () => {
+    it('matches the shared ViewedFileResponse schema', async () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession, viewedFiles: [] });
       mockGetDiffText.mockResolvedValueOnce('diff text');
       mockGetFileDiffHashes.mockReturnValueOnce({ 'src/foo.ts': 'hash123' });
 
-      const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/viewed-files`)
-        .send({ path: 'src/foo.ts' });
+      const res = await request(app).put(
+        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+      );
 
-      expect(res.status).toBe(201);
+      expect(res.status).toBe(200);
       expect(() => validateViewedFileResponse(res.body)).not.toThrow();
     });
   });
