@@ -111,7 +111,7 @@ describe('useReviewSession', () => {
     };
     mockFetchSession.mockResolvedValue({ session: baseSession } as unknown as SessionResponse);
     mockUpdateSessionStatus.mockResolvedValue({
-      session: updatedSession,
+      session: updatedSession.session,
     } as unknown as UpdateSessionStatusResponse);
 
     const { result } = renderHook(() => useReviewSession('def456'));

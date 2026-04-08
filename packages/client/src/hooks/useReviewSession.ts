@@ -73,12 +73,10 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
 
   const handleUpdateStatus = useCallback(
     async (status: ReviewStatus): Promise<void> => {
-      const response = (await updateSessionStatus(commitSha, { status }, repo)) as unknown as {
-        session: ReviewData;
-      };
+      const response = await updateSessionStatus(commitSha, { status }, repo);
       setSession((prev) => {
         if (prev === null) return prev;
-        return response.session;
+        return { ...prev, session: response.session };
       });
     },
     [commitSha, repo],

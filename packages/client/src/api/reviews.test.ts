@@ -121,12 +121,12 @@ describe('fetchSession', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('calls apiGet for /api/sessions/:sha and returns the session', async () => {
-    mockApiGet.mockResolvedValue(sampleSession);
+    mockApiGet.mockResolvedValue({ session: sampleSession });
 
     const result = await fetchSession(SESSION_SHA);
 
     expect(mockApiGet).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}`);
-    expect(result).toEqual(sampleSession);
+    expect(result).toEqual({ session: sampleSession });
   });
 });
 
@@ -134,7 +134,7 @@ describe('createSession', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('calls apiPost for /api/sessions with the request body', async () => {
-    mockApiPost.mockResolvedValue(sampleSession);
+    mockApiPost.mockResolvedValue({ session: sampleSession });
 
     const result = await createSession({ title: 'Test', baseRef: 'main', headRef: 'HEAD' });
 
@@ -143,7 +143,7 @@ describe('createSession', () => {
       baseRef: 'main',
       headRef: 'HEAD',
     });
-    expect(result).toEqual(sampleSession);
+    expect(result).toEqual({ session: sampleSession });
   });
 });
 
