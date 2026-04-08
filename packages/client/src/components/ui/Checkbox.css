@@ -5,6 +5,12 @@
   cursor: pointer;
 }
 
+.ds-checkbox:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
 .ds-checkbox:disabled {
   opacity: 0.6;
   cursor: not-allowed;

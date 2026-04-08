@@ -16,6 +16,11 @@
     color var(--duration-normal) ease;
 }
 
+.ds-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
 .ds-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
