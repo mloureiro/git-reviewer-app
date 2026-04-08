@@ -133,7 +133,10 @@ export class HttpBackend implements Backend {
 
   markFileViewed(commitSha: string, path: string, repo?: string): Promise<ViewedFile> {
     const qs = buildQueryString({ repo });
-    return apiPost<ViewedFile>(`/api/sessions/${commitSha}/viewed-files${qs}`, { path });
+    return apiPut<ViewedFile>(
+      `/api/sessions/${commitSha}/viewed-files/${encodeURIComponent(path)}${qs}`,
+      {},
+    );
   }
 
   unmarkFileViewed(commitSha: string, path: string, repo?: string): Promise<void> {

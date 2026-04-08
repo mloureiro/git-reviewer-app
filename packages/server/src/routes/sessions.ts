@@ -282,29 +282,33 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
     }
   });
 
-  // Mark a file as viewed
-  router.post('/sessions/:commitSha/viewed-files', ...sessionMiddleware, async (req, res, next) => {
-    try {
-      const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
-      const commitSha = req.params.commitSha ?? '';
+  // Mark a file as viewed (idempotent upsert)
+  router.put(
+    '/sessions/:commitSha/viewed-files/:filePath',
+    ...sessionMiddleware,
+    async (req, res, next) => {
+      try {
+        const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
+        const commitSha = req.params.commitSha ?? '';
 
-      const { path } = req.body as { path: string };
-      if (typeof path !== 'string' || path.trim().length === 0) {
-        res.status(400).json({ error: 'Invalid body: path must be a non-empty string' });
-        return;
+        const filePath = decodeURIComponent(req.params.filePath ?? '');
+        if (typeof filePath !== 'string' || filePath.trim().length === 0) {
+          res.status(400).json({ error: 'Invalid path: must be a non-empty string' });
+          return;
+        }
+
+        const viewedFile = await markFileViewed(git, commitSha, filePath);
+        if (!viewedFile) {
+          res.status(404).json({ error: 'Review session not found' });
+          return;
+        }
+
+        res.json(viewedFile);
+      } catch (error) {
+        next(error);
       }
-
-      const viewedFile = await markFileViewed(git, commitSha, path);
-      if (!viewedFile) {
-        res.status(404).json({ error: 'Review session not found' });
-        return;
-      }
-
-      res.status(201).json(viewedFile);
-    } catch (error) {
-      next(error);
-    }
-  });
+    },
+  );
 
   // Unmark a file as viewed
   router.delete(

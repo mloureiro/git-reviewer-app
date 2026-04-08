@@ -316,24 +316,25 @@ describe('HttpBackend', () => {
   // ---------------------------------------------------------------------------
 
   describe('markFileViewed', () => {
-    it('calls apiPost for /api/sessions/:sha/viewed-files with path', async () => {
-      mockApiPost.mockResolvedValue({ path: 'src/foo.ts' });
+    it('calls apiPut for /api/sessions/:sha/viewed-files/:filePath', async () => {
+      mockApiPut.mockResolvedValue({ path: 'src/foo.ts' });
 
       await backend.markFileViewed(SHA, 'src/foo.ts');
 
-      expect(mockApiPost).toHaveBeenCalledWith(`/api/sessions/${SHA}/viewed-files`, {
-        path: 'src/foo.ts',
-      });
+      expect(mockApiPut).toHaveBeenCalledWith(
+        `/api/sessions/${SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+        {},
+      );
     });
 
     it('appends repo query param when provided', async () => {
-      mockApiPost.mockResolvedValue({ path: 'src/foo.ts' });
+      mockApiPut.mockResolvedValue({ path: 'src/foo.ts' });
 
       await backend.markFileViewed(SHA, 'src/foo.ts', REPO);
 
-      expect(mockApiPost).toHaveBeenCalledWith(
-        `/api/sessions/${SHA}/viewed-files?repo=${encodeURIComponent(REPO)}`,
-        { path: 'src/foo.ts' },
+      expect(mockApiPut).toHaveBeenCalledWith(
+        `/api/sessions/${SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}?repo=${encodeURIComponent(REPO)}`,
+        {},
       );
     });
   });
