@@ -43,17 +43,25 @@ describe('git/diff.ts', () => {
   });
 
   describe('getUncommittedDiffText', () => {
-    it('returns combined staged and unstaged diff text', async () => {
-      const stagedDiff = 'diff --git a/staged.ts b/staged.ts\n+staged change\n';
-      const unstagedDiff = 'diff --git a/unstaged.ts b/unstaged.ts\n+unstaged change\n';
-      mockDiff.mockResolvedValueOnce(stagedDiff).mockResolvedValueOnce(unstagedDiff);
+    it('returns diff against HEAD in a single pass', async () => {
+      const headDiff = 'diff --git a/file.ts b/file.ts\n--- a/file.ts\n+++ b/file.ts\n+changed\n';
+      mockDiff.mockResolvedValueOnce(headDiff);
 
       const result = await getUncommittedDiffText(mockGit);
 
-      expect(mockDiff).toHaveBeenCalledTimes(2);
-      expect(mockDiff).toHaveBeenNthCalledWith(1, ['--cached']);
-      expect(mockDiff).toHaveBeenNthCalledWith(2);
-      expect(result).toBe(`${stagedDiff}\n${unstagedDiff}`);
+      expect(mockDiff).toHaveBeenCalledOnce();
+      expect(mockDiff).toHaveBeenCalledWith(['HEAD']);
+      expect(result).toBe(headDiff);
+    });
+
+    it('returns empty string when there are no uncommitted changes', async () => {
+      mockDiff.mockResolvedValueOnce('');
+
+      const result = await getUncommittedDiffText(mockGit);
+
+      expect(mockDiff).toHaveBeenCalledOnce();
+      expect(mockDiff).toHaveBeenCalledWith(['HEAD']);
+      expect(result).toBe('');
     });
   });
 

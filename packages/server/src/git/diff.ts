@@ -17,9 +17,7 @@ export async function getDiffText(git: SimpleGit, base: string, head: string): P
 }
 
 export async function getUncommittedDiffText(git: SimpleGit): Promise<string> {
-  const staged = await git.diff(['--cached']);
-  const unstaged = await git.diff();
-  return [staged, unstaged].filter(Boolean).join('\n');
+  return git.diff(['HEAD']);
 }
 
 export async function getChangedFiles(
