@@ -42,8 +42,11 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
   const sessionMiddleware = [validateCommitSha, resolveRepo(registry)] as const;
 
   // List all review sessions (aggregated across all registered repos)
-  router.get('/sessions', async (_req, res, next) => {
+  router.get('/sessions', async (req, res, next) => {
     try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 20));
+
       const repoPaths = registry.listPaths();
 
       // Fetch notes for all repos in parallel, then read each note in parallel.
@@ -68,9 +71,12 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
         }),
       );
 
-      const sessions = perRepoSessions.flat();
+      const allSessions = perRepoSessions.flat();
+      const total = allSessions.length;
+      const offset = (page - 1) * limit;
+      const sessions = allSessions.slice(offset, offset + limit);
 
-      res.json({ sessions });
+      res.json({ sessions, total, page, limit });
     } catch (error) {
       next(error);
     }

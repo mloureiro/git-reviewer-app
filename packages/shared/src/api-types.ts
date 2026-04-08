@@ -70,6 +70,9 @@ export interface DiffResponse {
 
 export interface SessionListResponse {
   sessions: ReviewData[];
+  total: number;
+  page: number;
+  limit: number;
 }
 
 // ---------------------------------------------------------------------------
