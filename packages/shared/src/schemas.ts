@@ -3,10 +3,29 @@
  * the Node.js (HTTP) and Rust (Tauri) backends.
  *
  * These are intentionally hand-written (no Zod dependency) so the shared
- * package stays dependency-free. Each validator returns `true` when the
- * value structurally matches what the TypeScript frontend expects, or
- * throws a descriptive error otherwise.
+ * package stays dependency-free. Each validator throws a descriptive error
+ * when the value does not match the expected shape, and returns the
+ * validated value typed as the concrete type on success.
  */
+
+import type {
+  DiffFile,
+  CommitInfo,
+  ReviewComment,
+  ReviewSession,
+  ViewedFile,
+  ReviewData,
+} from './types.js';
+import type {
+  FilesResponse,
+  DiffResponse,
+  SessionListResponse,
+  SessionResponse,
+  UpdateSessionStatusResponse,
+  AutoMarkRulesResponse,
+  AutoMarkApplyResponse,
+  CommitsResponse,
+} from './api-types.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,7 +96,7 @@ const AUTO_MARK_RULES = [
 // Entity validators
 // ---------------------------------------------------------------------------
 
-export function validateDiffFile(val: unknown, label = 'DiffFile'): void {
+export function validateDiffFile(val: unknown, label = 'DiffFile'): DiffFile {
   assertObject(val, label);
   assertString(val.path, `${label}.path`);
   assertOneOf(val.status, FILE_STATUSES, `${label}.status`);
@@ -85,18 +104,20 @@ export function validateDiffFile(val: unknown, label = 'DiffFile'): void {
   assertNumber(val.deletions, `${label}.deletions`);
   assertOptional(val.oldPath, `${label}.oldPath`, assertString);
   assertOptional(val.binary, `${label}.binary`, assertBoolean);
+  return val as unknown as DiffFile;
 }
 
-export function validateCommitInfo(val: unknown, label = 'CommitInfo'): void {
+export function validateCommitInfo(val: unknown, label = 'CommitInfo'): CommitInfo {
   assertObject(val, label);
   assertString(val.hash, `${label}.hash`);
   assertString(val.shortHash, `${label}.shortHash`);
   assertString(val.message, `${label}.message`);
   assertString(val.author, `${label}.author`);
   assertString(val.date, `${label}.date`);
+  return val as unknown as CommitInfo;
 }
 
-export function validateReviewComment(val: unknown, label = 'ReviewComment'): void {
+export function validateReviewComment(val: unknown, label = 'ReviewComment'): ReviewComment {
   assertObject(val, label);
   assertString(val.id, `${label}.id`);
   assertString(val.file, `${label}.file`);
@@ -106,9 +127,10 @@ export function validateReviewComment(val: unknown, label = 'ReviewComment'): vo
   assertString(val.author, `${label}.author`);
   assertString(val.createdAt, `${label}.createdAt`);
   assertBoolean(val.resolved, `${label}.resolved`);
+  return val as unknown as ReviewComment;
 }
 
-export function validateReviewSession(val: unknown, label = 'ReviewSession'): void {
+export function validateReviewSession(val: unknown, label = 'ReviewSession'): ReviewSession {
   assertObject(val, label);
   assertString(val.id, `${label}.id`);
   assertString(val.title, `${label}.title`);
@@ -119,9 +141,10 @@ export function validateReviewSession(val: unknown, label = 'ReviewSession'): vo
   assertOneOf(val.status, REVIEW_STATUSES, `${label}.status`);
   assertString(val.createdAt, `${label}.createdAt`);
   assertString(val.updatedAt, `${label}.updatedAt`);
+  return val as unknown as ReviewSession;
 }
 
-export function validateViewedFile(val: unknown, label = 'ViewedFile'): void {
+export function validateViewedFile(val: unknown, label = 'ViewedFile'): ViewedFile {
   assertObject(val, label);
   assertString(val.path, `${label}.path`);
   assertString(val.viewedAt, `${label}.viewedAt`);
@@ -129,9 +152,10 @@ export function validateViewedFile(val: unknown, label = 'ViewedFile'): void {
   assertOptional(val.autoMarkedBy, `${label}.autoMarkedBy`, (v, l) =>
     assertOneOf(v, AUTO_MARK_RULES, l),
   );
+  return val as unknown as ViewedFile;
 }
 
-export function validateReviewData(val: unknown, label = 'ReviewData'): void {
+export function validateReviewData(val: unknown, label = 'ReviewData'): ReviewData {
   assertObject(val, label);
   assertNumber(val.version, `${label}.version`);
   if (val.version !== 1) throw new Error(`${label}.version: expected 1, got ${val.version}`);
@@ -152,13 +176,15 @@ export function validateReviewData(val: unknown, label = 'ReviewData'): void {
     assertArray(v, l);
     (v as unknown[]).forEach((r, i) => assertOneOf(r, AUTO_MARK_RULES, `${l}[${i}]`));
   });
+
+  return val as unknown as ReviewData;
 }
 
 // ---------------------------------------------------------------------------
 // Response validators
 // ---------------------------------------------------------------------------
 
-export function validateFilesResponse(val: unknown): void {
+export function validateFilesResponse(val: unknown): FilesResponse {
   assertObject(val, 'FilesResponse');
   assertArray(val.files, 'FilesResponse.files');
   (val.files as unknown[]).forEach((f, i) => validateDiffFile(f, `FilesResponse.files[${i}]`));
@@ -170,14 +196,17 @@ export function validateFilesResponse(val: unknown): void {
       assertString(value, `${l}["${key}"]`);
     }
   });
+
+  return val as unknown as FilesResponse;
 }
 
-export function validateDiffResponse(val: unknown): void {
+export function validateDiffResponse(val: unknown): DiffResponse {
   assertObject(val, 'DiffResponse');
   assertString(val.diff, 'DiffResponse.diff');
+  return val as unknown as DiffResponse;
 }
 
-export function validateSessionListResponse(val: unknown): void {
+export function validateSessionListResponse(val: unknown): SessionListResponse {
   assertObject(val, 'SessionListResponse');
   assertArray(val.sessions, 'SessionListResponse.sessions');
   (val.sessions as unknown[]).forEach((s, i) =>
@@ -186,31 +215,34 @@ export function validateSessionListResponse(val: unknown): void {
   assertNumber(val.total, 'SessionListResponse.total');
   assertNumber(val.page, 'SessionListResponse.page');
   assertNumber(val.limit, 'SessionListResponse.limit');
+  return val as unknown as SessionListResponse;
 }
 
-export function validateSessionResponse(val: unknown): void {
+export function validateSessionResponse(val: unknown): SessionResponse {
   assertObject(val, 'SessionResponse');
   validateReviewData(val.session, 'SessionResponse.session');
+  return val as unknown as SessionResponse;
 }
 
-export function validateCreateCommentResponse(val: unknown): void {
-  validateReviewComment(val, 'CreateCommentResponse');
+export function validateCreateCommentResponse(val: unknown): ReviewComment {
+  return validateReviewComment(val, 'CreateCommentResponse');
 }
 
-export function validateUpdateCommentResponse(val: unknown): void {
-  validateReviewComment(val, 'UpdateCommentResponse');
+export function validateUpdateCommentResponse(val: unknown): ReviewComment {
+  return validateReviewComment(val, 'UpdateCommentResponse');
 }
 
-export function validateUpdateSessionStatusResponse(val: unknown): void {
+export function validateUpdateSessionStatusResponse(val: unknown): UpdateSessionStatusResponse {
   assertObject(val, 'UpdateSessionStatusResponse');
   validateReviewSession(val.session, 'UpdateSessionStatusResponse.session');
+  return val as unknown as UpdateSessionStatusResponse;
 }
 
-export function validateViewedFileResponse(val: unknown): void {
-  validateViewedFile(val, 'ViewedFileResponse');
+export function validateViewedFileResponse(val: unknown): ViewedFile {
+  return validateViewedFile(val, 'ViewedFileResponse');
 }
 
-export function validateAutoMarkRulesResponse(val: unknown): void {
+export function validateAutoMarkRulesResponse(val: unknown): AutoMarkRulesResponse {
   assertObject(val, 'AutoMarkRulesResponse');
   assertArray(val.rules, 'AutoMarkRulesResponse.rules');
   (val.rules as unknown[]).forEach((r, i) =>
@@ -220,28 +252,31 @@ export function validateAutoMarkRulesResponse(val: unknown): void {
   (val.autoMarked as unknown[]).forEach((vf, i) =>
     validateViewedFile(vf, `AutoMarkRulesResponse.autoMarked[${i}]`),
   );
+  return val as unknown as AutoMarkRulesResponse;
 }
 
-export function validateAutoMarkApplyResponse(val: unknown): void {
+export function validateAutoMarkApplyResponse(val: unknown): AutoMarkApplyResponse {
   assertObject(val, 'AutoMarkApplyResponse');
   assertArray(val.autoMarked, 'AutoMarkApplyResponse.autoMarked');
   (val.autoMarked as unknown[]).forEach((vf, i) =>
     validateViewedFile(vf, `AutoMarkApplyResponse.autoMarked[${i}]`),
   );
+  return val as unknown as AutoMarkApplyResponse;
 }
 
-export function validateCommitsResponse(val: unknown): void {
+export function validateCommitsResponse(val: unknown): CommitsResponse {
   assertObject(val, 'CommitsResponse');
   assertArray(val.commits, 'CommitsResponse.commits');
   (val.commits as unknown[]).forEach((c, i) =>
     validateCommitInfo(c, `CommitsResponse.commits[${i}]`),
   );
+  return val as unknown as CommitsResponse;
 }
 
-export function validateCommitDiffResponse(val: unknown): void {
-  validateDiffResponse(val);
+export function validateCommitDiffResponse(val: unknown): DiffResponse {
+  return validateDiffResponse(val);
 }
 
-export function validateCommitFilesResponse(val: unknown): void {
-  validateFilesResponse(val);
+export function validateCommitFilesResponse(val: unknown): FilesResponse {
+  return validateFilesResponse(val);
 }

@@ -12,8 +12,7 @@ export async function readReviewNote(
   try {
     const raw = await git.raw(['notes', '--ref', NOTES_REF, 'show', commitSha]);
     const parsed: unknown = JSON.parse(raw);
-    validateReviewData(parsed);
-    return parsed as ReviewData;
+    return validateReviewData(parsed);
   } catch {
     return null;
   }
