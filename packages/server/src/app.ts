@@ -5,6 +5,7 @@ import express, {
   type Request,
   type Response,
 } from 'express';
+import helmet from 'helmet';
 import { existsSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -79,6 +80,9 @@ export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
   const app = express();
 
   const resolvedStaticDir = resolveStaticDir(staticDir);
+
+  // Security headers (X-Content-Type-Options, X-Frame-Options, etc.)
+  app.use(helmet());
 
   // In development the client runs on a separate Vite dev server (different
   // origin), so CORS headers are required.  In production the server serves
