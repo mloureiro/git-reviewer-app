@@ -2,7 +2,13 @@ import { EventEmitter } from 'node:events';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SimpleGit } from 'simple-git';
 import type { ReviewData } from '@git-reviewer/shared';
-import { readReviewNote, writeReviewNote, listReviewNotes, removeReviewNote } from './notes.js';
+import {
+  readReviewNote,
+  writeReviewNote,
+  listReviewNotes,
+  removeReviewNote,
+  cleanupOrphanedNotes,
+} from './notes.js';
 
 vi.mock('node:child_process', () => ({ spawn: vi.fn() }));
 
@@ -176,6 +182,68 @@ describe('git/notes.ts', () => {
       mockRaw.mockRejectedValueOnce(new Error('fatal: git command failed'));
 
       await expect(removeReviewNote(mockGit, COMMIT_SHA)).resolves.toBeUndefined();
+    });
+  });
+
+  describe('cleanupOrphanedNotes', () => {
+    it('returns zero counts when there are no notes', async () => {
+      // listReviewNotes → empty
+      mockRaw.mockRejectedValueOnce(new Error('error: No note found'));
+
+      const result = await cleanupOrphanedNotes(mockGit);
+
+      expect(result).toEqual({ checked: 0, removed: 0, removedCommits: [] });
+    });
+
+    it('does not remove notes whose commits still exist', async () => {
+      // listReviewNotes → two notes
+      mockRaw.mockResolvedValueOnce('noteHash1 commitHash1\nnoteHash2 commitHash2\n');
+      // cat-file -e commitHash1 → exists (resolves)
+      mockRaw.mockResolvedValueOnce('');
+      // cat-file -e commitHash2 → exists (resolves)
+      mockRaw.mockResolvedValueOnce('');
+
+      const result = await cleanupOrphanedNotes(mockGit);
+
+      // remove should never have been called
+      expect(mockRaw).not.toHaveBeenCalledWith(expect.arrayContaining(['remove']));
+      expect(result).toEqual({ checked: 2, removed: 0, removedCommits: [] });
+    });
+
+    it('removes notes whose commits no longer exist', async () => {
+      // listReviewNotes → two notes
+      mockRaw.mockResolvedValueOnce('noteHash1 commitHash1\nnoteHash2 commitHash2\n');
+      // cat-file -e commitHash1 → missing (rejects)
+      mockRaw.mockRejectedValueOnce(new Error('fatal: Not a valid object name'));
+      // cat-file -e commitHash2 → exists (resolves)
+      mockRaw.mockResolvedValueOnce('');
+      // removeReviewNote for commitHash1 → success
+      mockRaw.mockResolvedValueOnce('');
+
+      const result = await cleanupOrphanedNotes(mockGit);
+
+      expect(result.checked).toBe(2);
+      expect(result.removed).toBe(1);
+      expect(result.removedCommits).toEqual(['commitHash1']);
+    });
+
+    it('removes all notes when every referenced commit is missing', async () => {
+      // listReviewNotes → two notes
+      mockRaw.mockResolvedValueOnce('noteHash1 commitHash1\nnoteHash2 commitHash2\n');
+      // cat-file -e → missing for both
+      mockRaw.mockRejectedValueOnce(new Error('fatal: Not a valid object name'));
+      mockRaw.mockRejectedValueOnce(new Error('fatal: Not a valid object name'));
+      // removeReviewNote for each
+      mockRaw.mockResolvedValueOnce('');
+      mockRaw.mockResolvedValueOnce('');
+
+      const result = await cleanupOrphanedNotes(mockGit);
+
+      expect(result.checked).toBe(2);
+      expect(result.removed).toBe(2);
+      expect(result.removedCommits).toHaveLength(2);
+      expect(result.removedCommits).toContain('commitHash1');
+      expect(result.removedCommits).toContain('commitHash2');
     });
   });
 });

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { createGitClient } from '../git/diff.js';
+import { cleanupOrphanedNotes } from '../git/notes.js';
 import type { RepoRegistry } from '../git/repo-registry.js';
 
 export function createReposRouter(registry: RepoRegistry): Router {
@@ -45,6 +46,23 @@ export function createReposRouter(registry: RepoRegistry): Router {
     try {
       registry.registerRepo(repoPath);
       res.status(201).json({ path: repoPath });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Trigger orphaned notes cleanup for a specific registered repo.
+  // A note is considered orphaned when the commit it references no longer exists
+  // (e.g. after a force-push, rebase, or garbage collection).
+  router.post('/repos/cleanup', async (req, res, next) => {
+    try {
+      const repoPath =
+        (typeof req.query.path === 'string' && req.query.path) ||
+        (req.body as { path?: string })?.path;
+
+      const [git] = registry.resolve(typeof repoPath === 'string' ? repoPath : undefined);
+      const result = await cleanupOrphanedNotes(git);
+      res.json(result);
     } catch (error) {
       next(error);
     }

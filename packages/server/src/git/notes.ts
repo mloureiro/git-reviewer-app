@@ -83,3 +83,49 @@ export async function removeReviewNote(git: SimpleGit, commitSha: string): Promi
     // Note might not exist, that's fine
   }
 }
+
+export interface CleanupOrphanedNotesResult {
+  checked: number;
+  removed: number;
+  removedCommits: string[];
+}
+
+/**
+ * Detects and removes review notes whose referenced commits no longer exist in
+ * the repository (e.g. after a force-push, rebase, or garbage collection).
+ *
+ * For each note returned by `listReviewNotes`, the referenced commit is checked
+ * with `git cat-file -e <hash>` (exits 0 if the object exists, non-zero otherwise).
+ * Notes whose commits are missing are removed via `removeReviewNote`.
+ *
+ * Returns a summary: total notes checked, number removed, and the list of
+ * removed commit SHAs.
+ */
+export async function cleanupOrphanedNotes(git: SimpleGit): Promise<CleanupOrphanedNotesResult> {
+  const notes = await listReviewNotes(git);
+
+  const removedCommits: string[] = [];
+
+  await Promise.all(
+    notes.map(async ({ commitHash }) => {
+      let commitExists = false;
+      try {
+        await git.raw(['cat-file', '-e', commitHash]);
+        commitExists = true;
+      } catch {
+        // cat-file exits non-zero when the object does not exist
+      }
+
+      if (!commitExists) {
+        await removeReviewNote(git, commitHash);
+        removedCommits.push(commitHash);
+      }
+    }),
+  );
+
+  return {
+    checked: notes.length,
+    removed: removedCommits.length,
+    removedCommits,
+  };
+}
