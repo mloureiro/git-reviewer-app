@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { createGitClient } from '../git/diff.js';
 import type { RepoRegistry } from '../git/repo-registry.js';
 
 export function createReposRouter(registry: RepoRegistry): Router {
@@ -27,10 +28,18 @@ export function createReposRouter(registry: RepoRegistry): Router {
   });
 
   // Register a new repo
-  router.post('/repos', (req, res, next) => {
+  router.post('/repos', async (req, res, next) => {
     const { path: repoPath } = req.body as { path: string };
     if (typeof repoPath !== 'string' || repoPath.trim().length === 0) {
       res.status(400).json({ error: 'Invalid body: path must be a non-empty string' });
+      return;
+    }
+    try {
+      // Verify the path is an actual git repository before registering
+      const git = createGitClient(repoPath);
+      await git.revparse(['--git-dir']);
+    } catch {
+      res.status(400).json({ error: 'Invalid path: not a git repository' });
       return;
     }
     try {
