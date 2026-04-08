@@ -141,6 +141,7 @@ export function validateReviewSession(val: unknown, label = 'ReviewSession'): Re
   assertOneOf(val.status, REVIEW_STATUSES, `${label}.status`);
   assertString(val.createdAt, `${label}.createdAt`);
   assertString(val.updatedAt, `${label}.updatedAt`);
+  assertOptional(val.repoPath, `${label}.repoPath`, assertString);
   return val as unknown as ReviewSession;
 }
 

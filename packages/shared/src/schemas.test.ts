@@ -379,6 +379,26 @@ describe('validateReviewSession', () => {
       'ReviewSession.updatedAt: expected string, got boolean',
     );
   });
+
+  it('accepts a ReviewSession without repoPath (optional field)', () => {
+    expect(() => validateReviewSession(VALID_REVIEW_SESSION)).not.toThrow();
+  });
+
+  it('accepts a ReviewSession with a valid string repoPath', () => {
+    expect(() =>
+      validateReviewSession({ ...VALID_REVIEW_SESSION, repoPath: '/home/user/project' }),
+    ).not.toThrow();
+  });
+
+  it('accepts null repoPath (treated as absent)', () => {
+    expect(() => validateReviewSession({ ...VALID_REVIEW_SESSION, repoPath: null })).not.toThrow();
+  });
+
+  it('throws when repoPath is present but not a string', () => {
+    expect(() => validateReviewSession({ ...VALID_REVIEW_SESSION, repoPath: 42 })).toThrow(
+      'ReviewSession.repoPath: expected string, got number',
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
