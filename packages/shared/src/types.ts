@@ -66,6 +66,7 @@ export interface DiffFile {
   additions: number;
   deletions: number;
   oldPath?: string;
+  binary?: boolean;
 }
 
 export interface CommitInfo {

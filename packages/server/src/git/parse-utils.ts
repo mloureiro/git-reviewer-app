@@ -28,30 +28,40 @@ export function parseNameStatus(
   return result;
 }
 
-export function parseNumstat(raw: string): Array<{ additions: number; deletions: number }> {
+export function parseNumstat(
+  raw: string,
+): Array<{ additions: number; deletions: number; binary: boolean }> {
   return raw
     .split('\n')
     .filter(Boolean)
     .map((line) => {
       const parts = line.split('\t');
+      const addRaw = parts[0] ?? '0';
+      const delRaw = parts[1] ?? '0';
+      const binary = addRaw === '-' && delRaw === '-';
       return {
-        additions: parseInt(parts[0] ?? '0', 10) || 0,
-        deletions: parseInt(parts[1] ?? '0', 10) || 0,
+        additions: binary ? 0 : parseInt(addRaw, 10) || 0,
+        deletions: binary ? 0 : parseInt(delRaw, 10) || 0,
+        binary,
       };
     });
 }
 
 export function mergeStatusAndStats(
   statuses: Array<{ status: FileStatus; path: string; oldPath?: string }>,
-  stats: Array<{ additions: number; deletions: number }>,
+  stats: Array<{ additions: number; deletions: number; binary: boolean }>,
 ): DiffFile[] {
-  return statuses.map((entry, index) => ({
-    path: entry.path,
-    status: entry.status,
-    additions: stats[index]?.additions ?? 0,
-    deletions: stats[index]?.deletions ?? 0,
-    ...(entry.oldPath !== undefined ? { oldPath: entry.oldPath } : {}),
-  }));
+  return statuses.map((entry, index) => {
+    const stat = stats[index];
+    return {
+      path: entry.path,
+      status: entry.status,
+      additions: stat?.additions ?? 0,
+      deletions: stat?.deletions ?? 0,
+      ...(entry.oldPath !== undefined ? { oldPath: entry.oldPath } : {}),
+      ...(stat?.binary === true ? { binary: true } : {}),
+    };
+  });
 }
 
 /**
