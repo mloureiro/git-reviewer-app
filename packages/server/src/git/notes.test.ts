@@ -12,12 +12,14 @@ const mockSpawn = vi.mocked(spawn);
 
 /** Creates a fake ChildProcess-like EventEmitter that resolves with exit code 0. */
 function makeFakeChild(exitCode = 0) {
-  const child = new EventEmitter() as ReturnType<typeof spawn>;
+  const child = new EventEmitter();
   const stdinMock = { end: vi.fn() };
   const stderrMock = new EventEmitter();
   Object.assign(child, { stdin: stdinMock, stderr: stderrMock, stdout: new EventEmitter() });
   setTimeout(() => child.emit('close', exitCode), 0);
-  return child;
+  return child as unknown as ReturnType<typeof spawn> & {
+    stdin: { end: ReturnType<typeof vi.fn> };
+  };
 }
 
 const mockRaw = vi.fn();
