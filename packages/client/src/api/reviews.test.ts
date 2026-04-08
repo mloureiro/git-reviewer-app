@@ -54,7 +54,7 @@ describe('fetchFiles', () => {
 
     const result = await fetchFiles({ base: 'main', head: 'HEAD' });
 
-    expect(mockApiGet).toHaveBeenCalledWith('/api/files?base=main&head=HEAD');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/files?base=main&head=HEAD');
     expect(result).toEqual({ files: sampleFiles });
   });
 
@@ -63,7 +63,7 @@ describe('fetchFiles', () => {
 
     await fetchFiles({ uncommitted: 'true' });
 
-    expect(mockApiGet).toHaveBeenCalledWith('/api/files?uncommitted=true');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/files?uncommitted=true');
   });
 
   it('calls apiGet with no query string when params are empty', async () => {
@@ -71,7 +71,7 @@ describe('fetchFiles', () => {
 
     await fetchFiles({});
 
-    expect(mockApiGet).toHaveBeenCalledWith('/api/files');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/files');
   });
 });
 
@@ -83,7 +83,7 @@ describe('fetchDiff', () => {
 
     const result = await fetchDiff({ base: 'main', head: 'HEAD' });
 
-    expect(mockApiGet).toHaveBeenCalledWith('/api/diff?base=main&head=HEAD');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/diff?base=main&head=HEAD');
     expect(result).toEqual({ diff: 'some diff' });
   });
 
@@ -92,7 +92,7 @@ describe('fetchDiff', () => {
 
     await fetchDiff({ uncommitted: 'true' });
 
-    expect(mockApiGet).toHaveBeenCalledWith('/api/diff?uncommitted=true');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/diff?uncommitted=true');
   });
 
   it('calls apiGet with no query string when params are empty', async () => {
@@ -100,7 +100,7 @@ describe('fetchDiff', () => {
 
     await fetchDiff({});
 
-    expect(mockApiGet).toHaveBeenCalledWith('/api/diff');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/diff');
   });
 });
 
@@ -112,7 +112,7 @@ describe('fetchSessions', () => {
 
     const result = await fetchSessions();
 
-    expect(mockApiGet).toHaveBeenCalledWith('/api/sessions');
+    expect(mockApiGet).toHaveBeenCalledWith('/api/v1/sessions');
     expect(result).toEqual({ sessions: [sampleSession] });
   });
 });
@@ -125,7 +125,7 @@ describe('fetchSession', () => {
 
     const result = await fetchSession(SESSION_SHA);
 
-    expect(mockApiGet).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}`);
+    expect(mockApiGet).toHaveBeenCalledWith(`/api/v1/sessions/${SESSION_SHA}`);
     expect(result).toEqual({ session: sampleSession });
   });
 });
@@ -138,7 +138,7 @@ describe('createSession', () => {
 
     const result = await createSession({ title: 'Test', baseRef: 'main', headRef: 'HEAD' });
 
-    expect(mockApiPost).toHaveBeenCalledWith('/api/sessions', {
+    expect(mockApiPost).toHaveBeenCalledWith('/api/v1/sessions', {
       title: 'Test',
       baseRef: 'main',
       headRef: 'HEAD',
@@ -171,7 +171,7 @@ describe('fetchComments', () => {
     const result = await fetchComments(SESSION_SHA);
 
     expect(result).toEqual({ comments: sessionWithComments.comments });
-    expect(mockApiGet).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}`);
+    expect(mockApiGet).toHaveBeenCalledWith(`/api/v1/sessions/${SESSION_SHA}`);
   });
 
   it('returns empty comments array when session has none', async () => {
@@ -207,7 +207,7 @@ describe('postComment', () => {
       author: 'reviewer',
     });
 
-    expect(mockApiPost).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}/comments`, {
+    expect(mockApiPost).toHaveBeenCalledWith(`/api/v1/sessions/${SESSION_SHA}/comments`, {
       file: 'src/bar.ts',
       line: 5,
       side: 'right',
@@ -236,7 +236,7 @@ describe('patchComment', () => {
 
     const result = await patchComment(SESSION_SHA, 'c1', { resolved: true });
 
-    expect(mockApiPatch).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}/comments/c1`, {
+    expect(mockApiPatch).toHaveBeenCalledWith(`/api/v1/sessions/${SESSION_SHA}/comments/c1`, {
       resolved: true,
     });
     expect(result).toEqual(updated);
@@ -255,7 +255,7 @@ describe('updateSessionStatus', () => {
 
     const result = await updateSessionStatus(SESSION_SHA, { status: 'approved' });
 
-    expect(mockApiPatch).toHaveBeenCalledWith(`/api/sessions/${SESSION_SHA}`, {
+    expect(mockApiPatch).toHaveBeenCalledWith(`/api/v1/sessions/${SESSION_SHA}`, {
       status: 'approved',
     });
     expect(result).toEqual({ session: updatedSession });

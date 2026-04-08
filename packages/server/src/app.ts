@@ -93,10 +93,16 @@ export function createApp({ repoPath, staticDir }: CreateAppOptions): Express {
 
   app.use(express.json());
 
-  app.use('/api', createMultiRepoReviewRouter(registry));
+  app.use('/api/v1', createMultiRepoReviewRouter(registry));
 
-  app.get('/api/health', (_req, res) => {
+  app.get('/api/v1/health', (_req, res) => {
     res.json({ status: 'ok' });
+  });
+
+  // Backward-compatibility redirects: forward old /api/* requests to /api/v1/*.
+  // The regex excludes /api/v1/* paths so they are not double-redirected.
+  app.use(/^\/api(?!\/v\d)/, (req: Request, res: Response) => {
+    res.redirect(308, `/api/v1${req.url}`);
   });
 
   if (resolvedStaticDir) {

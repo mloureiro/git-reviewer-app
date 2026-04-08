@@ -21,11 +21,11 @@ vi.mock('./git/diff.js', () => ({
 const EXISTING_STATIC_DIR = path.resolve(import.meta.dirname);
 
 describe('createApp', () => {
-  describe('GET /api/health', () => {
+  describe('GET /api/v1/health', () => {
     it('returns { status: ok } with HTTP 200', async () => {
       const app = createApp({ repoPath: '/mock/repo', staticDir: EXISTING_STATIC_DIR });
 
-      const res = await request(app).get('/api/health');
+      const res = await request(app).get('/api/v1/health');
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ status: 'ok' });
@@ -39,16 +39,16 @@ describe('createApp', () => {
       app = createApp({ repoPath: '/mock/repo', staticDir: EXISTING_STATIC_DIR });
     });
 
-    it('returns 404 JSON for unknown /api/* paths when static dir is set', async () => {
+    it('returns 404 JSON for unknown /api/v1/* paths when static dir is set', async () => {
       // The SPA catch-all guard returns 404 JSON for unrecognised /api/ paths.
-      const res = await request(app).get('/api/nonexistent-endpoint-xyz');
+      const res = await request(app).get('/api/v1/nonexistent-endpoint-xyz');
 
       expect(res.status).toBe(404);
     });
 
     it('does not set CORS headers when staticDir is provided (production mode)', async () => {
       const res = await request(app)
-        .options('/api/health')
+        .options('/api/v1/health')
         .set('Origin', 'http://localhost:5173')
         .set('Access-Control-Request-Method', 'GET');
 
@@ -63,7 +63,7 @@ describe('createApp', () => {
       // We verify this indirectly: static serving is active (health responds without CORS).
       const app = createApp({ repoPath: '/mock/repo', staticDir: EXISTING_STATIC_DIR });
 
-      const res = await request(app).get('/api/health');
+      const res = await request(app).get('/api/v1/health');
 
       expect(res.status).toBe(200);
     });

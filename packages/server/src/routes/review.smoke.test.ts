@@ -73,11 +73,11 @@ describe('E2E smoke test — full review flow', () => {
   // ---------------------------------------------------------------------------
   // Step 1: Create a review session
   // ---------------------------------------------------------------------------
-  it('step 1 — POST /api/sessions creates a new review session', async () => {
+  it('step 1 — POST /api/v1/sessions creates a new review session', async () => {
     mockRevparse.mockResolvedValueOnce(`${HEAD_COMMIT}\n`);
     mockRevparse.mockResolvedValueOnce(`${BASE_COMMIT}\n`);
 
-    const res = await request(app).post('/api/sessions').send({
+    const res = await request(app).post('/api/v1/sessions').send({
       title: 'E2E Smoke Review',
       baseRef: 'main',
       headRef: 'HEAD',
@@ -100,8 +100,8 @@ describe('E2E smoke test — full review flow', () => {
   // ---------------------------------------------------------------------------
   // Step 2: Get the session
   // ---------------------------------------------------------------------------
-  it('step 2 — GET /api/sessions/:commitSha returns the created session', async () => {
-    const res = await request(app).get(`/api/sessions/${headCommit}`);
+  it('step 2 — GET /api/v1/sessions/:commitSha returns the created session', async () => {
+    const res = await request(app).get(`/api/v1/sessions/${headCommit}`);
 
     expect(res.status).toBe(200);
     expect(res.body.session.session.title).toBe('E2E Smoke Review');
@@ -113,10 +113,10 @@ describe('E2E smoke test — full review flow', () => {
   // ---------------------------------------------------------------------------
   // Step 3: Get the diff
   // ---------------------------------------------------------------------------
-  it('step 3 — GET /api/diff returns diff for the session range', async () => {
+  it('step 3 — GET /api/v1/diff returns diff for the session range', async () => {
     mockGetDiffText.mockResolvedValueOnce(SAMPLE_DIFF);
 
-    const res = await request(app).get('/api/diff').query({ base: 'main', head: 'HEAD' });
+    const res = await request(app).get('/api/v1/diff').query({ base: 'main', head: 'HEAD' });
 
     expect(res.status).toBe(200);
     expect(res.body.diff).toBe(SAMPLE_DIFF);
@@ -126,8 +126,8 @@ describe('E2E smoke test — full review flow', () => {
   // ---------------------------------------------------------------------------
   // Step 4: Add a comment
   // ---------------------------------------------------------------------------
-  it('step 4 — POST /api/sessions/:commitSha/comments adds a comment', async () => {
-    const res = await request(app).post(`/api/sessions/${headCommit}/comments`).send({
+  it('step 4 — POST /api/v1/sessions/:commitSha/comments adds a comment', async () => {
+    const res = await request(app).post(`/api/v1/sessions/${headCommit}/comments`).send({
       file: 'src/auth.ts',
       line: 2,
       side: 'right',
@@ -160,9 +160,9 @@ describe('E2E smoke test — full review flow', () => {
   // ---------------------------------------------------------------------------
   // Step 5: Resolve the comment
   // ---------------------------------------------------------------------------
-  it('step 5 — PATCH /api/sessions/:commitSha/comments/:id resolves the comment', async () => {
+  it('step 5 — PATCH /api/v1/sessions/:commitSha/comments/:id resolves the comment', async () => {
     const res = await request(app)
-      .patch(`/api/sessions/${headCommit}/comments/${commentId}`)
+      .patch(`/api/v1/sessions/${headCommit}/comments/${commentId}`)
       .send({ resolved: true });
 
     expect(res.status).toBe(200);
@@ -179,9 +179,9 @@ describe('E2E smoke test — full review flow', () => {
   // ---------------------------------------------------------------------------
   // Step 6: Change session status
   // ---------------------------------------------------------------------------
-  it('step 6 — PATCH /api/sessions/:commitSha changes status to approved', async () => {
+  it('step 6 — PATCH /api/v1/sessions/:commitSha changes status to approved', async () => {
     const res = await request(app)
-      .patch(`/api/sessions/${headCommit}`)
+      .patch(`/api/v1/sessions/${headCommit}`)
       .send({ status: 'approved' });
 
     expect(res.status).toBe(200);
@@ -195,8 +195,8 @@ describe('E2E smoke test — full review flow', () => {
   // ---------------------------------------------------------------------------
   // Step 7: Verify final state
   // ---------------------------------------------------------------------------
-  it('step 7 — GET /api/sessions/:commitSha returns fully updated session', async () => {
-    const res = await request(app).get(`/api/sessions/${headCommit}`);
+  it('step 7 — GET /api/v1/sessions/:commitSha returns fully updated session', async () => {
+    const res = await request(app).get(`/api/v1/sessions/${headCommit}`);
 
     expect(res.status).toBe(200);
 

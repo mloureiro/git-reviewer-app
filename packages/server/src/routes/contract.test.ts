@@ -169,13 +169,13 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // GET /api/files
   // -------------------------------------------------------------------------
-  describe('GET /api/files — FilesResponse', () => {
+  describe('GET /api/v1/files — FilesResponse', () => {
     it('matches the shared FilesResponse schema with files and diffHashes', async () => {
       mockGetChangedFiles.mockResolvedValueOnce(sampleFiles);
       mockGetDiffText.mockResolvedValueOnce('diff text');
       mockGetFileDiffHashes.mockReturnValueOnce(sampleDiffHashes);
 
-      const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/files').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
       expect(() => validateFilesResponse(res.body)).not.toThrow();
@@ -186,7 +186,7 @@ describe('contract tests — response shapes match shared schemas', () => {
       mockGetDiffText.mockResolvedValueOnce('');
       mockGetFileDiffHashes.mockReturnValueOnce({});
 
-      const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/files').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
       expect(() => validateFilesResponse(res.body)).not.toThrow();
@@ -196,11 +196,11 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // GET /api/diff
   // -------------------------------------------------------------------------
-  describe('GET /api/diff — DiffResponse', () => {
+  describe('GET /api/v1/diff — DiffResponse', () => {
     it('matches the shared DiffResponse schema', async () => {
       mockGetDiffText.mockResolvedValueOnce('diff --git a/foo b/foo\n+line\n');
 
-      const res = await request(app).get('/api/diff').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/diff').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
       expect(() => validateDiffResponse(res.body)).not.toThrow();
@@ -209,7 +209,7 @@ describe('contract tests — response shapes match shared schemas', () => {
     it('matches the schema with an empty diff', async () => {
       mockGetDiffText.mockResolvedValueOnce('');
 
-      const res = await request(app).get('/api/diff').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/diff').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
       expect(() => validateDiffResponse(res.body)).not.toThrow();
@@ -219,12 +219,12 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // GET /api/sessions
   // -------------------------------------------------------------------------
-  describe('GET /api/sessions — SessionListResponse', () => {
+  describe('GET /api/v1/sessions — SessionListResponse', () => {
     it('matches the schema with populated sessions', async () => {
       mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'n1', commitHash: COMMIT_SHA }]);
       mockReadReviewNote.mockResolvedValueOnce(sampleSession);
 
-      const res = await request(app).get('/api/sessions');
+      const res = await request(app).get('/api/v1/sessions');
 
       expect(res.status).toBe(200);
       expect(() => validateSessionListResponse(res.body)).not.toThrow();
@@ -233,7 +233,7 @@ describe('contract tests — response shapes match shared schemas', () => {
     it('matches the schema with an empty sessions array', async () => {
       mockListReviewNotes.mockResolvedValueOnce([]);
 
-      const res = await request(app).get('/api/sessions');
+      const res = await request(app).get('/api/v1/sessions');
 
       expect(res.status).toBe(200);
       expect(() => validateSessionListResponse(res.body)).not.toThrow();
@@ -243,11 +243,11 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // GET /api/sessions/:commitSha
   // -------------------------------------------------------------------------
-  describe('GET /api/sessions/:commitSha — SessionResponse', () => {
+  describe('GET /api/v1/sessions/:commitSha — SessionResponse', () => {
     it('matches the shared SessionResponse schema', async () => {
       mockReadReviewNote.mockResolvedValueOnce(sampleSession);
 
-      const res = await request(app).get(`/api/sessions/${COMMIT_SHA}`);
+      const res = await request(app).get(`/api/v1/sessions/${COMMIT_SHA}`);
 
       expect(res.status).toBe(200);
       expect(() => validateSessionResponse(res.body)).not.toThrow();
@@ -257,12 +257,12 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // POST /api/sessions
   // -------------------------------------------------------------------------
-  describe('POST /api/sessions — SessionResponse (create)', () => {
+  describe('POST /api/v1/sessions — SessionResponse (create)', () => {
     it('matches the shared SessionResponse schema', async () => {
       mockRevparse.mockResolvedValueOnce(`${COMMIT_SHA}\n`);
       mockRevparse.mockResolvedValueOnce('aaaa1111\n');
 
-      const res = await request(app).post('/api/sessions').send({
+      const res = await request(app).post('/api/v1/sessions').send({
         title: 'New Review',
         baseRef: 'main',
         headRef: 'feature-branch',
@@ -276,12 +276,12 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // POST /api/sessions/:commitSha/comments
   // -------------------------------------------------------------------------
-  describe('POST /api/sessions/:commitSha/comments — CreateCommentResponse', () => {
+  describe('POST /api/v1/sessions/:commitSha/comments — CreateCommentResponse', () => {
     it('matches the shared CreateCommentResponse schema', async () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession, comments: [] });
 
       const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .post(`/api/v1/sessions/${COMMIT_SHA}/comments`)
         .send({ file: 'src/foo.ts', line: 10, side: 'right', body: 'Needs work', author: 'dev' });
 
       expect(res.status).toBe(201);
@@ -292,7 +292,7 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // PATCH /api/sessions/:commitSha/comments/:commentId
   // -------------------------------------------------------------------------
-  describe('PATCH /api/sessions/:commitSha/comments/:commentId — UpdateCommentResponse', () => {
+  describe('PATCH /api/v1/sessions/:commitSha/comments/:commentId — UpdateCommentResponse', () => {
     it('matches the shared UpdateCommentResponse schema', async () => {
       const comment = sampleSession.comments[0] as (typeof sampleSession.comments)[number];
       mockReadReviewNote.mockResolvedValueOnce({
@@ -301,7 +301,7 @@ describe('contract tests — response shapes match shared schemas', () => {
       });
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}/comments/${comment.id}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}/comments/${comment.id}`)
         .send({ resolved: true });
 
       expect(res.status).toBe(200);
@@ -312,12 +312,12 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // PATCH /api/sessions/:commitSha — update status
   // -------------------------------------------------------------------------
-  describe('PATCH /api/sessions/:commitSha — UpdateSessionStatusResponse', () => {
+  describe('PATCH /api/v1/sessions/:commitSha — UpdateSessionStatusResponse', () => {
     it('matches the shared UpdateSessionStatusResponse schema', async () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}`)
         .send({ status: 'approved' });
 
       expect(res.status).toBe(200);
@@ -328,14 +328,14 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // PUT /api/sessions/:commitSha/viewed-files/:filePath
   // -------------------------------------------------------------------------
-  describe('PUT /api/sessions/:commitSha/viewed-files/:filePath — ViewedFileResponse', () => {
+  describe('PUT /api/v1/sessions/:commitSha/viewed-files/:filePath — ViewedFileResponse', () => {
     it('matches the shared ViewedFileResponse schema', async () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession, viewedFiles: [] });
       mockGetDiffText.mockResolvedValueOnce('diff text');
       mockGetFileDiffHashes.mockReturnValueOnce({ 'src/foo.ts': 'hash123' });
 
       const res = await request(app).put(
-        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+        `/api/v1/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
       );
 
       expect(res.status).toBe(200);
@@ -346,7 +346,7 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // PUT /api/sessions/:commitSha/auto-mark-rules
   // -------------------------------------------------------------------------
-  describe('PUT /api/sessions/:commitSha/auto-mark-rules — AutoMarkRulesResponse', () => {
+  describe('PUT /api/v1/sessions/:commitSha/auto-mark-rules — AutoMarkRulesResponse', () => {
     it('matches the shared AutoMarkRulesResponse schema', async () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession, viewedFiles: [] });
       mockGetChangedFiles.mockResolvedValueOnce(sampleFiles);
@@ -357,7 +357,7 @@ describe('contract tests — response shapes match shared schemas', () => {
       ]);
 
       const res = await request(app)
-        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .put(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-rules`)
         .send({ rules: ['lockfile'] });
 
       expect(res.status).toBe(200);
@@ -372,7 +372,7 @@ describe('contract tests — response shapes match shared schemas', () => {
       mockEvaluateAutoMarkRules.mockReturnValueOnce([]);
 
       const res = await request(app)
-        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .put(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-rules`)
         .send({ rules: ['lockfile'] });
 
       expect(res.status).toBe(200);
@@ -383,7 +383,7 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // POST /api/sessions/:commitSha/auto-mark-apply
   // -------------------------------------------------------------------------
-  describe('POST /api/sessions/:commitSha/auto-mark-apply — AutoMarkApplyResponse', () => {
+  describe('POST /api/v1/sessions/:commitSha/auto-mark-apply — AutoMarkApplyResponse', () => {
     it('matches the shared AutoMarkApplyResponse schema', async () => {
       mockReadReviewNote.mockResolvedValueOnce({
         ...sampleSession,
@@ -397,7 +397,7 @@ describe('contract tests — response shapes match shared schemas', () => {
         { path: 'package-lock.json', rule: 'lockfile' },
       ]);
 
-      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/auto-mark-apply`);
+      const res = await request(app).post(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-apply`);
 
       expect(res.status).toBe(200);
       expect(() => validateAutoMarkApplyResponse(res.body)).not.toThrow();
@@ -407,12 +407,12 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // GET /api/sessions/:commitSha/commits
   // -------------------------------------------------------------------------
-  describe('GET /api/sessions/:commitSha/commits — CommitsResponse', () => {
+  describe('GET /api/v1/sessions/:commitSha/commits — CommitsResponse', () => {
     it('matches the shared CommitsResponse schema', async () => {
       mockReadReviewNote.mockResolvedValueOnce(sampleSession);
       mockGetCommitList.mockResolvedValueOnce(sampleCommits);
 
-      const res = await request(app).get(`/api/sessions/${COMMIT_SHA}/commits`);
+      const res = await request(app).get(`/api/v1/sessions/${COMMIT_SHA}/commits`);
 
       expect(res.status).toBe(200);
       expect(() => validateCommitsResponse(res.body)).not.toThrow();
@@ -422,7 +422,7 @@ describe('contract tests — response shapes match shared schemas', () => {
       mockReadReviewNote.mockResolvedValueOnce(sampleSession);
       mockGetCommitList.mockResolvedValueOnce([]);
 
-      const res = await request(app).get(`/api/sessions/${COMMIT_SHA}/commits`);
+      const res = await request(app).get(`/api/v1/sessions/${COMMIT_SHA}/commits`);
 
       expect(res.status).toBe(200);
       expect(() => validateCommitsResponse(res.body)).not.toThrow();
@@ -432,11 +432,11 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // GET /api/commits/:commitHash/diff
   // -------------------------------------------------------------------------
-  describe('GET /api/commits/:commitHash/diff — CommitDiffResponse', () => {
+  describe('GET /api/v1/commits/:commitHash/diff — CommitDiffResponse', () => {
     it('matches the shared CommitDiffResponse schema', async () => {
       mockGetCommitDiffText.mockResolvedValueOnce('diff --git a/f b/f\n+new\n');
 
-      const res = await request(app).get(`/api/commits/${COMMIT_SHA}/diff`);
+      const res = await request(app).get(`/api/v1/commits/${COMMIT_SHA}/diff`);
 
       expect(res.status).toBe(200);
       expect(() => validateCommitDiffResponse(res.body)).not.toThrow();
@@ -446,13 +446,13 @@ describe('contract tests — response shapes match shared schemas', () => {
   // -------------------------------------------------------------------------
   // GET /api/commits/:commitHash/files
   // -------------------------------------------------------------------------
-  describe('GET /api/commits/:commitHash/files — CommitFilesResponse', () => {
+  describe('GET /api/v1/commits/:commitHash/files — CommitFilesResponse', () => {
     it('matches the shared CommitFilesResponse schema', async () => {
       mockGetCommitChangedFiles.mockResolvedValueOnce(sampleFiles);
       mockGetCommitDiffText.mockResolvedValueOnce('diff text');
       mockGetFileDiffHashes.mockReturnValueOnce(sampleDiffHashes);
 
-      const res = await request(app).get(`/api/commits/${COMMIT_SHA}/files`);
+      const res = await request(app).get(`/api/v1/commits/${COMMIT_SHA}/files`);
 
       expect(res.status).toBe(200);
       expect(() => validateCommitFilesResponse(res.body)).not.toThrow();

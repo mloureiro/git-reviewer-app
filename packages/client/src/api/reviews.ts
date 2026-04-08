@@ -27,43 +27,43 @@ import type {
   ValidateSessionsResponse,
 } from '../types/review';
 
-/** GET /api/files — Fetch the list of changed files for the given base/head/uncommitted params. */
+/** GET /api/v1/files — Fetch the list of changed files for the given base/head/uncommitted params. */
 export function fetchFiles(params: FilesQueryParams): Promise<FilesResponse> {
   return getBackend().fetchFiles(params);
 }
 
-/** GET /api/diff — Fetch raw diff text for the given base/head/uncommitted params. */
+/** GET /api/v1/diff — Fetch raw diff text for the given base/head/uncommitted params. */
 export function fetchDiff(params: DiffQueryParams): Promise<DiffResponse> {
   return getBackend().fetchDiff(params);
 }
 
-/** GET /api/sessions — List all review sessions. */
+/** GET /api/v1/sessions — List all review sessions. */
 export function fetchSessions(): Promise<SessionListResponse> {
   return getBackend().fetchSessions();
 }
 
-/** GET /api/sessions/validate — Validate all sessions (check refs, detect stale). */
+/** GET /api/v1/sessions/validate — Validate all sessions (check refs, detect stale). */
 export function validateSessions(): Promise<ValidateSessionsResponse> {
   return getBackend().validateSessions();
 }
 
-/** GET /api/sessions/:commitSha — Fetch a single review session by its head commit SHA. */
+/** GET /api/v1/sessions/:commitSha — Fetch a single review session by its head commit SHA. */
 export function fetchSession(commitSha: string, repo?: string): Promise<SessionResponse> {
   return getBackend().fetchSession(commitSha, repo);
 }
 
-/** POST /api/sessions — Create a new review session. */
+/** POST /api/v1/sessions — Create a new review session. */
 export function createSession(data: CreateSessionRequest, repo?: string): Promise<SessionResponse> {
   return getBackend().createSession(data, repo);
 }
 
-/** DELETE /api/sessions/:commitSha — Delete a review session. */
+/** DELETE /api/v1/sessions/:commitSha — Delete a review session. */
 export function deleteSession(commitSha: string, repo?: string): Promise<void> {
   return getBackend().deleteSession(commitSha, repo);
 }
 
 /**
- * GET /api/sessions/:commitSha/comments — Fetch all comments for a review session.
+ * GET /api/v1/sessions/:commitSha/comments — Fetch all comments for a review session.
  * Comments are stored as part of the session in git-notes, so this extracts them
  * from the full session response rather than a dedicated endpoint.
  */
@@ -72,7 +72,7 @@ export async function fetchComments(commitSha: string, repo?: string): Promise<C
   return { comments: response.session.comments };
 }
 
-/** POST /api/sessions/:commitSha/comments — Add a comment to a review session. */
+/** POST /api/v1/sessions/:commitSha/comments — Add a comment to a review session. */
 export function postComment(
   commitSha: string,
   data: CreateCommentRequest,
@@ -81,7 +81,7 @@ export function postComment(
   return getBackend().postComment(commitSha, data, repo);
 }
 
-/** PATCH /api/sessions/:commitSha/comments/:commentId — Resolve or unresolve a comment. */
+/** PATCH /api/v1/sessions/:commitSha/comments/:commentId — Resolve or unresolve a comment. */
 export function patchComment(
   commitSha: string,
   commentId: string,
@@ -91,12 +91,12 @@ export function patchComment(
   return getBackend().patchComment(commitSha, commentId, data, repo);
 }
 
-/** DELETE /api/sessions/:commitSha/comments/:commentId — Delete a comment. */
+/** DELETE /api/v1/sessions/:commitSha/comments/:commentId — Delete a comment. */
 export function deleteComment(commitSha: string, commentId: string, repo?: string): Promise<void> {
   return getBackend().deleteComment(commitSha, commentId, repo);
 }
 
-/** PUT /api/sessions/:commitSha/viewed-files/:filePath — Mark a file as viewed. */
+/** PUT /api/v1/sessions/:commitSha/viewed-files/:filePath — Mark a file as viewed. */
 export function markFileViewed(
   commitSha: string,
   path: string,
@@ -105,12 +105,12 @@ export function markFileViewed(
   return getBackend().markFileViewed(commitSha, path, repo);
 }
 
-/** DELETE /api/sessions/:commitSha/viewed-files/:filePath — Unmark a file as viewed. */
+/** DELETE /api/v1/sessions/:commitSha/viewed-files/:filePath — Unmark a file as viewed. */
 export function unmarkFileViewed(commitSha: string, path: string, repo?: string): Promise<void> {
   return getBackend().unmarkFileViewed(commitSha, path, repo);
 }
 
-/** PATCH /api/sessions/:commitSha — Update the status of a review session. */
+/** PATCH /api/v1/sessions/:commitSha — Update the status of a review session. */
 export function updateSessionStatus(
   commitSha: string,
   data: UpdateSessionStatusRequest,
@@ -119,7 +119,7 @@ export function updateSessionStatus(
   return getBackend().updateSessionStatus(commitSha, data, repo);
 }
 
-/** PUT /api/sessions/:commitSha/auto-mark-rules — Update auto-mark rules and apply them. */
+/** PUT /api/v1/sessions/:commitSha/auto-mark-rules — Update auto-mark rules and apply them. */
 export function updateAutoMarkRules(
   commitSha: string,
   rules: AutoMarkRule[],
@@ -128,7 +128,7 @@ export function updateAutoMarkRules(
   return getBackend().updateAutoMarkRules(commitSha, rules, repo);
 }
 
-/** POST /api/sessions/:commitSha/auto-mark-apply — Re-apply existing auto-mark rules. */
+/** POST /api/v1/sessions/:commitSha/auto-mark-apply — Re-apply existing auto-mark rules. */
 export function applyAutoMarkRules(
   commitSha: string,
   repo?: string,
@@ -136,37 +136,37 @@ export function applyAutoMarkRules(
   return getBackend().applyAutoMarkRules(commitSha, repo);
 }
 
-/** GET /api/refs — Fetch branches and tags for the repository. */
+/** GET /api/v1/refs — Fetch branches and tags for the repository. */
 export function fetchRefs(repo?: string): Promise<RefsResponse> {
   return getBackend().fetchRefs(repo);
 }
 
-/** GET /api/resolve-refs — Resolve ref names to commit hashes. */
+/** GET /api/v1/resolve-refs — Resolve ref names to commit hashes. */
 export function resolveRefs(refs: string[], repo?: string): Promise<ResolveRefsResponse> {
   return getBackend().resolveRefs(refs, repo);
 }
 
-/** GET /api/repos — Fetch the list of registered repositories. */
+/** GET /api/v1/repos — Fetch the list of registered repositories. */
 export function fetchRepos(): Promise<ReposResponse> {
   return getBackend().fetchRepos();
 }
 
-/** DELETE /api/repos — Remove a repository from the registry. */
+/** DELETE /api/v1/repos — Remove a repository from the registry. */
 export function removeRepo(path: string): Promise<void> {
   return getBackend().removeRepo(path);
 }
 
-/** GET /api/sessions/:commitSha/commits — Fetch the commit list for a session's base..head range. */
+/** GET /api/v1/sessions/:commitSha/commits — Fetch the commit list for a session's base..head range. */
 export function fetchCommits(commitSha: string, repo?: string): Promise<CommitsResponse> {
   return getBackend().fetchCommits(commitSha, repo);
 }
 
-/** GET /api/commits/:commitHash/diff — Fetch the diff for a single commit. */
+/** GET /api/v1/commits/:commitHash/diff — Fetch the diff for a single commit. */
 export function fetchCommitDiff(commitHash: string, repo?: string): Promise<CommitDiffResponse> {
   return getBackend().fetchCommitDiff(commitHash, repo);
 }
 
-/** GET /api/commits/:commitHash/files — Fetch the changed files for a single commit. */
+/** GET /api/v1/commits/:commitHash/files — Fetch the changed files for a single commit. */
 export function fetchCommitFiles(commitHash: string, repo?: string): Promise<CommitFilesResponse> {
   return getBackend().fetchCommitFiles(commitHash, repo);
 }

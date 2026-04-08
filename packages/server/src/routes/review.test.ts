@@ -101,11 +101,11 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // GET /api/diff
   // ---------------------------------------------------------------------------
-  describe('GET /api/diff', () => {
+  describe('GET /api/v1/diff', () => {
     it('returns 500 when getDiffText throws', async () => {
       mockGetDiffText.mockRejectedValueOnce(new Error('git diff failed'));
 
-      const res = await request(app).get('/api/diff').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/diff').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
@@ -115,7 +115,7 @@ describe('review API routes — integration', () => {
       const diffText = 'diff --git a/src/foo.ts b/src/foo.ts\n+added line\n';
       mockGetDiffText.mockResolvedValueOnce(diffText);
 
-      const res = await request(app).get('/api/diff').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/diff').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ diff: diffText });
@@ -126,7 +126,7 @@ describe('review API routes — integration', () => {
       const diffText = 'diff --git a/src/bar.ts b/src/bar.ts\n+uncommitted change\n';
       mockGetUncommittedDiffText.mockResolvedValueOnce(diffText);
 
-      const res = await request(app).get('/api/diff').query({ uncommitted: 'true' });
+      const res = await request(app).get('/api/v1/diff').query({ uncommitted: 'true' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ diff: diffText });
@@ -137,7 +137,7 @@ describe('review API routes — integration', () => {
     it('falls back to main..HEAD when base and head params are omitted', async () => {
       mockGetDiffText.mockResolvedValueOnce('');
 
-      const res = await request(app).get('/api/diff');
+      const res = await request(app).get('/api/v1/diff');
 
       expect(res.status).toBe(200);
       expect(mockGetDiffText).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
@@ -145,7 +145,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when base contains shell-dangerous characters', async () => {
       const res = await request(app)
-        .get('/api/diff')
+        .get('/api/v1/diff')
         .query({ base: 'main;rm -rf /', head: 'HEAD' });
 
       expect(res.status).toBe(400);
@@ -154,7 +154,7 @@ describe('review API routes — integration', () => {
     });
 
     it('returns 400 when head contains shell-dangerous characters', async () => {
-      const res = await request(app).get('/api/diff').query({ base: 'main', head: '$(evil)' });
+      const res = await request(app).get('/api/v1/diff').query({ base: 'main', head: '$(evil)' });
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -162,7 +162,7 @@ describe('review API routes — integration', () => {
     });
 
     it('returns 400 when base contains a path traversal sequence', async () => {
-      const res = await request(app).get('/api/diff').query({ base: '../other', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/diff').query({ base: '../other', head: 'HEAD' });
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -173,11 +173,11 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // GET /api/files
   // ---------------------------------------------------------------------------
-  describe('GET /api/files', () => {
+  describe('GET /api/v1/files', () => {
     it('returns 500 when getChangedFiles throws', async () => {
       mockGetChangedFiles.mockRejectedValueOnce(new Error('git diff --name-status failed'));
 
-      const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/files').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
@@ -190,7 +190,7 @@ describe('review API routes — integration', () => {
       ];
       mockGetChangedFiles.mockResolvedValueOnce(files);
 
-      const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/files').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ files, diffHashes: {} });
@@ -203,7 +203,7 @@ describe('review API routes — integration', () => {
       ];
       mockGetUncommittedChangedFiles.mockResolvedValueOnce(files);
 
-      const res = await request(app).get('/api/files').query({ uncommitted: 'true' });
+      const res = await request(app).get('/api/v1/files').query({ uncommitted: 'true' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ files, diffHashes: {} });
@@ -214,7 +214,7 @@ describe('review API routes — integration', () => {
     it('falls back to main..HEAD when base and head params are omitted', async () => {
       mockGetChangedFiles.mockResolvedValueOnce([]);
 
-      const res = await request(app).get('/api/files');
+      const res = await request(app).get('/api/v1/files');
 
       expect(res.status).toBe(200);
       expect(mockGetChangedFiles).toHaveBeenCalledWith(mockGit, 'main', 'HEAD');
@@ -223,7 +223,7 @@ describe('review API routes — integration', () => {
     it('returns an empty files array when there are no changed files', async () => {
       mockGetChangedFiles.mockResolvedValueOnce([]);
 
-      const res = await request(app).get('/api/files').query({ base: 'main', head: 'HEAD' });
+      const res = await request(app).get('/api/v1/files').query({ base: 'main', head: 'HEAD' });
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ files: [], diffHashes: {} });
@@ -231,7 +231,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when base contains shell-dangerous characters', async () => {
       const res = await request(app)
-        .get('/api/files')
+        .get('/api/v1/files')
         .query({ base: 'main|cat /etc/passwd', head: 'HEAD' });
 
       expect(res.status).toBe(400);
@@ -240,7 +240,7 @@ describe('review API routes — integration', () => {
     });
 
     it('returns 400 when head contains shell-dangerous characters', async () => {
-      const res = await request(app).get('/api/files').query({ base: 'main', head: '`whoami`' });
+      const res = await request(app).get('/api/v1/files').query({ base: 'main', head: '`whoami`' });
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -251,11 +251,11 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // GET /api/sessions
   // ---------------------------------------------------------------------------
-  describe('GET /api/sessions', () => {
+  describe('GET /api/v1/sessions', () => {
     it('returns 500 when listReviewNotes throws', async () => {
       mockListReviewNotes.mockRejectedValueOnce(new Error('git notes list failed'));
 
-      const res = await request(app).get('/api/sessions');
+      const res = await request(app).get('/api/v1/sessions');
 
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
@@ -264,7 +264,7 @@ describe('review API routes — integration', () => {
     it('returns an empty sessions array when no notes exist', async () => {
       mockListReviewNotes.mockResolvedValueOnce([]);
 
-      const res = await request(app).get('/api/sessions');
+      const res = await request(app).get('/api/v1/sessions');
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ sessions: [], total: 0, page: 1, limit: 20 });
@@ -274,7 +274,7 @@ describe('review API routes — integration', () => {
       mockListReviewNotes.mockResolvedValueOnce([{ noteHash: 'note1', commitHash: COMMIT_SHA }]);
       mockReadReviewNote.mockResolvedValueOnce(sampleSession);
 
-      const res = await request(app).get('/api/sessions');
+      const res = await request(app).get('/api/v1/sessions');
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ sessions: [sampleSession], total: 1, page: 1, limit: 20 });
@@ -284,11 +284,11 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // GET /api/sessions/:commitSha
   // ---------------------------------------------------------------------------
-  describe('GET /api/sessions/:commitSha', () => {
+  describe('GET /api/v1/sessions/:commitSha', () => {
     it('returns 500 when readReviewNote throws', async () => {
       mockReadReviewNote.mockRejectedValueOnce(new Error('git notes show failed'));
 
-      const res = await request(app).get(`/api/sessions/${COMMIT_SHA}`);
+      const res = await request(app).get(`/api/v1/sessions/${COMMIT_SHA}`);
 
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
@@ -297,7 +297,7 @@ describe('review API routes — integration', () => {
     it('returns the review session for a known commitSha', async () => {
       mockReadReviewNote.mockResolvedValueOnce(sampleSession);
 
-      const res = await request(app).get(`/api/sessions/${COMMIT_SHA}`);
+      const res = await request(app).get(`/api/v1/sessions/${COMMIT_SHA}`);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ session: sampleSession });
@@ -307,14 +307,14 @@ describe('review API routes — integration', () => {
     it('returns 404 when the commitSha has no associated session', async () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
-      const res = await request(app).get(`/api/sessions/${COMMIT_SHA.slice(0, 8)}`);
+      const res = await request(app).get(`/api/v1/sessions/${COMMIT_SHA.slice(0, 8)}`);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });
     });
 
     it('returns 400 for a commitSha that is not valid hex', async () => {
-      const res = await request(app).get('/api/sessions/nonexistent');
+      const res = await request(app).get('/api/v1/sessions/nonexistent');
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -322,7 +322,7 @@ describe('review API routes — integration', () => {
     });
 
     it('returns 400 for a commitSha that is too short (fewer than 4 hex chars)', async () => {
-      const res = await request(app).get('/api/sessions/abc');
+      const res = await request(app).get('/api/v1/sessions/abc');
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -333,12 +333,12 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // POST /api/sessions
   // ---------------------------------------------------------------------------
-  describe('POST /api/sessions', () => {
+  describe('POST /api/v1/sessions', () => {
     it('creates and returns a new review session with status 201', async () => {
       mockRevparse.mockResolvedValueOnce(`${COMMIT_SHA}\n`); // headRef
       mockRevparse.mockResolvedValueOnce('base123\n'); // baseRef
 
-      const res = await request(app).post('/api/sessions').send({
+      const res = await request(app).post('/api/v1/sessions').send({
         title: 'Test Review',
         baseRef: 'main',
         headRef: 'HEAD',
@@ -359,7 +359,7 @@ describe('review API routes — integration', () => {
     it('returns 500 when git.revparse throws (invalid ref)', async () => {
       mockRevparse.mockRejectedValueOnce(new Error('fatal: ambiguous argument'));
 
-      const res = await request(app).post('/api/sessions').send({
+      const res = await request(app).post('/api/v1/sessions').send({
         title: 'Bad Review',
         baseRef: 'nonexistent-branch',
         headRef: 'HEAD',
@@ -371,7 +371,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when title is missing', async () => {
       const res = await request(app)
-        .post('/api/sessions')
+        .post('/api/v1/sessions')
         .send({ baseRef: 'main', headRef: 'HEAD' });
 
       expect(res.status).toBe(400);
@@ -381,7 +381,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when title is an empty string', async () => {
       const res = await request(app)
-        .post('/api/sessions')
+        .post('/api/v1/sessions')
         .send({ title: '   ', baseRef: 'main', headRef: 'HEAD' });
 
       expect(res.status).toBe(400);
@@ -390,7 +390,9 @@ describe('review API routes — integration', () => {
     });
 
     it('returns 400 when baseRef is missing', async () => {
-      const res = await request(app).post('/api/sessions').send({ title: 'Test', headRef: 'HEAD' });
+      const res = await request(app)
+        .post('/api/v1/sessions')
+        .send({ title: 'Test', headRef: 'HEAD' });
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -398,7 +400,9 @@ describe('review API routes — integration', () => {
     });
 
     it('returns 400 when headRef is missing', async () => {
-      const res = await request(app).post('/api/sessions').send({ title: 'Test', baseRef: 'main' });
+      const res = await request(app)
+        .post('/api/v1/sessions')
+        .send({ title: 'Test', baseRef: 'main' });
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -409,7 +413,7 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // POST /api/sessions/:commitSha/comments
   // ---------------------------------------------------------------------------
-  describe('POST /api/sessions/:commitSha/comments', () => {
+  describe('POST /api/v1/sessions/:commitSha/comments', () => {
     it('adds a comment to a session and returns it with status 201', async () => {
       const sessionWithComment: ReviewData = {
         ...sampleSession,
@@ -417,7 +421,7 @@ describe('review API routes — integration', () => {
       };
       mockReadReviewNote.mockResolvedValueOnce(sessionWithComment);
 
-      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/comments`).send({
+      const res = await request(app).post(`/api/v1/sessions/${COMMIT_SHA}/comments`).send({
         file: 'src/foo.ts',
         line: 42,
         side: 'right',
@@ -441,7 +445,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
       const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .post(`/api/v1/sessions/${COMMIT_SHA}/comments`)
         .send({ file: 'src/foo.ts', line: 1, body: 'comment', author: 'reviewer' });
 
       expect(res.status).toBe(404);
@@ -450,7 +454,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 for an invalid commitSha in the URL', async () => {
       const res = await request(app)
-        .post('/api/sessions/nonexistent/comments')
+        .post('/api/v1/sessions/nonexistent/comments')
         .send({ file: 'src/foo.ts', line: 1, body: 'comment', author: 'reviewer' });
 
       expect(res.status).toBe(400);
@@ -460,7 +464,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when file is missing', async () => {
       const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .post(`/api/v1/sessions/${COMMIT_SHA}/comments`)
         .send({ line: 1, body: 'comment', author: 'reviewer' });
 
       expect(res.status).toBe(400);
@@ -470,7 +474,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when line is not a positive integer', async () => {
       const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .post(`/api/v1/sessions/${COMMIT_SHA}/comments`)
         .send({ file: 'src/foo.ts', line: -1, body: 'comment', author: 'reviewer' });
 
       expect(res.status).toBe(400);
@@ -480,7 +484,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when body is missing', async () => {
       const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .post(`/api/v1/sessions/${COMMIT_SHA}/comments`)
         .send({ file: 'src/foo.ts', line: 1, author: 'reviewer' });
 
       expect(res.status).toBe(400);
@@ -490,7 +494,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when side is an invalid value', async () => {
       const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .post(`/api/v1/sessions/${COMMIT_SHA}/comments`)
         .send({ file: 'src/foo.ts', line: 1, body: 'comment', side: 'center', author: 'reviewer' });
 
       expect(res.status).toBe(400);
@@ -503,7 +507,7 @@ describe('review API routes — integration', () => {
       mockWriteReviewNote.mockRejectedValueOnce(new Error('git notes write failed'));
 
       const res = await request(app)
-        .post(`/api/sessions/${COMMIT_SHA}/comments`)
+        .post(`/api/v1/sessions/${COMMIT_SHA}/comments`)
         .send({ file: 'src/foo.ts', line: 1, body: 'boom', author: 'reviewer' });
 
       expect(res.status).toBe(500);
@@ -514,7 +518,7 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // PATCH /api/sessions/:commitSha/comments/:commentId
   // ---------------------------------------------------------------------------
-  describe('PATCH /api/sessions/:commitSha/comments/:commentId', () => {
+  describe('PATCH /api/v1/sessions/:commitSha/comments/:commentId', () => {
     it('resolves a comment and returns the updated comment', async () => {
       const sessionWithComment: ReviewData = {
         ...sampleSession,
@@ -523,7 +527,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(sessionWithComment);
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
         .send({ resolved: true });
 
       expect(res.status).toBe(200);
@@ -540,7 +544,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(sessionWithComment);
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}/comments/nonexistent-comment-id`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}/comments/nonexistent-comment-id`)
         .send({ resolved: true });
 
       expect(res.status).toBe(404);
@@ -551,7 +555,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
         .send({ resolved: true });
 
       expect(res.status).toBe(404);
@@ -564,7 +568,7 @@ describe('review API routes — integration', () => {
       mockWriteReviewNote.mockRejectedValueOnce(new Error('git notes write failed'));
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
         .send({ resolved: true });
 
       expect(res.status).toBe(500);
@@ -573,7 +577,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 for an invalid commitSha in the URL', async () => {
       const res = await request(app)
-        .patch(`/api/sessions/nonexistent/comments/${sampleComment.id}`)
+        .patch(`/api/v1/sessions/nonexistent/comments/${sampleComment.id}`)
         .send({ resolved: true });
 
       expect(res.status).toBe(400);
@@ -583,7 +587,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when resolved is not a boolean', async () => {
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
         .send({ resolved: 'yes' });
 
       expect(res.status).toBe(400);
@@ -593,7 +597,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when resolved is missing from the body', async () => {
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}/comments/${sampleComment.id}`)
         .send({});
 
       expect(res.status).toBe(400);
@@ -605,12 +609,12 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // PATCH /api/sessions/:commitSha
   // ---------------------------------------------------------------------------
-  describe('PATCH /api/sessions/:commitSha', () => {
+  describe('PATCH /api/v1/sessions/:commitSha', () => {
     it('updates session status and returns the updated session', async () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}`)
         .send({ status: 'approved' });
 
       expect(res.status).toBe(200);
@@ -623,7 +627,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA.slice(0, 8)}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA.slice(0, 8)}`)
         .send({ status: 'approved' });
 
       expect(res.status).toBe(404);
@@ -632,7 +636,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 for an invalid commitSha in the URL', async () => {
       const res = await request(app)
-        .patch('/api/sessions/nonexistent')
+        .patch('/api/v1/sessions/nonexistent')
         .send({ status: 'approved' });
 
       expect(res.status).toBe(400);
@@ -642,7 +646,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when status is an invalid value', async () => {
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}`)
         .send({ status: 'merged' });
 
       expect(res.status).toBe(400);
@@ -651,7 +655,7 @@ describe('review API routes — integration', () => {
     });
 
     it('returns 400 when status is missing from the body', async () => {
-      const res = await request(app).patch(`/api/sessions/${COMMIT_SHA}`).send({});
+      const res = await request(app).patch(`/api/v1/sessions/${COMMIT_SHA}`).send({});
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -663,7 +667,7 @@ describe('review API routes — integration', () => {
       mockWriteReviewNote.mockRejectedValueOnce(new Error('git notes write failed'));
 
       const res = await request(app)
-        .patch(`/api/sessions/${COMMIT_SHA}`)
+        .patch(`/api/v1/sessions/${COMMIT_SHA}`)
         .send({ status: 'approved' });
 
       expect(res.status).toBe(500);
@@ -674,11 +678,11 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // DELETE /api/sessions/:commitSha
   // ---------------------------------------------------------------------------
-  describe('DELETE /api/sessions/:commitSha', () => {
+  describe('DELETE /api/v1/sessions/:commitSha', () => {
     it('returns 204 when the session exists and is successfully removed', async () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
 
-      const res = await request(app).delete(`/api/sessions/${COMMIT_SHA}`);
+      const res = await request(app).delete(`/api/v1/sessions/${COMMIT_SHA}`);
 
       expect(res.status).toBe(204);
       expect(res.body).toEqual({});
@@ -689,7 +693,7 @@ describe('review API routes — integration', () => {
     it('returns 404 when the session does not exist', async () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
-      const res = await request(app).delete(`/api/sessions/${COMMIT_SHA}`);
+      const res = await request(app).delete(`/api/v1/sessions/${COMMIT_SHA}`);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });
@@ -700,7 +704,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
       mockRemoveReviewNote.mockRejectedValueOnce(new Error('git notes remove failed'));
 
-      const res = await request(app).delete(`/api/sessions/${COMMIT_SHA}`);
+      const res = await request(app).delete(`/api/v1/sessions/${COMMIT_SHA}`);
 
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
@@ -709,14 +713,14 @@ describe('review API routes — integration', () => {
     it('returns 500 when readReviewNote throws', async () => {
       mockReadReviewNote.mockRejectedValueOnce(new Error('git notes show failed'));
 
-      const res = await request(app).delete(`/api/sessions/${COMMIT_SHA}`);
+      const res = await request(app).delete(`/api/v1/sessions/${COMMIT_SHA}`);
 
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
     });
 
     it('returns 400 for an invalid commitSha in the URL', async () => {
-      const res = await request(app).delete('/api/sessions/nonexistent');
+      const res = await request(app).delete('/api/v1/sessions/nonexistent');
 
       expect(res.status).toBe(400);
       expect(res.body).toHaveProperty('error');
@@ -727,14 +731,14 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // PUT /api/sessions/:commitSha/viewed-files/:filePath
   // ---------------------------------------------------------------------------
-  describe('PUT /api/sessions/:commitSha/viewed-files/:filePath', () => {
+  describe('PUT /api/v1/sessions/:commitSha/viewed-files/:filePath', () => {
     it('marks a file as viewed for a committed session using getDiffText', async () => {
       const diffText = 'diff --git a/src/foo.ts b/src/foo.ts\n+line\n';
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
       mockGetDiffText.mockResolvedValueOnce(diffText);
 
       const res = await request(app).put(
-        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+        `/api/v1/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
       );
 
       expect(res.status).toBe(200);
@@ -754,7 +758,7 @@ describe('review API routes — integration', () => {
       mockGetUncommittedDiffText.mockResolvedValueOnce(diffText);
 
       const res = await request(app).put(
-        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+        `/api/v1/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
       );
 
       expect(res.status).toBe(200);
@@ -766,7 +770,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when path is whitespace only', async () => {
       const res = await request(app).put(
-        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('   ')}`,
+        `/api/v1/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('   ')}`,
       );
 
       expect(res.status).toBe(400);
@@ -777,7 +781,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
       const res = await request(app).put(
-        `/api/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
+        `/api/v1/sessions/${COMMIT_SHA}/viewed-files/${encodeURIComponent('src/foo.ts')}`,
       );
 
       expect(res.status).toBe(404);
@@ -788,14 +792,14 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // PUT /api/sessions/:commitSha/auto-mark-rules
   // ---------------------------------------------------------------------------
-  describe('PUT /api/sessions/:commitSha/auto-mark-rules', () => {
+  describe('PUT /api/v1/sessions/:commitSha/auto-mark-rules', () => {
     it('applies auto-mark rules for a committed session using getDiffText/getChangedFiles', async () => {
       mockReadReviewNote.mockResolvedValueOnce({ ...sampleSession });
       mockGetChangedFiles.mockResolvedValueOnce([]);
       mockGetDiffText.mockResolvedValueOnce('');
 
       const res = await request(app)
-        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .put(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-rules`)
         .send({ rules: ['lockfile'] });
 
       expect(res.status).toBe(200);
@@ -816,7 +820,7 @@ describe('review API routes — integration', () => {
       mockGetUncommittedDiffText.mockResolvedValueOnce('');
 
       const res = await request(app)
-        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .put(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-rules`)
         .send({ rules: ['lockfile'] });
 
       expect(res.status).toBe(200);
@@ -829,7 +833,7 @@ describe('review API routes — integration', () => {
 
     it('returns 400 when rules contains an invalid value', async () => {
       const res = await request(app)
-        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .put(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-rules`)
         .send({ rules: ['invalid-rule'] });
 
       expect(res.status).toBe(400);
@@ -841,7 +845,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
       const res = await request(app)
-        .put(`/api/sessions/${COMMIT_SHA}/auto-mark-rules`)
+        .put(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-rules`)
         .send({ rules: [] });
 
       expect(res.status).toBe(404);
@@ -852,14 +856,14 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // GET /api/sessions/validate
   // ---------------------------------------------------------------------------
-  describe('GET /api/sessions/validate', () => {
+  describe('GET /api/v1/sessions/validate', () => {
     const BASE_SHA = 'base0000000000000000000000000000000000';
     const HEAD_SHA = 'head0000000000000000000000000000000000';
 
     it('returns empty health and stats when there are no sessions', async () => {
       mockListReviewNotes.mockResolvedValueOnce([]);
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ health: {}, stats: {} });
@@ -879,7 +883,7 @@ describe('review API routes — integration', () => {
       });
       (mockGit as unknown as Record<string, unknown>).diffSummary = mockDiffSummary;
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'ok' });
@@ -892,7 +896,7 @@ describe('review API routes — integration', () => {
       mockRevparse.mockRejectedValueOnce(new Error('unknown revision'));
       mockRevparse.mockRejectedValueOnce(new Error('unknown revision'));
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body.health[COMMIT_SHA]).toEqual({
@@ -908,7 +912,7 @@ describe('review API routes — integration', () => {
       mockRevparse.mockRejectedValueOnce(new Error('unknown revision')); // baseRef
       mockRevparse.mockResolvedValueOnce(`${HEAD_SHA}\n`); // headRef
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body.health[COMMIT_SHA]).toEqual({
@@ -923,7 +927,7 @@ describe('review API routes — integration', () => {
       mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`); // baseRef
       mockRevparse.mockRejectedValueOnce(new Error('unknown revision')); // headRef
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body.health[COMMIT_SHA]).toEqual({
@@ -938,7 +942,7 @@ describe('review API routes — integration', () => {
       mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
       mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`); // same as base
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'stale', reason: 'no-changes' });
@@ -958,7 +962,7 @@ describe('review API routes — integration', () => {
       ];
       mockGetUncommittedChangedFiles.mockResolvedValueOnce(files);
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       // revparse called exactly once (for baseRef only)
@@ -981,7 +985,7 @@ describe('review API routes — integration', () => {
       ];
       mockGetUncommittedChangedFiles.mockResolvedValueOnce(files);
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'ok' });
@@ -998,7 +1002,7 @@ describe('review API routes — integration', () => {
       mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
       mockGetUncommittedChangedFiles.mockResolvedValueOnce([]);
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body.health[COMMIT_SHA]).toEqual({ status: 'stale', reason: 'no-changes' });
@@ -1014,7 +1018,7 @@ describe('review API routes — integration', () => {
       mockReadReviewNote.mockResolvedValueOnce(uncommittedSession);
       mockRevparse.mockRejectedValueOnce(new Error('unknown revision'));
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       expect(res.body.health[COMMIT_SHA]).toEqual({
@@ -1034,7 +1038,7 @@ describe('review API routes — integration', () => {
       mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
       mockGetUncommittedChangedFiles.mockRejectedValueOnce(new Error('git diff failed'));
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(200);
       // Falls back to ok to avoid false stale warnings
@@ -1044,7 +1048,7 @@ describe('review API routes — integration', () => {
     it('returns 500 when listReviewNotes throws', async () => {
       mockListReviewNotes.mockRejectedValueOnce(new Error('git notes list failed'));
 
-      const res = await request(app).get('/api/sessions/validate');
+      const res = await request(app).get('/api/v1/sessions/validate');
 
       expect(res.status).toBe(500);
       expect(res.body).toHaveProperty('error');
@@ -1054,7 +1058,7 @@ describe('review API routes — integration', () => {
   // ---------------------------------------------------------------------------
   // POST /api/sessions/:commitSha/auto-mark-apply
   // ---------------------------------------------------------------------------
-  describe('POST /api/sessions/:commitSha/auto-mark-apply', () => {
+  describe('POST /api/v1/sessions/:commitSha/auto-mark-apply', () => {
     it('re-applies rules for a committed session using getDiffText/getChangedFiles', async () => {
       const sessionWithRules: ReviewData = {
         ...sampleSession,
@@ -1064,7 +1068,7 @@ describe('review API routes — integration', () => {
       mockGetChangedFiles.mockResolvedValueOnce([]);
       mockGetDiffText.mockResolvedValueOnce('');
 
-      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/auto-mark-apply`);
+      const res = await request(app).post(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-apply`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('autoMarked');
@@ -1084,7 +1088,7 @@ describe('review API routes — integration', () => {
       mockGetUncommittedChangedFiles.mockResolvedValueOnce([]);
       mockGetUncommittedDiffText.mockResolvedValueOnce('');
 
-      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/auto-mark-apply`);
+      const res = await request(app).post(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-apply`);
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('autoMarked');
@@ -1097,7 +1101,7 @@ describe('review API routes — integration', () => {
     it('returns 404 when session does not exist', async () => {
       mockReadReviewNote.mockResolvedValueOnce(null);
 
-      const res = await request(app).post(`/api/sessions/${COMMIT_SHA}/auto-mark-apply`);
+      const res = await request(app).post(`/api/v1/sessions/${COMMIT_SHA}/auto-mark-apply`);
 
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: 'Review session not found' });
