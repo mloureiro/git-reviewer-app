@@ -68,7 +68,7 @@
 }
 
 .search-bar__nav-btn:disabled {
-  opacity: 0.3;
+  opacity: var(--opacity-disabled-subtle);
   cursor: default;
 }
 

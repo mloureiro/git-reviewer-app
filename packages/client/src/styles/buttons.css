@@ -43,7 +43,7 @@
 
 .btn--primary:disabled {
   background-color: var(--color-success-emphasis);
-  opacity: 0.6;
+  opacity: var(--opacity-disabled);
   cursor: not-allowed;
 }
 

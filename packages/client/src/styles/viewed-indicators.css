@@ -43,11 +43,11 @@
 
 /* Dim viewed files in the file tree */
 .file-tree__item--viewed {
-  opacity: 0.55;
+  opacity: var(--opacity-viewed);
 }
 
 .file-tree__item--viewed:hover {
-  opacity: 0.8;
+  opacity: var(--opacity-viewed-hover);
 }
 
 /* Diff header: viewed toggle button */

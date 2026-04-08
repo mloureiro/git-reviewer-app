@@ -67,6 +67,14 @@
   --duration-fast: 0.1s;
   --duration-normal: 0.15s;
 
+  /* Opacity */
+  --opacity-disabled: 0.6;
+  --opacity-disabled-subtle: 0.3;
+  --opacity-muted: 0.5;
+  --opacity-muted-hover: 0.75;
+  --opacity-viewed: 0.55;
+  --opacity-viewed-hover: 0.8;
+
   /* Shadows */
   --shadow-focus: 0 0 0 3px var(--color-accent-focus-shadow);
   --shadow-sm: 0 1px 2px var(--color-shadow-strong);

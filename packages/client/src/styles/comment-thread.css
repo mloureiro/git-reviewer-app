@@ -33,11 +33,11 @@
 }
 
 .comment-thread__item--resolved {
-  opacity: 0.5;
+  opacity: var(--opacity-muted);
 }
 
 .comment-thread__item--resolved:hover {
-  opacity: 0.75;
+  opacity: var(--opacity-muted-hover);
 }
 
 .comment-thread__header {

@@ -85,7 +85,7 @@
 }
 
 .diff-sbs-placeholder__icon {
-  opacity: 0.5;
+  opacity: var(--opacity-muted);
 }
 
 .diff-sbs-placeholder__text {

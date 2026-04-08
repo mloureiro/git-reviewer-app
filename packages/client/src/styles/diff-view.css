@@ -224,6 +224,12 @@
   font-style: italic;
 }
 
+/* Pending state — shown while a new diff is being parsed in a transition */
+.diff-view--pending {
+  opacity: var(--opacity-disabled);
+  transition: opacity var(--duration-normal) ease;
+}
+
 .diff-container {
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-lg);

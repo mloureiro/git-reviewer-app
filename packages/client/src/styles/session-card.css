@@ -93,7 +93,7 @@
 }
 
 .session-card--stale {
-  opacity: 0.6;
+  opacity: var(--opacity-disabled);
 }
 
 .session-card--stale:hover {
