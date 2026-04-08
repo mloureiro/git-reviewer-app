@@ -639,24 +639,28 @@ describe('validateDiffResponse', () => {
 
 describe('validateSessionListResponse', () => {
   it('accepts a valid SessionListResponse with one session', () => {
-    expect(() => validateSessionListResponse({ sessions: [VALID_REVIEW_DATA] })).not.toThrow();
+    expect(() =>
+      validateSessionListResponse({ sessions: [VALID_REVIEW_DATA], total: 1, page: 1, limit: 20 }),
+    ).not.toThrow();
   });
 
   it('accepts an empty sessions array', () => {
-    expect(() => validateSessionListResponse({ sessions: [] })).not.toThrow();
+    expect(() =>
+      validateSessionListResponse({ sessions: [], total: 0, page: 1, limit: 20 }),
+    ).not.toThrow();
   });
 
   it('throws when sessions is not an array', () => {
-    expect(() => validateSessionListResponse({ sessions: null })).toThrow(
-      'SessionListResponse.sessions: expected array, got object',
-    );
+    expect(() =>
+      validateSessionListResponse({ sessions: null, total: 0, page: 1, limit: 20 }),
+    ).toThrow('SessionListResponse.sessions: expected array, got object');
   });
 
   it('throws when a session entry is invalid (nested label is correct)', () => {
     const badSession = { ...VALID_REVIEW_DATA, version: 2 };
-    expect(() => validateSessionListResponse({ sessions: [badSession] })).toThrow(
-      'SessionListResponse.sessions[0].version: expected 1, got 2',
-    );
+    expect(() =>
+      validateSessionListResponse({ sessions: [badSession], total: 1, page: 1, limit: 20 }),
+    ).toThrow('SessionListResponse.sessions[0].version: expected 1, got 2');
   });
 });
 
@@ -666,13 +670,13 @@ describe('validateSessionListResponse', () => {
 
 describe('validateSessionResponse', () => {
   it('accepts valid ReviewData as a SessionResponse', () => {
-    expect(() => validateSessionResponse(VALID_REVIEW_DATA)).not.toThrow();
+    expect(() => validateSessionResponse({ session: VALID_REVIEW_DATA })).not.toThrow();
   });
 
   it('throws when session is invalid', () => {
-    expect(() => validateSessionResponse({ ...VALID_REVIEW_DATA, session: null })).toThrow(
-      'SessionResponse.session: expected object',
-    );
+    expect(() =>
+      validateSessionResponse({ session: { ...VALID_REVIEW_DATA, session: null } }),
+    ).toThrow('SessionResponse.session.session: expected object');
   });
 });
 
@@ -716,20 +720,26 @@ describe('validateUpdateCommentResponse', () => {
 
 describe('validateUpdateSessionStatusResponse', () => {
   it('accepts a valid session as UpdateSessionStatusResponse', () => {
-    expect(() => validateUpdateSessionStatusResponse(VALID_REVIEW_SESSION)).not.toThrow();
+    expect(() =>
+      validateUpdateSessionStatusResponse({ session: VALID_REVIEW_SESSION }),
+    ).not.toThrow();
   });
 
   it('accepts approved status', () => {
     expect(() =>
-      validateUpdateSessionStatusResponse({ ...VALID_REVIEW_SESSION, status: 'approved' }),
+      validateUpdateSessionStatusResponse({
+        session: { ...VALID_REVIEW_SESSION, status: 'approved' },
+      }),
     ).not.toThrow();
   });
 
   it('throws when status is invalid', () => {
     expect(() =>
-      validateUpdateSessionStatusResponse({ ...VALID_REVIEW_SESSION, status: 'open' }),
+      validateUpdateSessionStatusResponse({
+        session: { ...VALID_REVIEW_SESSION, status: 'open' as never },
+      }),
     ).toThrow(
-      'UpdateSessionStatusResponse.status: expected one of [pending, approved, changes_requested], got "open"',
+      'UpdateSessionStatusResponse.session.status: expected one of [pending, approved, changes_requested], got "open"',
     );
   });
 });
