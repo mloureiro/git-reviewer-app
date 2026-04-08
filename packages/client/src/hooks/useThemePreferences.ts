@@ -72,11 +72,23 @@ export function useThemePreferences(): UseThemePreferencesReturn {
   const [prefs, setPrefsState] = useState<ThemePreferences>(readStoredPreferences);
   const activeScheme = resolveScheme(prefs);
   const previewRef = useRef<ColorScheme | null>(null);
+  const prefsRef = useRef<ThemePreferences>(prefs);
 
-  const setPrefs = useCallback((next: ThemePreferences) => {
-    setPrefsState(next);
-    persistPreferences(next);
-  }, []);
+  // Keep prefsRef in sync so stable callbacks can read the latest prefs.
+  useEffect(() => {
+    prefsRef.current = prefs;
+  }, [prefs]);
+
+  const setPrefs = useCallback(
+    (update: ThemePreferences | ((prev: ThemePreferences) => ThemePreferences)) => {
+      setPrefsState((prev) => {
+        const next = typeof update === 'function' ? update(prev) : update;
+        persistPreferences(next);
+        return next;
+      });
+    },
+    [],
+  );
 
   // Apply the active scheme whenever preferences change
   useEffect(() => {
@@ -86,24 +98,24 @@ export function useThemePreferences(): UseThemePreferencesReturn {
   }, [activeScheme]);
 
   const toggleMode = useCallback(() => {
-    setPrefs({ ...prefs, mode: prefs.mode === 'dark' ? 'light' : 'dark' });
+    setPrefs((prev) => ({ ...prev, mode: prev.mode === 'dark' ? 'light' : 'dark' }));
     previewRef.current = null;
-  }, [prefs, setPrefs]);
+  }, [setPrefs]);
 
   const setDarkScheme = useCallback(
     (id: string) => {
-      setPrefs({ ...prefs, darkSchemeId: id });
+      setPrefs((prev) => ({ ...prev, darkSchemeId: id }));
       previewRef.current = null;
     },
-    [prefs, setPrefs],
+    [setPrefs],
   );
 
   const setLightScheme = useCallback(
     (id: string) => {
-      setPrefs({ ...prefs, lightSchemeId: id });
+      setPrefs((prev) => ({ ...prev, lightSchemeId: id }));
       previewRef.current = null;
     },
-    [prefs, setPrefs],
+    [setPrefs],
   );
 
   const previewScheme = useCallback((scheme: ColorScheme) => {
@@ -115,9 +127,9 @@ export function useThemePreferences(): UseThemePreferencesReturn {
     if (previewRef.current) {
       clearSchemeColors(previewRef.current);
       previewRef.current = null;
-      applyTheme(activeScheme);
+      applyTheme(resolveScheme(prefsRef.current));
     }
-  }, [activeScheme]);
+  }, []);
 
   return {
     mode: prefs.mode,
