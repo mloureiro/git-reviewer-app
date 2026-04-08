@@ -25,19 +25,29 @@ export function SessionCreatePage() {
   const [currentBranch, setCurrentBranch] = useState('');
 
   useEffect(() => {
+    let cancelled = false;
+
     fetchRepos()
       .then((data) => {
-        setRepos(data.repos);
-        if (data.repos.length > 0 && !selectedRepo) {
-          setSelectedRepo(data.repos[0] ?? '');
+        if (!cancelled) {
+          setRepos(data.repos);
+          if (data.repos.length > 0 && !selectedRepo) {
+            setSelectedRepo(data.repos[0] ?? '');
+          }
         }
       })
       .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
     // Intentionally run only once on mount — selectedRepo is read as initial value only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
     if (!selectedRepo && repos.length === 0) return;
+
+    let cancelled = false;
 
     setBranches([]);
     setTags([]);
@@ -48,16 +58,22 @@ export function SessionCreatePage() {
     const repo = selectedRepo || undefined;
     fetchRefs(repo)
       .then((data) => {
-        setBranches(data.branches);
-        setTags(data.tags);
-        setCurrentBranch(data.currentBranch);
-        if (data.currentBranch) {
-          setHeadRef(data.currentBranch);
+        if (!cancelled) {
+          setBranches(data.branches);
+          setTags(data.tags);
+          setCurrentBranch(data.currentBranch);
+          if (data.currentBranch) {
+            setHeadRef(data.currentBranch);
+          }
         }
       })
       .catch(() => {
         // Refs unavailable — user can still type manually
       });
+
+    return () => {
+      cancelled = true;
+    };
     // repos.length is intentionally excluded — this effect is driven by selectedRepo changes only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRepo]);
