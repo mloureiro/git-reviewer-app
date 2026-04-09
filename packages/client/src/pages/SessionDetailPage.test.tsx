@@ -809,7 +809,9 @@ describe('SessionDetailPage', () => {
         );
       });
 
-      expect(screen.queryByPlaceholderText(/Leave a comment/)).toBeNull();
+      await waitFor(() => {
+        expect(screen.queryByPlaceholderText(/Leave a comment/)).toBeNull();
+      });
     });
 
     it('does not submit when the comment body is empty', () => {
