@@ -20,7 +20,6 @@ jobs:
             artifact-name: git-reviewer-macos
             artifact-paths: |
               packages/desktop/src-tauri/target/release/bundle/dmg/*.dmg
-              packages/desktop/src-tauri/target/release/bundle/macos/*.app
           - name: Linux
             os: ubuntu-22.04
             artifact-name: git-reviewer-linux
@@ -122,4 +121,4 @@ jobs:
           gh release create "$TAG" \
             --title "Git Reviewer ${{ steps.version.outputs.version }} (build ${{ github.run_number }})" \
             --generate-notes \
-            artifacts/**/*
+            $(find artifacts -type f \( -name "*.dmg" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.msi" -o -name "*.exe" \))
