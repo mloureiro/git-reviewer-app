@@ -106,6 +106,7 @@ export function SessionDetailPage(): React.ReactNode {
     updateStatus,
     addComment,
     resolveComment,
+    editComment,
     markViewed,
     unmarkViewed,
     setAutoMarkRules,
@@ -459,6 +460,19 @@ export function SessionDetailPage(): React.ReactNode {
     [resolveComment],
   );
 
+  const handleCommentEdit = useCallback(
+    async (commentId: string, body: string): Promise<void> => {
+      try {
+        await editComment(commentId, body);
+      } catch (err) {
+        const message =
+          err instanceof ApiError ? err.message : 'Failed to edit comment. Please try again.';
+        setMutationError(message);
+      }
+    },
+    [editComment],
+  );
+
   const handleStatusChange = useCallback(
     async (status: ReviewStatus): Promise<void> => {
       setIsStatusPending(true);
@@ -562,6 +576,7 @@ export function SessionDetailPage(): React.ReactNode {
             <CommentThread
               comments={lineComments}
               onResolve={handleCommentResolve}
+              onEdit={handleCommentEdit}
               onReply={isActiveLine ? undefined : () => setActiveLine(lineData)}
               colSpan={colSpan}
             />
@@ -577,7 +592,7 @@ export function SessionDetailPage(): React.ReactNode {
         </>
       );
     },
-    [activeLine, commentsByLine, handleCommentResolve, handleCommentSubmit],
+    [activeLine, commentsByLine, handleCommentResolve, handleCommentEdit, handleCommentSubmit],
   );
 
   if (sessionLoading) {
