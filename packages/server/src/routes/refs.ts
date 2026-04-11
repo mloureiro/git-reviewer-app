@@ -9,16 +9,25 @@ export function createRefsRouter(registry: RepoRegistry): Router {
   router.get('/refs', async (req, res, next) => {
     try {
       const [git] = registry.resolve(req.query.repo);
-      const [branchResult, tagResult] = await Promise.all([git.branchLocal(), git.tag()]);
+      const [branchResult, remoteBranchResult, tagResult] = await Promise.all([
+        git.branchLocal(),
+        git.branch(['-r']),
+        git.tag(),
+      ]);
 
       const branches = branchResult.all;
       const currentBranch = branchResult.current;
+      const localSet = new Set(branches);
+      const remoteBranches = remoteBranchResult.all
+        .filter((name) => !name.includes('HEAD'))
+        .map((name) => name.replace(/^[^/]+\//, ''))
+        .filter((name) => !localSet.has(name));
       const tags = tagResult
         .split('\n')
         .map((t) => t.trim())
         .filter(Boolean);
 
-      res.json({ branches, tags, currentBranch });
+      res.json({ branches, remoteBranches, tags, currentBranch });
     } catch (error) {
       next(error);
     }

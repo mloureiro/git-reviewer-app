@@ -174,6 +174,7 @@ export interface ResolveRefsResponse {
 
 export interface RefsResponse {
   branches: string[];
+  remoteBranches: string[];
   tags: string[];
   currentBranch: string;
 }
