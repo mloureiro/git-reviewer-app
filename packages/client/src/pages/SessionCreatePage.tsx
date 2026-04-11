@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createSession, fetchRefs, fetchRepos } from '../api/reviews';
 import { ApiError } from '../api/client';
-import { Button, LinkButton, TextInput, Select } from '../components/ui';
+import { Button, LinkButton, TextInput, ComboBox } from '../components/ui';
+import type { ComboBoxOption } from '../components/ui';
 
 function repoDisplayName(repoPath: string): string {
   if (!repoPath) return 'Unknown';
   const segments = repoPath.replace(/\/+$/, '').split('/');
   return segments[segments.length - 1] || repoPath;
 }
+
+const REF_GROUP_ORDER = ['Local branches', 'Remote branches', 'Tags'];
 
 export function SessionCreatePage(): React.ReactNode {
   const navigate = useNavigate();
@@ -21,8 +24,11 @@ export function SessionCreatePage(): React.ReactNode {
   const [repos, setRepos] = useState<string[]>([]);
   const [selectedRepo, setSelectedRepo] = useState('');
   const [branches, setBranches] = useState<string[]>([]);
+  const [remoteBranches, setRemoteBranches] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [currentBranch, setCurrentBranch] = useState('');
+
+  const titleTouched = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,26 +50,47 @@ export function SessionCreatePage(): React.ReactNode {
     // Intentionally run only once on mount — selectedRepo is read as initial value only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
   useEffect(() => {
     if (!selectedRepo && repos.length === 0) return;
 
     let cancelled = false;
 
     setBranches([]);
+    setRemoteBranches([]);
     setTags([]);
     setCurrentBranch('');
     setBaseRef('');
     setHeadRef('');
+    titleTouched.current = false;
 
     const repo = selectedRepo || undefined;
     fetchRefs(repo)
       .then((data) => {
         if (!cancelled) {
           setBranches(data.branches);
+          setRemoteBranches(data.remoteBranches);
           setTags(data.tags);
           setCurrentBranch(data.currentBranch);
+
+          // Smart base branch default
+          const allLocal = data.branches;
+          const allRemote = data.remoteBranches;
+          if (allLocal.includes('master')) {
+            setBaseRef('master');
+          } else if (allLocal.includes('main')) {
+            setBaseRef('main');
+          } else if (allRemote.includes('master')) {
+            setBaseRef('master');
+          } else if (allRemote.includes('main')) {
+            setBaseRef('main');
+          }
+
           if (data.currentBranch) {
             setHeadRef(data.currentBranch);
+            if (!titleTouched.current) {
+              setTitle(data.currentBranch);
+            }
           }
         }
       })
@@ -77,6 +104,14 @@ export function SessionCreatePage(): React.ReactNode {
     // repos.length is intentionally excluded — this effect is driven by selectedRepo changes only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRepo]);
+
+  function handleHeadRefChange(value: string) {
+    setHeadRef(value);
+    if (!titleTouched.current) {
+      setTitle(value);
+    }
+  }
+
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
@@ -96,15 +131,21 @@ export function SessionCreatePage(): React.ReactNode {
     }
   }
 
-  const refOptions = [
-    ...branches.map((b) => ({ value: b, label: b, group: 'branch' as const })),
-    ...tags.map((t) => ({ value: t, label: t, group: 'tag' as const })),
+  const refOptions: ComboBoxOption[] = [
+    ...branches.map((b) => ({ value: b, label: b, group: 'Local branches' })),
+    ...remoteBranches.map((b) => ({ value: b, label: b, group: 'Remote branches' })),
+    ...tags.map((t) => ({ value: t, label: t, group: 'Tags' })),
   ];
+
+  const repoOptions: ComboBoxOption[] = repos.map((r) => ({
+    value: r,
+    label: repoDisplayName(r),
+  }));
 
   return (
     <div className="session-create">
       <div className="session-create__header">
-        <h1 className="session-create__title">New Review Session</h1>
+        <h1 className="session-create__title">New Review</h1>
       </div>
 
       <form className="session-create__form" onSubmit={handleSubmit}>
@@ -113,18 +154,13 @@ export function SessionCreatePage(): React.ReactNode {
             <label className="form-field__label" htmlFor="repo">
               Repository
             </label>
-            <Select
+            <ComboBox
               id="repo"
+              options={repoOptions}
               value={selectedRepo}
-              onChange={(e) => setSelectedRepo(e.target.value)}
+              onChange={setSelectedRepo}
               disabled={submitting}
-            >
-              {repos.map((r) => (
-                <option key={r} value={r} title={r}>
-                  {repoDisplayName(r)}
-                </option>
-              ))}
-            </Select>
+            />
           </div>
         )}
 
@@ -136,7 +172,10 @@ export function SessionCreatePage(): React.ReactNode {
             id="title"
             placeholder="e.g. Review auth changes"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              setTitle(e.target.value);
+              titleTouched.current = true;
+            }}
             required
             disabled={submitting}
           />
@@ -146,23 +185,16 @@ export function SessionCreatePage(): React.ReactNode {
           <label className="form-field__label" htmlFor="baseRef">
             Base Ref
           </label>
-          <TextInput
+          <ComboBox
             id="baseRef"
-            placeholder="e.g. main"
-            list="baseRef-options"
+            options={refOptions}
             value={baseRef}
-            onChange={(e) => setBaseRef(e.target.value)}
+            onChange={setBaseRef}
+            placeholder="e.g. main"
             required
             disabled={submitting}
-            autoComplete="off"
+            groupOrder={REF_GROUP_ORDER}
           />
-          <datalist id="baseRef-options">
-            {refOptions.map(({ value, group }) => (
-              <option key={`${group}-${value}`} value={value}>
-                {group === 'tag' ? `tag: ${value}` : value}
-              </option>
-            ))}
-          </datalist>
           <p className="form-field__hint">
             The branch, tag, or commit to diff against (the &quot;before&quot;).
           </p>
@@ -172,23 +204,16 @@ export function SessionCreatePage(): React.ReactNode {
           <label className="form-field__label" htmlFor="headRef">
             Head Ref
           </label>
-          <TextInput
+          <ComboBox
             id="headRef"
-            placeholder="e.g. HEAD"
-            list="headRef-options"
+            options={refOptions}
             value={headRef}
-            onChange={(e) => setHeadRef(e.target.value)}
+            onChange={handleHeadRefChange}
+            placeholder="e.g. HEAD"
             required
             disabled={submitting}
-            autoComplete="off"
+            groupOrder={REF_GROUP_ORDER}
           />
-          <datalist id="headRef-options">
-            {refOptions.map(({ value, group }) => (
-              <option key={`${group}-${value}`} value={value}>
-                {group === 'tag' ? `tag: ${value}` : value}
-              </option>
-            ))}
-          </datalist>
           <p className="form-field__hint">
             The branch, tag, or commit to review (the &quot;after&quot;).
             {currentBranch && (

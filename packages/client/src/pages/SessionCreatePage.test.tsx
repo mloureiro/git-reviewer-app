@@ -136,4 +136,37 @@ describe('SessionCreatePage', () => {
       expect(screen.getByRole('button', { name: 'Creating…' })).toBeDisabled();
     });
   });
+
+  it('auto-populates title from head ref when refs load', async () => {
+    mockFetchRepos.mockResolvedValue({ repos: ['/path/to/repo'] });
+    mockFetchRefs.mockResolvedValue({
+      branches: ['main', 'feature/login'],
+      remoteBranches: [],
+      tags: [],
+      currentBranch: 'feature/login',
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Title')).toHaveValue('feature/login');
+      expect(screen.getByLabelText('Head Ref')).toHaveValue('feature/login');
+    });
+  });
+
+  it('sets smart base ref default when refs load', async () => {
+    mockFetchRepos.mockResolvedValue({ repos: ['/path/to/repo'] });
+    mockFetchRefs.mockResolvedValue({
+      branches: ['main', 'develop', 'feature/auth'],
+      remoteBranches: ['staging'],
+      tags: ['v1.0'],
+      currentBranch: 'feature/auth',
+    });
+
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Base Ref')).toHaveValue('main');
+    });
+  });
 });
