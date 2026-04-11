@@ -520,6 +520,17 @@ export function SessionDetailPage(): React.ReactNode {
   const handleToggleViewed = useCallback(
     (filePath: string, isCurrentlyViewed: boolean): void => {
       const action = isCurrentlyViewed ? unmarkViewed(filePath) : markViewed(filePath);
+
+      // Collapse the file when marking as viewed
+      if (!isCurrentlyViewed) {
+        setCollapsedFiles((prev) => {
+          if (prev.has(filePath)) return prev;
+          const next = new Set(prev);
+          next.add(filePath);
+          return next;
+        });
+      }
+
       action.catch((err: unknown) => {
         const message =
           err instanceof ApiError
