@@ -254,11 +254,25 @@ export function SessionDetailPage(): React.ReactNode {
 
   const handleToggleCollapsed = useCallback((filePath: string) => {
     setCollapsedFiles((prev) => {
+      const isCollapsing = !prev.has(filePath);
       const next = new Set(prev);
-      if (next.has(filePath)) {
-        next.delete(filePath);
-      } else {
+      if (isCollapsing) {
         next.add(filePath);
+
+        // After the DOM updates with the collapsed state, scroll the file
+        // header into view so it stays visible.
+        requestAnimationFrame(() => {
+          const sectionId = filePathToId(filePath);
+          const element = document.getElementById(sectionId);
+          if (element != null) {
+            const rect = element.getBoundingClientRect();
+            if (rect.top < 0) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }
+        });
+      } else {
+        next.delete(filePath);
       }
       return next;
     });
@@ -521,12 +535,24 @@ export function SessionDetailPage(): React.ReactNode {
     (filePath: string, isCurrentlyViewed: boolean): void => {
       const action = isCurrentlyViewed ? unmarkViewed(filePath) : markViewed(filePath);
 
-      // Collapse the file when marking as viewed
+      // Collapse the file when marking as viewed and scroll header into view
       if (!isCurrentlyViewed) {
         setCollapsedFiles((prev) => {
           if (prev.has(filePath)) return prev;
           const next = new Set(prev);
           next.add(filePath);
+
+          requestAnimationFrame(() => {
+            const sectionId = filePathToId(filePath);
+            const element = document.getElementById(sectionId);
+            if (element != null) {
+              const rect = element.getBoundingClientRect();
+              if (rect.top < 0) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              }
+            }
+          });
+
           return next;
         });
       }
