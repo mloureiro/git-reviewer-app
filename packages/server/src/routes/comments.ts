@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { RepoRegistry } from '../git/repo-registry.js';
 import { validateCommitSha, resolveRepo, type ResolvedRepoLocals } from './middleware.js';
-import { addComment, resolveComment, deleteComment } from '../services/session-service.js';
+import { addComment, updateComment, deleteComment } from '../services/session-service.js';
 import type { CreateCommentRequest, UpdateCommentRequest } from '@git-reviewer/shared';
 import { MAX_COMMENT_BODY_LENGTH } from '@git-reviewer/shared';
 
@@ -31,11 +31,9 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
         return;
       }
       if (body.length > MAX_COMMENT_BODY_LENGTH) {
-        res
-          .status(400)
-          .json({
-            error: `Invalid body: body must not exceed ${MAX_COMMENT_BODY_LENGTH} characters`,
-          });
+        res.status(400).json({
+          error: `Invalid body: body must not exceed ${MAX_COMMENT_BODY_LENGTH} characters`,
+        });
         return;
       }
       if (side !== undefined && side !== 'left' && side !== 'right') {
@@ -65,7 +63,7 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
     }
   });
 
-  // Resolve/unresolve a comment
+  // Update a comment (resolve/unresolve and/or edit body)
   router.patch(
     '/sessions/:commitSha/comments/:commentId',
     ...sessionMiddleware,
@@ -74,13 +72,34 @@ export function createCommentsRouter(registry: RepoRegistry): Router {
         const { resolvedGit: git } = res.locals as ResolvedRepoLocals;
         const commitSha = req.params.commitSha ?? '';
 
-        const { resolved } = req.body as UpdateCommentRequest;
-        if (typeof resolved !== 'boolean') {
+        const { resolved, body } = req.body as UpdateCommentRequest;
+        if (resolved !== undefined && typeof resolved !== 'boolean') {
           res.status(400).json({ error: 'Invalid body: resolved must be a boolean' });
           return;
         }
+        if (body !== undefined) {
+          if (typeof body !== 'string' || body.trim().length === 0) {
+            res.status(400).json({ error: 'Invalid body: body must be a non-empty string' });
+            return;
+          }
+          if (body.length > MAX_COMMENT_BODY_LENGTH) {
+            res.status(400).json({
+              error: `Invalid body: body must not exceed ${MAX_COMMENT_BODY_LENGTH} characters`,
+            });
+            return;
+          }
+        }
+        if (resolved === undefined && body === undefined) {
+          res
+            .status(400)
+            .json({ error: 'Invalid body: at least one of resolved or body is required' });
+          return;
+        }
 
-        const result = await resolveComment(git, commitSha, req.params.commentId ?? '', resolved);
+        const result = await updateComment(git, commitSha, req.params.commentId ?? '', {
+          resolved,
+          body: body?.trim(),
+        });
         if (result === null) {
           res.status(404).json({ error: 'Review session not found' });
           return;

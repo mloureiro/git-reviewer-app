@@ -114,7 +114,8 @@ export interface CommentsResponse {
 // ---------------------------------------------------------------------------
 
 export interface UpdateCommentRequest {
-  resolved: boolean;
+  resolved?: boolean;
+  body?: string;
 }
 
 /** Response for PATCH /api/sessions/:commitSha/comments/:commentId */

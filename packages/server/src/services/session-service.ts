@@ -217,15 +217,15 @@ export async function addComment(
 }
 
 /**
- * Resolve or unresolve a comment.
+ * Update a comment's resolved status and/or body text.
  * Returns the updated comment, `null` when the session is not found, or
  * `'comment-not-found'` when the comment ID does not exist in the session.
  */
-export async function resolveComment(
+export async function updateComment(
   git: SimpleGit,
   commitSha: string,
   commentId: string,
-  resolved: boolean,
+  updates: { resolved?: boolean; body?: string },
 ): Promise<ReviewComment | null | 'comment-not-found'> {
   return withSessionLock(commitSha, async () => {
     const data = await readReviewNote(git, commitSha);
@@ -234,7 +234,12 @@ export async function resolveComment(
     const comment = data.comments.find(({ id }) => id === commentId);
     if (!comment) return 'comment-not-found';
 
-    comment.resolved = resolved;
+    if (updates.resolved !== undefined) {
+      comment.resolved = updates.resolved;
+    }
+    if (updates.body !== undefined) {
+      comment.body = updates.body;
+    }
     data.session.updatedAt = new Date().toISOString();
     await writeReviewNote(git, commitSha, data);
 
