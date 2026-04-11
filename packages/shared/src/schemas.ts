@@ -138,6 +138,7 @@ export function validateReviewSession(val: unknown, label = 'ReviewSession'): Re
   assertString(val.headRef, `${label}.headRef`);
   assertString(val.baseCommit, `${label}.baseCommit`);
   assertString(val.headCommit, `${label}.headCommit`);
+  assertOptional(val.headCommitDate, `${label}.headCommitDate`, assertString);
   assertOneOf(val.status, REVIEW_STATUSES, `${label}.status`);
   assertString(val.createdAt, `${label}.createdAt`);
   assertString(val.updatedAt, `${label}.updatedAt`);

@@ -148,6 +148,10 @@ pub fn fetch_sessions(
                     if data.session.repo_path.is_none() {
                         data.session.repo_path = repo_path.clone();
                     }
+                    if data.session.head_commit_date.is_none() {
+                        data.session.head_commit_date =
+                            git_ops::get_commit_date(&repo, &data.session.head_commit).ok();
+                    }
                     sessions.push(data);
                 }
             }
@@ -160,6 +164,10 @@ pub fn fetch_sessions(
                         if let Ok(Some(mut data)) = git_ops::read_review_note(&repo, sha) {
                             if data.session.repo_path.is_none() {
                                 data.session.repo_path = Some(repo_path.clone());
+                            }
+                            if data.session.head_commit_date.is_none() {
+                                data.session.head_commit_date =
+                                    git_ops::get_commit_date(&repo, &data.session.head_commit).ok();
                             }
                             sessions.push(data);
                         }
@@ -341,6 +349,7 @@ pub fn create_session(
 
     let base_commit = git_ops::resolve_ref(&repository, &base_ref)?;
     let head_commit = git_ops::resolve_ref(&repository, &head_ref)?;
+    let head_commit_date = git_ops::get_commit_date(&repository, &head_commit).ok();
 
     let now = now_iso();
 
@@ -353,6 +362,7 @@ pub fn create_session(
             head_ref,
             base_commit,
             head_commit: head_commit.clone(),
+            head_commit_date,
             status: ReviewStatus::Pending,
             created_at: now.clone(),
             updated_at: now,
@@ -769,6 +779,7 @@ pub fn create_session_from_cli(base_ref: &str, head_ref: &str) -> Result<String,
 
     let base_commit = git_ops::resolve_ref(&repo, base_ref)?;
     let head_commit = git_ops::resolve_ref(&repo, head_ref)?;
+    let head_commit_date = git_ops::get_commit_date(&repo, &head_commit).ok();
 
     // Resolve human-friendly names: replace "HEAD" with the current branch name
     let display_head = if head_ref.eq_ignore_ascii_case("HEAD") {
@@ -793,6 +804,7 @@ pub fn create_session_from_cli(base_ref: &str, head_ref: &str) -> Result<String,
             head_ref: head_ref.to_string(),
             base_commit,
             head_commit: head_commit.clone(),
+            head_commit_date,
             status: ReviewStatus::Pending,
             created_at: now.clone(),
             updated_at: now,

@@ -2,6 +2,7 @@ import { v4 as uuid } from 'uuid';
 import type { SimpleGit } from 'simple-git';
 import type { ReviewData } from '@git-reviewer/shared';
 import { writeReviewNote } from './notes.js';
+import { getCommitDate } from './commits.js';
 
 /**
  * Resolves a ref to a human-friendly name.
@@ -112,6 +113,7 @@ export async function createAutoSession(
   const headRef = uncommitted ? 'working tree' : await resolveRefName(git, head, 'HEAD');
   const title = uncommitted ? 'Uncommitted changes' : `Review ${baseRef}..${headRef}`;
 
+  const headCommitDate = await getCommitDate(git, headCommit);
   const now = new Date().toISOString();
 
   const data: ReviewData = {
@@ -123,6 +125,7 @@ export async function createAutoSession(
       headRef,
       baseCommit,
       headCommit,
+      headCommitDate,
       status: 'pending',
       createdAt: now,
       updatedAt: now,

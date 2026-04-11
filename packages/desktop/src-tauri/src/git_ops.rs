@@ -559,6 +559,17 @@ fn format_git_time(secs: i64, offset_minutes: i32) -> String {
     }
 }
 
+/// Returns the author date (ISO 8601 / RFC 3339) of a single commit.
+pub fn get_commit_date(repo: &Repository, commit_sha: &str) -> Result<String, String> {
+    let oid =
+        Oid::from_str(commit_sha).map_err(|e| format!("Invalid commit SHA '{}': {}", commit_sha, e))?;
+    let commit = repo
+        .find_commit(oid)
+        .map_err(|e| format!("Failed to find commit {}: {}", commit_sha, e))?;
+    let time = commit.time();
+    Ok(format_git_time(time.seconds(), time.offset_minutes()))
+}
+
 /// Returns the unified diff text for a single commit.
 pub fn get_commit_diff_text(repo: &Repository, commit_hash: &str) -> Result<String, String> {
     let commit = repo

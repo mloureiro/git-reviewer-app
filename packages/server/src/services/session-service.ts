@@ -7,6 +7,7 @@ import {
   getUncommittedChangedFiles,
   getFileDiffHashes,
 } from '../git/diff.js';
+import { getCommitDate } from '../git/commits.js';
 import {
   listReviewNotes,
   readReviewNote,
@@ -129,6 +130,7 @@ export async function createSession(
 
   const headCommit = await git.revparse([headRef]);
   const baseCommit = await git.revparse([baseRef]);
+  const headCommitDate = await getCommitDate(git, headCommit.trim());
   const now = new Date().toISOString();
 
   const data: ReviewData = {
@@ -140,6 +142,7 @@ export async function createSession(
       headRef,
       baseCommit: baseCommit.trim(),
       headCommit: headCommit.trim(),
+      headCommitDate,
       status: 'pending',
       createdAt: now,
       updatedAt: now,

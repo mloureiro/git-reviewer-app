@@ -67,6 +67,8 @@ pub struct ReviewSession {
     pub head_ref: String,
     pub base_commit: String,
     pub head_commit: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub head_commit_date: Option<String>,
     pub status: ReviewStatus,
     pub created_at: String,
     pub updated_at: String,
@@ -228,6 +230,7 @@ mod tests {
             head_ref: "feature-branch".into(),
             base_commit: "aaaa1111".into(),
             head_commit: "bbbb2222".into(),
+            head_commit_date: None,
             status: ReviewStatus::Pending,
             created_at: "2026-03-19T10:00:00.000Z".into(),
             updated_at: "2026-03-19T10:00:00.000Z".into(),

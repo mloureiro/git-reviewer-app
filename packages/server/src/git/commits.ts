@@ -3,6 +3,22 @@ import type { CommitInfo, DiffFile } from '@git-reviewer/shared';
 import { parseNameStatus, parseNumstat, mergeStatusAndStats } from './parse-utils.js';
 
 /**
+ * Returns the author date (ISO 8601 string) of a single commit.
+ * Returns `undefined` when the commit cannot be resolved.
+ */
+export async function getCommitDate(
+  git: SimpleGit,
+  commitSha: string,
+): Promise<string | undefined> {
+  try {
+    const raw = await git.raw(['show', '-s', '--format=%aI', commitSha]);
+    return raw.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Returns the list of commits between `base` and `head` (exclusive of base),
  * ordered oldest-first.
  */

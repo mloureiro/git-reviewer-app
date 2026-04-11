@@ -45,6 +45,7 @@ vi.mock('../git/diff.js', () => ({
 }));
 
 vi.mock('../git/commits.js', () => ({
+  getCommitDate: vi.fn(),
   getCommitList: vi.fn(),
   getCommitDiffText: vi.fn(),
   getCommitChangedFiles: vi.fn(),
