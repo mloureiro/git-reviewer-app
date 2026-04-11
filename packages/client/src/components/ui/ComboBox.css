@@ -1,0 +1,68 @@
+/* ── Design System: ComboBox ───────────────────────────────────────────── */
+
+.ds-combobox {
+  position: relative;
+  width: 100%;
+}
+
+.ds-combobox__input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-md);
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-normal) ease;
+  box-sizing: border-box;
+}
+
+.ds-combobox__input::placeholder {
+  color: var(--color-text-placeholder);
+}
+
+.ds-combobox__input:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-focus);
+}
+
+.ds-combobox__input:disabled {
+  opacity: var(--opacity-disabled);
+  cursor: not-allowed;
+}
+
+.ds-combobox__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: var(--z-dropdown);
+  margin-top: var(--space-1);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.ds-combobox__group-header {
+  padding: var(--space-1-5) var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-semibold);
+  user-select: none;
+}
+
+.ds-combobox__option {
+  padding: var(--space-1-5) var(--space-3);
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: var(--text-md);
+}
+
+.ds-combobox__option--highlighted {
+  background: var(--color-neutral-hover);
+}
