@@ -25,6 +25,7 @@ export interface UseReviewSessionResult {
   updateStatus: (status: ReviewStatus) => Promise<void>;
   addComment: (data: CreateCommentRequest) => Promise<ReviewComment>;
   resolveComment: (commentId: string, resolved: boolean) => Promise<void>;
+  editComment: (commentId: string, body: string) => Promise<void>;
   markViewed: (path: string) => Promise<void>;
   unmarkViewed: (path: string) => Promise<void>;
   setAutoMarkRules: (rules: AutoMarkRule[]) => Promise<void>;
@@ -129,6 +130,18 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
   const handleResolveComment = useCallback(
     async (commentId: string, resolved: boolean): Promise<void> => {
       const updatedComment = await patchComment(commitSha, commentId, { resolved }, repo);
+      setSession((prev) => {
+        if (prev === null) return prev;
+        const comments = prev.comments.map((c) => (c.id === commentId ? updatedComment : c));
+        return { ...prev, comments };
+      });
+    },
+    [commitSha, repo],
+  );
+
+  const handleEditComment = useCallback(
+    async (commentId: string, body: string): Promise<void> => {
+      const updatedComment = await patchComment(commitSha, commentId, { body }, repo);
       setSession((prev) => {
         if (prev === null) return prev;
         const comments = prev.comments.map((c) => (c.id === commentId ? updatedComment : c));
@@ -248,6 +261,7 @@ export function useReviewSession(commitSha: string): UseReviewSessionResult {
     updateStatus: handleUpdateStatus,
     addComment: handleAddComment,
     resolveComment: handleResolveComment,
+    editComment: handleEditComment,
     markViewed: handleMarkViewed,
     unmarkViewed: handleUnmarkViewed,
     setAutoMarkRules: handleSetAutoMarkRules,

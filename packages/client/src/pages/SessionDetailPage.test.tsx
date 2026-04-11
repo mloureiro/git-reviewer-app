@@ -135,6 +135,7 @@ index 1234567..abcdefg 100644
 const mockUpdateStatus = vi.fn();
 const mockAddComment = vi.fn();
 const mockResolveComment = vi.fn();
+const mockEditComment = vi.fn();
 const mockMarkViewed = vi.fn();
 const mockUnmarkViewed = vi.fn();
 const mockSetAutoMarkRules = vi.fn();
@@ -144,6 +145,7 @@ const sessionMockBase = {
   updateStatus: mockUpdateStatus,
   addComment: mockAddComment,
   resolveComment: mockResolveComment,
+  editComment: mockEditComment,
   markViewed: mockMarkViewed,
   unmarkViewed: mockUnmarkViewed,
   setAutoMarkRules: mockSetAutoMarkRules,

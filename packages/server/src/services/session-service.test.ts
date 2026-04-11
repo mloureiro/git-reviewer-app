@@ -11,7 +11,7 @@ import type { SimpleGit } from 'simple-git';
 import type { ReviewData, ReviewComment } from '@git-reviewer/shared';
 import {
   addComment,
-  resolveComment,
+  updateComment,
   updateStatus,
   markFileViewed,
   unmarkFileViewed,
@@ -182,11 +182,11 @@ describe('session-service write-lock', () => {
   });
 
   // -------------------------------------------------------------------------
-  // resolveComment
+  // updateComment
   // -------------------------------------------------------------------------
 
-  describe('resolveComment', () => {
-    it('serialises two concurrent resolveComment calls on the same session', async () => {
+  describe('updateComment', () => {
+    it('serialises two concurrent updateComment calls on the same session', async () => {
       const commentA: ReviewComment = {
         id: 'cmt-a',
         file: 'a.ts',
@@ -217,8 +217,8 @@ describe('session-service write-lock', () => {
           Promise.resolve(makeSessionData({ comments: [{ ...commentA }, { ...commentB }] })),
         );
 
-      const p1 = resolveComment(mockGit, COMMIT_SHA, 'cmt-a', true);
-      const p2 = resolveComment(mockGit, COMMIT_SHA, 'cmt-b', true);
+      const p1 = updateComment(mockGit, COMMIT_SHA, 'cmt-a', { resolved: true });
+      const p2 = updateComment(mockGit, COMMIT_SHA, 'cmt-b', { resolved: true });
 
       gate.resolve({ ...sessionWithBoth, comments: [{ ...commentA }, { ...commentB }] });
 
@@ -236,7 +236,7 @@ describe('session-service write-lock', () => {
     it('returns comment-not-found when the comment id is missing', async () => {
       mockReadReviewNote.mockResolvedValue(makeSessionData());
 
-      const result = await resolveComment(mockGit, COMMIT_SHA, 'nonexistent', true);
+      const result = await updateComment(mockGit, COMMIT_SHA, 'nonexistent', { resolved: true });
 
       expect(result).toBe('comment-not-found');
     });
