@@ -75,17 +75,21 @@ export class TauriBackend implements Backend {
 
   async fetchSession(commitSha: string, repo?: string): Promise<SessionResponse> {
     const invoke = await getInvoke();
-    return invoke('fetch_session', { commitSha, repo }) as Promise<SessionResponse>;
+    // Tauri command returns ReviewData directly; wrap to match SessionResponse.
+    const session = await invoke('fetch_session', { commitSha, repo });
+    return { session } as SessionResponse;
   }
 
   async createSession(data: CreateSessionRequest, repo?: string): Promise<SessionResponse> {
     const invoke = await getInvoke();
-    return invoke('create_session', {
+    // Tauri command returns ReviewData directly; wrap to match SessionResponse.
+    const session = await invoke('create_session', {
       title: data.title,
       baseRef: data.baseRef,
       headRef: data.headRef,
       repo,
-    }) as Promise<SessionResponse>;
+    });
+    return { session } as SessionResponse;
   }
 
   async deleteSession(commitSha: string, repo?: string): Promise<void> {
@@ -99,11 +103,13 @@ export class TauriBackend implements Backend {
     repo?: string,
   ): Promise<UpdateSessionStatusResponse> {
     const invoke = await getInvoke();
-    return invoke('update_session_status', {
+    // Tauri command returns ReviewSession directly; wrap to match UpdateSessionStatusResponse.
+    const session = await invoke('update_session_status', {
       commitSha,
       status: data.status,
       repo,
-    }) as Promise<UpdateSessionStatusResponse>;
+    });
+    return { session } as UpdateSessionStatusResponse;
   }
 
   // Comments
@@ -128,6 +134,7 @@ export class TauriBackend implements Backend {
       commitSha,
       commentId,
       resolved: data.resolved,
+      body: data.body,
       repo,
     }) as Promise<UpdateCommentResponse>;
   }
