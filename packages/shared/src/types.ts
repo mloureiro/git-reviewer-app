@@ -18,6 +18,7 @@ export interface ReviewSession {
   headRef: string;
   baseCommit: string;
   headCommit: string;
+  headCommitDate?: string;
   status: ReviewStatus;
   createdAt: string;
   updatedAt: string;

@@ -146,6 +146,9 @@ function SessionCard({
             <span className="session-card__arrow">→</span>
             <code>{session.headRef}</code>
           </span>
+          {session.headCommitDate && (
+            <span className="session-card__date">Commit {formatDate(session.headCommitDate)}</span>
+          )}
           <span className="session-card__date">Updated {formatDate(session.updatedAt)}</span>
           {stats != null && (
             <span className="session-card__stats">
@@ -270,7 +273,17 @@ function SessionGroups({
       list.push(rd);
       groups.set(key, list);
     }
-    // Sort by repo path
+
+    // Sort sessions within each group by head commit date descending (newest first)
+    for (const [, list] of groups) {
+      list.sort((a, b) => {
+        const dateA = a.session.headCommitDate ?? a.session.updatedAt;
+        const dateB = b.session.headCommitDate ?? b.session.updatedAt;
+        return dateB.localeCompare(dateA);
+      });
+    }
+
+    // Sort groups by repo path
     return [...groups.entries()].sort(([a], [b]) => a.localeCompare(b));
   }, [sessions]);
 

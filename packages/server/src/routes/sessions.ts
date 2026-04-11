@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { SimpleGit } from 'simple-git';
-import { getCommitList } from '../git/commits.js';
+import { getCommitDate, getCommitList } from '../git/commits.js';
 import { getUncommittedChangedFiles } from '../git/diff.js';
 import { listReviewNotes, readReviewNote } from '../git/notes.js';
 import type { RepoRegistry } from '../git/repo-registry.js';
@@ -58,7 +58,7 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
             notes.map(({ commitHash }) => readReviewNote(git, commitHash)),
           );
 
-          return dataList.flatMap((data) => {
+          const sessions = dataList.flatMap((data) => {
             if (!data) return [];
             // Ensure repoPath is set on the session for grouping
             if (data.session.repoPath == null) {
@@ -66,6 +66,17 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
             }
             return [data];
           });
+
+          // Backfill headCommitDate for sessions that lack it
+          await Promise.all(
+            sessions
+              .filter((d) => d.session.headCommitDate == null)
+              .map(async (d) => {
+                d.session.headCommitDate = await getCommitDate(git, d.session.headCommit);
+              }),
+          );
+
+          return sessions;
         }),
       );
 
@@ -269,11 +280,9 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
         return;
       }
       if (title.length > MAX_SESSION_TITLE_LENGTH) {
-        res
-          .status(400)
-          .json({
-            error: `Invalid body: title must not exceed ${MAX_SESSION_TITLE_LENGTH} characters`,
-          });
+        res.status(400).json({
+          error: `Invalid body: title must not exceed ${MAX_SESSION_TITLE_LENGTH} characters`,
+        });
         return;
       }
       if (typeof baseRef !== 'string' || baseRef.trim().length === 0) {
