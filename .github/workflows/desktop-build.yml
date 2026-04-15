@@ -79,6 +79,8 @@ jobs:
 
       - name: Build Tauri desktop app
         working-directory: packages/desktop
+        env:
+          TAURI_BUNDLER_DMG_IGNORE_CI: "true"
         run: pnpm exec tauri build
 
       - name: Upload build artifacts
