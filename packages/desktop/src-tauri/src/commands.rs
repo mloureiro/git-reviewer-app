@@ -46,11 +46,13 @@ fn resolve_repo_path(repo: &Option<String>) -> Result<String, String> {
 pub fn fetch_refs(repo: Option<String>) -> Result<RefsResponse, String> {
     let repository = open_repo_from(&repo)?;
     let branches = git_ops::list_branches(&repository)?;
+    let remote_branches = git_ops::list_remote_branches(&repository)?;
     let tags = git_ops::list_tags(&repository)?;
     let current_branch = git_ops::current_branch_name(&repository).unwrap_or_default();
 
     Ok(RefsResponse {
         branches,
+        remote_branches,
         tags,
         current_branch,
     })

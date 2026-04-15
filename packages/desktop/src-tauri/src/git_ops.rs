@@ -45,6 +45,31 @@ pub fn list_branches(repo: &Repository) -> Result<Vec<String>, String> {
     Ok(names)
 }
 
+/// List all remote branch names (without the remote prefix, e.g. "origin/main" → "main").
+pub fn list_remote_branches(repo: &Repository) -> Result<Vec<String>, String> {
+    let branches = repo
+        .branches(Some(git2::BranchType::Remote))
+        .map_err(|e| format!("Failed to list remote branches: {}", e))?;
+
+    let mut names = Vec::new();
+    for branch in branches {
+        let (branch, _) = branch.map_err(|e| format!("Failed to read branch: {}", e))?;
+        if let Some(name) = branch.name().map_err(|e| format!("Invalid branch name: {}", e))? {
+            // Strip the remote prefix (e.g. "origin/main" → "main")
+            if let Some(short) = name.split_once('/').map(|(_, rest)| rest) {
+                // Skip HEAD pointers like "origin/HEAD"
+                if short == "HEAD" {
+                    continue;
+                }
+                names.push(short.to_string());
+            }
+        }
+    }
+    names.sort();
+    names.dedup();
+    Ok(names)
+}
+
 /// List all tag names.
 pub fn list_tags(repo: &Repository) -> Result<Vec<String>, String> {
     let mut tags = Vec::new();
