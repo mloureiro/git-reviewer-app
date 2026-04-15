@@ -140,6 +140,7 @@ pub fn run() {
             commands::update_session_status,
             commands::post_comment,
             commands::patch_comment,
+            commands::delete_comment,
             commands::mark_file_viewed,
             commands::unmark_file_viewed,
             commands::update_auto_mark_rules,

@@ -490,6 +490,30 @@ pub fn patch_comment(
     Ok(updated_comment)
 }
 
+#[tauri::command]
+pub fn delete_comment(
+    commit_sha: String,
+    comment_id: String,
+    repo: Option<String>,
+) -> Result<(), String> {
+    let repo = open_repo_from(&repo)?;
+
+    let mut data = git_ops::read_review_note(&repo, &commit_sha)?
+        .ok_or_else(|| "Review session not found".to_string())?;
+
+    let index = data
+        .comments
+        .iter()
+        .position(|c| c.id == comment_id)
+        .ok_or_else(|| "Comment not found".to_string())?;
+
+    data.comments.remove(index);
+    data.session.updated_at = now_iso();
+    git_ops::write_review_note(&repo, &commit_sha, &data)?;
+
+    Ok(())
+}
+
 // ---------------------------------------------------------------------------
 // Viewed files
 // ---------------------------------------------------------------------------
