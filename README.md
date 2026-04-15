@@ -84,7 +84,19 @@ git-reviewer serve --repo /path/to/repo --base main
 
 ### Desktop App (Tauri)
 
-A native desktop app is also available, built with [Tauri](https://tauri.app/):
+A native desktop app is also available, built with [Tauri](https://tauri.app/).
+
+Pre-built binaries are available on the [Releases](https://github.com/mloureiro/git-reviewer-app/releases) page.
+
+> **macOS users:** The app is not code-signed (this is a personal project, Apple charges $99/year for a signing certificate). macOS Gatekeeper will block it by default. After installing, run:
+>
+> ```bash
+> xattr -cr "/Applications/Git Reviewer.app"
+> ```
+>
+> Then open the app normally.
+
+To build from source:
 
 ```bash
 pnpm desktop:build
