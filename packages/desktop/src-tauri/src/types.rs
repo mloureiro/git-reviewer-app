@@ -171,6 +171,7 @@ pub struct CommitsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct RefsResponse {
     pub branches: Vec<String>,
+    pub remote_branches: Vec<String>,
     pub tags: Vec<String>,
     pub current_branch: String,
 }
