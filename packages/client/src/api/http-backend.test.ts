@@ -556,6 +556,36 @@ describe('HttpBackend', () => {
     });
   });
 
+  describe('fetchMergeBase', () => {
+    it('calls apiGet for /api/v1/merge-base with base and head query params', async () => {
+      mockApiGet.mockResolvedValue({ mergeBase: 'abc123' });
+
+      await backend.fetchMergeBase('main', 'feature');
+
+      expect(mockApiGet).toHaveBeenCalledWith('/api/v1/merge-base?base=main&head=feature');
+    });
+
+    it('appends repo query param when provided', async () => {
+      mockApiGet.mockResolvedValue({ mergeBase: 'abc123' });
+
+      await backend.fetchMergeBase('main', 'feature', REPO);
+
+      expect(mockApiGet).toHaveBeenCalledWith(
+        `/api/v1/merge-base?base=main&head=feature&repo=${encodeURIComponent(REPO)}`,
+      );
+    });
+
+    it('URL-encodes ref names with special characters', async () => {
+      mockApiGet.mockResolvedValue({ mergeBase: 'abc123' });
+
+      await backend.fetchMergeBase('origin/main', 'feature/auth');
+
+      expect(mockApiGet).toHaveBeenCalledWith(
+        '/api/v1/merge-base?base=origin%2Fmain&head=feature%2Fauth',
+      );
+    });
+  });
+
   // ---------------------------------------------------------------------------
   // Repos
   // ---------------------------------------------------------------------------

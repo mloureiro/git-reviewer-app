@@ -156,6 +156,7 @@ pub fn run() {
             commands::register_repo,
             commands::unregister_repo,
             commands::resolve_refs,
+            commands::fetch_merge_base,
             commands::open_session_window,
         ])
         .run(tauri::generate_context!())

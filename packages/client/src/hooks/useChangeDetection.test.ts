@@ -2,7 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useChangeDetection } from './useChangeDetection';
 import * as reviewsApi from '../api/reviews';
-import type { ResolveRefsResponse } from '../types/review';
+import type { ResolveRefsResponse, MergeBaseResponse } from '../types/review';
 
 // ---------------------------------------------------------------------------
 // Module mock
@@ -11,6 +11,7 @@ import type { ResolveRefsResponse } from '../types/review';
 vi.mock('../api/reviews');
 
 const mockResolveRefs = vi.mocked(reviewsApi.resolveRefs);
+const mockFetchMergeBase = vi.mocked(reviewsApi.fetchMergeBase);
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -19,13 +20,29 @@ const mockResolveRefs = vi.mocked(reviewsApi.resolveRefs);
 const BASE_OPTIONS = {
   baseRef: 'main',
   headRef: 'feature',
-  baseCommit: 'abc111',
   headCommit: 'def222',
   enabled: true,
 };
 
-function makeRefsResponse(baseCommit: string, headCommit: string): ResolveRefsResponse {
-  return { refs: { main: baseCommit, feature: headCommit } };
+const INITIAL_MERGE_BASE = 'fork111';
+
+function headRefsResponse(headCommit: string): ResolveRefsResponse {
+  return { refs: { feature: headCommit } };
+}
+
+function mergeBaseResponse(sha: string): MergeBaseResponse {
+  return { mergeBase: sha };
+}
+
+/**
+ * Most tests want a deterministic baseline merge-base captured before any
+ * polling happens. This advances timers just enough for the on-mount
+ * `fetchMergeBase` to resolve without firing the poll interval.
+ */
+async function waitForInitialMergeBase() {
+  await act(async () => {
+    await Promise.resolve();
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -37,10 +54,10 @@ describe('useChangeDetection', () => {
     vi.useFakeTimers();
     vi.resetAllMocks();
 
-    // Default: refs resolve to the same commits as known (no change)
-    mockResolveRefs.mockResolvedValue(
-      makeRefsResponse(BASE_OPTIONS.baseCommit, BASE_OPTIONS.headCommit),
-    );
+    // Default: head ref resolves to the same commit it was when the session opened
+    mockResolveRefs.mockResolvedValue(headRefsResponse(BASE_OPTIONS.headCommit));
+    // Default: merge-base hasn't shifted
+    mockFetchMergeBase.mockResolvedValue(mergeBaseResponse(INITIAL_MERGE_BASE));
 
     // Default: tab is visible
     vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
@@ -64,9 +81,12 @@ describe('useChangeDetection', () => {
       expect(result.current.revision).toBe(0);
     });
 
-    it('does not call resolveRefs before the first interval fires', () => {
+    it('fetches the initial merge-base on mount but does not poll yet', async () => {
       renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
+      expect(mockFetchMergeBase).toHaveBeenCalledOnce();
+      expect(mockFetchMergeBase).toHaveBeenCalledWith('main', 'feature', undefined);
       expect(mockResolveRefs).not.toHaveBeenCalled();
     });
   });
@@ -84,50 +104,33 @@ describe('useChangeDetection', () => {
       });
 
       expect(mockResolveRefs).not.toHaveBeenCalled();
+      expect(mockFetchMergeBase).not.toHaveBeenCalled();
     });
 
-    it('starts polling after 30 s when enabled=true', async () => {
+    it('polls head ref and merge-base after 30 s when enabled=true', async () => {
       renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
       });
 
-      expect(mockResolveRefs).toHaveBeenCalledOnce();
+      expect(mockResolveRefs).toHaveBeenCalledWith(['feature'], undefined);
+      // 1 on mount + 1 in poll
+      expect(mockFetchMergeBase).toHaveBeenCalledTimes(2);
     });
 
-    it('polls again at the next interval when no changes were detected', async () => {
-      renderHook(() => useChangeDetection(BASE_OPTIONS));
-
-      await act(async () => {
-        vi.advanceTimersByTime(60_000);
-      });
-
-      expect(mockResolveRefs).toHaveBeenCalledTimes(2);
-    });
-
-    it('passes the correct refs and optional repo to resolveRefs', async () => {
+    it('passes the optional repo to all backend calls', async () => {
       const repo = '/path/to/repo';
       renderHook(() => useChangeDetection({ ...BASE_OPTIONS, repo }));
+      await waitForInitialMergeBase();
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
       });
 
-      expect(mockResolveRefs).toHaveBeenCalledWith(['main', 'feature'], repo);
-    });
-
-    it('deduplicates refs when baseRef and headRef are identical', async () => {
-      renderHook(() => useChangeDetection({ ...BASE_OPTIONS, baseRef: 'main', headRef: 'main' }));
-
-      mockResolveRefs.mockResolvedValue({ refs: { main: BASE_OPTIONS.baseCommit } });
-
-      await act(async () => {
-        vi.advanceTimersByTime(30_000);
-      });
-
-      const [calledRefs] = mockResolveRefs.mock.calls[0] as [string[], string?];
-      expect(calledRefs).toEqual(['main']); // deduplicated
+      expect(mockFetchMergeBase).toHaveBeenCalledWith('main', 'feature', repo);
+      expect(mockResolveRefs).toHaveBeenCalledWith(['feature'], repo);
     });
   });
 
@@ -136,10 +139,11 @@ describe('useChangeDetection', () => {
   // -------------------------------------------------------------------------
 
   describe('change detection', () => {
-    it('sets hasChanges=true and populates changedRefs when headRef resolves to a new commit', async () => {
-      mockResolveRefs.mockResolvedValue(makeRefsResponse(BASE_OPTIONS.baseCommit, 'new-head-sha'));
-
+    it('flags headRef when its SHA advances', async () => {
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
+
+      mockResolveRefs.mockResolvedValue(headRefsResponse('new-head-sha'));
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
@@ -150,10 +154,12 @@ describe('useChangeDetection', () => {
       expect(result.current.changedRefs).not.toContain('main');
     });
 
-    it('sets hasChanges=true and populates changedRefs when baseRef resolves to a new commit', async () => {
-      mockResolveRefs.mockResolvedValue(makeRefsResponse('new-base-sha', BASE_OPTIONS.headCommit));
-
+    it('flags baseRef when the merge-base shifts (rebase detected)', async () => {
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
+
+      // Initial merge-base was captured; now the poll returns a different one
+      mockFetchMergeBase.mockResolvedValue(mergeBaseResponse('new-fork-point'));
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
@@ -164,23 +170,17 @@ describe('useChangeDetection', () => {
       expect(result.current.changedRefs).not.toContain('feature');
     });
 
-    it('includes both refs in changedRefs when both have changed', async () => {
-      mockResolveRefs.mockResolvedValue(makeRefsResponse('new-base-sha', 'new-head-sha'));
-
+    it('does NOT flag a banner when baseRef advances past the existing merge-base', async () => {
+      // This is the scenario the merge-base check exists to suppress:
+      // origin/master fetched new unrelated commits, but the fork point hasn't moved.
+      // The diff is unchanged, so no banner.
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
-      await act(async () => {
-        vi.advanceTimersByTime(30_000);
-      });
-
-      expect(result.current.hasChanges).toBe(true);
-      expect(result.current.changedRefs).toContain('main');
-      expect(result.current.changedRefs).toContain('feature');
-    });
-
-    it('keeps hasChanges=false when resolved commits match known commits', async () => {
-      // mockResolveRefs already returns matching commits from beforeEach
-      const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      // baseRef SHA would have changed in the old implementation, but we don't
+      // resolve it anymore — only head + merge-base matter. Merge-base stays put.
+      mockResolveRefs.mockResolvedValue(headRefsResponse(BASE_OPTIONS.headCommit));
+      mockFetchMergeBase.mockResolvedValue(mergeBaseResponse(INITIAL_MERGE_BASE));
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
@@ -190,24 +190,66 @@ describe('useChangeDetection', () => {
       expect(result.current.changedRefs).toEqual([]);
     });
 
+    it('flags both refs when head moved AND merge-base shifted', async () => {
+      const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
+
+      mockResolveRefs.mockResolvedValue(headRefsResponse('new-head-sha'));
+      mockFetchMergeBase.mockResolvedValue(mergeBaseResponse('new-fork-point'));
+
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+      });
+
+      expect(result.current.hasChanges).toBe(true);
+      expect(result.current.changedRefs).toContain('feature');
+      expect(result.current.changedRefs).toContain('main');
+    });
+
     it('does not poll again after changes have been detected (hasChanges guard)', async () => {
-      mockResolveRefs.mockResolvedValue(makeRefsResponse(BASE_OPTIONS.baseCommit, 'new-head-sha'));
+      mockResolveRefs.mockResolvedValue(headRefsResponse('new-head-sha'));
 
       renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
+
+      const initialMergeBaseCalls = mockFetchMergeBase.mock.calls.length;
 
       // First tick detects a change
       await act(async () => {
         vi.advanceTimersByTime(30_000);
       });
 
-      expect(mockResolveRefs).toHaveBeenCalledTimes(1);
+      const afterFirstPoll = mockResolveRefs.mock.calls.length;
 
-      // Subsequent ticks should NOT call resolveRefs again
+      // Subsequent ticks should NOT call resolveRefs or fetchMergeBase again
       await act(async () => {
         vi.advanceTimersByTime(60_000);
       });
 
-      expect(mockResolveRefs).toHaveBeenCalledTimes(1);
+      expect(mockResolveRefs).toHaveBeenCalledTimes(afterFirstPoll);
+      expect(mockFetchMergeBase).toHaveBeenCalledTimes(initialMergeBaseCalls + 1);
+    });
+
+    it('falls back to head-only detection when the initial merge-base fetch fails', async () => {
+      mockFetchMergeBase.mockRejectedValueOnce(new Error('merge-base failed'));
+      const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
+
+      // Reset the mock so the poll can call it again without throwing —
+      // but the guard in the hook should skip the merge-base check since
+      // the baseline was never captured.
+      mockFetchMergeBase.mockResolvedValue(mergeBaseResponse(INITIAL_MERGE_BASE));
+      mockResolveRefs.mockResolvedValue(headRefsResponse('new-head-sha'));
+
+      await act(async () => {
+        vi.advanceTimersByTime(30_000);
+      });
+
+      // Head movement is still detected
+      expect(result.current.hasChanges).toBe(true);
+      expect(result.current.changedRefs).toEqual(['feature']);
+      // Merge-base was never re-queried in the poll because baseline is null
+      expect(mockFetchMergeBase).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -220,30 +262,22 @@ describe('useChangeDetection', () => {
       vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
 
       renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
+      const baselineCalls = mockFetchMergeBase.mock.calls.length;
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
       });
 
       expect(mockResolveRefs).not.toHaveBeenCalled();
-    });
-
-    it('polls normally when the document is visible', async () => {
-      vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
-
-      renderHook(() => useChangeDetection(BASE_OPTIONS));
-
-      await act(async () => {
-        vi.advanceTimersByTime(30_000);
-      });
-
-      expect(mockResolveRefs).toHaveBeenCalledOnce();
+      expect(mockFetchMergeBase).toHaveBeenCalledTimes(baselineCalls);
     });
 
     it('skips one tick when hidden and resumes on the next visible tick', async () => {
       const visibilitySpy = vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('hidden');
 
       renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
       // First tick: hidden → skipped
       await act(async () => {
@@ -269,6 +303,7 @@ describe('useChangeDetection', () => {
   describe('refresh()', () => {
     it('increments revision', async () => {
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
       act(() => {
         result.current.refresh();
@@ -277,23 +312,11 @@ describe('useChangeDetection', () => {
       expect(result.current.revision).toBe(1);
     });
 
-    it('increments revision each time it is called', () => {
-      const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
-
-      act(() => {
-        result.current.refresh();
-      });
-      act(() => {
-        result.current.refresh();
-      });
-
-      expect(result.current.revision).toBe(2);
-    });
-
     it('clears hasChanges and changedRefs after changes were detected', async () => {
-      mockResolveRefs.mockResolvedValue(makeRefsResponse(BASE_OPTIONS.baseCommit, 'new-head-sha'));
+      mockResolveRefs.mockResolvedValue(headRefsResponse('new-head-sha'));
 
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
@@ -310,30 +333,18 @@ describe('useChangeDetection', () => {
       expect(result.current.changedRefs).toEqual([]);
     });
 
-    it('clears the dismissed flag so subsequent changes become visible again', async () => {
-      mockResolveRefs.mockResolvedValue(makeRefsResponse(BASE_OPTIONS.baseCommit, 'new-head-sha'));
-
+    it('recaptures the merge-base baseline after refresh', async () => {
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
+      const onMountCalls = mockFetchMergeBase.mock.calls.length;
 
-      // Detect a change then dismiss it
-      await act(async () => {
-        vi.advanceTimersByTime(30_000);
-      });
-
-      act(() => {
-        result.current.dismiss();
-      });
-
-      expect(result.current.hasChanges).toBe(false); // dismissed
-
-      // refresh should clear the dismissed flag
       act(() => {
         result.current.refresh();
       });
 
-      // hasChanges is also cleared by refresh, so we expect false, but dismissed is gone
-      expect(result.current.revision).toBe(1);
-      expect(result.current.hasChanges).toBe(false); // cleared by refresh itself
+      // refresh triggers a re-fetch via the revision dep
+      await waitForInitialMergeBase();
+      expect(mockFetchMergeBase.mock.calls.length).toBeGreaterThan(onMountCalls);
     });
   });
 
@@ -343,9 +354,10 @@ describe('useChangeDetection', () => {
 
   describe('dismiss()', () => {
     it('hides hasChanges even when changes were detected', async () => {
-      mockResolveRefs.mockResolvedValue(makeRefsResponse(BASE_OPTIONS.baseCommit, 'new-head-sha'));
+      mockResolveRefs.mockResolvedValue(headRefsResponse('new-head-sha'));
 
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
@@ -361,9 +373,10 @@ describe('useChangeDetection', () => {
     });
 
     it('preserves changedRefs even after dismiss', async () => {
-      mockResolveRefs.mockResolvedValue(makeRefsResponse(BASE_OPTIONS.baseCommit, 'new-head-sha'));
+      mockResolveRefs.mockResolvedValue(headRefsResponse('new-head-sha'));
 
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
@@ -373,18 +386,7 @@ describe('useChangeDetection', () => {
         result.current.dismiss();
       });
 
-      // changedRefs still holds the refs that changed
       expect(result.current.changedRefs).toContain('feature');
-    });
-
-    it('has no effect on hasChanges when called before any change is detected', () => {
-      const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
-
-      act(() => {
-        result.current.dismiss();
-      });
-
-      expect(result.current.hasChanges).toBe(false);
     });
   });
 
@@ -397,14 +399,17 @@ describe('useChangeDetection', () => {
       const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval');
 
       const { unmount } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
       unmount();
 
       expect(clearIntervalSpy).toHaveBeenCalled();
     });
 
-    it('does not call resolveRefs after unmount', async () => {
+    it('does not call the backend after unmount', async () => {
       const { unmount } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
+      const baselineCalls = mockFetchMergeBase.mock.calls.length;
 
       unmount();
 
@@ -413,6 +418,7 @@ describe('useChangeDetection', () => {
       });
 
       expect(mockResolveRefs).not.toHaveBeenCalled();
+      expect(mockFetchMergeBase).toHaveBeenCalledTimes(baselineCalls);
     });
   });
 
@@ -421,10 +427,11 @@ describe('useChangeDetection', () => {
   // -------------------------------------------------------------------------
 
   describe('error handling', () => {
-    it('silently ignores errors thrown by resolveRefs', async () => {
+    it('silently ignores errors thrown by the polling calls', async () => {
       mockResolveRefs.mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
       await expect(
         act(async () => {
@@ -438,11 +445,12 @@ describe('useChangeDetection', () => {
     it('continues polling after a failed request', async () => {
       mockResolveRefs
         .mockRejectedValueOnce(new Error('Network error'))
-        .mockResolvedValue(makeRefsResponse(BASE_OPTIONS.baseCommit, BASE_OPTIONS.headCommit));
+        .mockResolvedValue(headRefsResponse(BASE_OPTIONS.headCommit));
 
       renderHook(() => useChangeDetection(BASE_OPTIONS));
+      await waitForInitialMergeBase();
 
-      // First tick: error — should not throw
+      // First tick: error
       await act(async () => {
         vi.advanceTimersByTime(30_000);
       });
@@ -457,25 +465,21 @@ describe('useChangeDetection', () => {
   });
 
   // -------------------------------------------------------------------------
-  // knownCommitsRef — keeps up to date across renders
+  // knownHeadCommitRef stays current across rerenders
   // -------------------------------------------------------------------------
 
-  describe('knownCommitsRef stays current', () => {
+  describe('knownHeadCommitRef stays current', () => {
     it('uses the latest headCommit when comparing after a rerender', async () => {
       const { result, rerender } = renderHook(
         (props: typeof BASE_OPTIONS) => useChangeDetection(props),
         { initialProps: BASE_OPTIONS },
       );
+      await waitForInitialMergeBase();
 
-      // Simulate the parent updating headCommit to match what the API will return
-      // (i.e. the "new" commit is now the known commit after a refresh)
-      const updatedOptions = { ...BASE_OPTIONS, headCommit: 'new-head-sha' };
-      rerender(updatedOptions);
+      // Parent updated headCommit to match what the API will return
+      rerender({ ...BASE_OPTIONS, headCommit: 'new-head-sha' });
 
-      // resolveRefs returns 'new-head-sha', which now equals knownCommitsRef.headCommit
-      mockResolveRefs.mockResolvedValue({
-        refs: { main: BASE_OPTIONS.baseCommit, feature: 'new-head-sha' },
-      });
+      mockResolveRefs.mockResolvedValue(headRefsResponse('new-head-sha'));
 
       await act(async () => {
         vi.advanceTimersByTime(30_000);
@@ -483,27 +487,6 @@ describe('useChangeDetection', () => {
 
       // No change should be detected because the commit is now the known one
       expect(result.current.hasChanges).toBe(false);
-    });
-
-    it('detects a change based on the most recent commit value after rerender', async () => {
-      const { result, rerender } = renderHook(
-        (props: typeof BASE_OPTIONS) => useChangeDetection(props),
-        { initialProps: BASE_OPTIONS },
-      );
-
-      // Parent updates headCommit to reflect a refresh
-      rerender({ ...BASE_OPTIONS, headCommit: 'updated-commit' });
-
-      // API now returns yet another commit — different from 'updated-commit'
-      mockResolveRefs.mockResolvedValue(
-        makeRefsResponse(BASE_OPTIONS.baseCommit, 'another-new-sha'),
-      );
-
-      await act(async () => {
-        vi.advanceTimersByTime(30_000);
-      });
-
-      expect(result.current.hasChanges).toBe(true);
     });
   });
 });

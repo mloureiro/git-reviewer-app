@@ -70,6 +70,17 @@ pub fn resolve_refs(refs: Vec<String>, repo: Option<String>) -> Result<ResolveRe
     Ok(ResolveRefsResponse { refs: resolved })
 }
 
+#[tauri::command]
+pub fn fetch_merge_base(
+    base: String,
+    head: String,
+    repo: Option<String>,
+) -> Result<MergeBaseResponse, String> {
+    let repository = open_repo_from(&repo)?;
+    let merge_base = git_ops::merge_base(&repository, &base, &head)?;
+    Ok(MergeBaseResponse { merge_base })
+}
+
 // ---------------------------------------------------------------------------
 // Files & Diff
 // ---------------------------------------------------------------------------

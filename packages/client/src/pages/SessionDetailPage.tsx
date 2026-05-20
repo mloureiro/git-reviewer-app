@@ -133,7 +133,6 @@ export function SessionDetailPage(): React.ReactNode {
   } = useChangeDetection({
     baseRef: reviewData?.session.baseRef ?? '',
     headRef: reviewData?.session.headRef ?? '',
-    baseCommit: reviewData?.session.baseCommit ?? '',
     headCommit: reviewData?.session.headCommit ?? '',
     enabled: isCommittedMode,
     repo: repoPath,

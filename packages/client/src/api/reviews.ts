@@ -20,6 +20,7 @@ import type {
   AutoMarkApplyResponse,
   RefsResponse,
   ResolveRefsResponse,
+  MergeBaseResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -144,6 +145,15 @@ export function fetchRefs(repo?: string): Promise<RefsResponse> {
 /** GET /api/v1/resolve-refs — Resolve ref names to commit hashes. */
 export function resolveRefs(refs: string[], repo?: string): Promise<ResolveRefsResponse> {
   return getBackend().resolveRefs(refs, repo);
+}
+
+/** GET /api/v1/merge-base — Find the fork-point SHA between base and head. */
+export function fetchMergeBase(
+  base: string,
+  head: string,
+  repo?: string,
+): Promise<MergeBaseResponse> {
+  return getBackend().fetchMergeBase(base, head, repo);
 }
 
 /** GET /api/v1/repos — Fetch the list of registered repositories. */

@@ -18,6 +18,7 @@ import type {
   AutoMarkApplyResponse,
   RefsResponse,
   ResolveRefsResponse,
+  MergeBaseResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -75,6 +76,7 @@ export interface Backend {
   // Refs
   fetchRefs(repo?: string): Promise<RefsResponse>;
   resolveRefs(refs: string[], repo?: string): Promise<ResolveRefsResponse>;
+  fetchMergeBase(base: string, head: string, repo?: string): Promise<MergeBaseResponse>;
 
   // Repos
   fetchRepos(): Promise<ReposResponse>;

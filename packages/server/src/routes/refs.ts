@@ -33,6 +33,27 @@ export function createRefsRouter(registry: RepoRegistry): Router {
     }
   });
 
+  // Find the merge-base SHA of two refs (the fork point used by three-dot diff semantics).
+  router.get('/merge-base', async (req, res, next) => {
+    try {
+      const [git] = registry.resolve(req.query.repo);
+      const base = typeof req.query.base === 'string' ? req.query.base : '';
+      const head = typeof req.query.head === 'string' ? req.query.head : '';
+      if (!base || !head) {
+        res.status(400).json({ error: 'Both `base` and `head` query params are required' });
+        return;
+      }
+      if (!isValidRef(base) || !isValidRef(head)) {
+        res.status(400).json({ error: 'Invalid ref: contains unsafe characters' });
+        return;
+      }
+      const mergeBase = (await git.raw(['merge-base', base, head])).trim();
+      res.json({ mergeBase });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   // Resolve ref names to commit hashes (lightweight poll endpoint)
   router.get('/resolve-refs', async (req, res, next) => {
     try {
