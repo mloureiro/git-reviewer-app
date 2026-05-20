@@ -58,6 +58,7 @@ export type {
   AutoMarkApplyResponse,
   ViewedFileResponse,
   ResolveRefsResponse,
+  MergeBaseResponse,
   RefsResponse,
   CommitsResponse,
   ReposResponse,

@@ -127,6 +127,12 @@ pub struct ResolveRefsResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MergeBaseResponse {
+    pub merge_base: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReposResponse {
     pub repos: Vec<String>,
 }

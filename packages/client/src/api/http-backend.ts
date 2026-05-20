@@ -20,6 +20,7 @@ import type {
   AutoMarkApplyResponse,
   RefsResponse,
   ResolveRefsResponse,
+  MergeBaseResponse,
   CommitsResponse,
   CommitDiffResponse,
   CommitFilesResponse,
@@ -177,6 +178,11 @@ export class HttpBackend implements Backend {
   resolveRefs(refs: string[], repo?: string): Promise<ResolveRefsResponse> {
     const qs = buildQueryString({ refs: refs.join(','), repo });
     return apiGet<ResolveRefsResponse>(`/api/v1/resolve-refs${qs}`);
+  }
+
+  fetchMergeBase(base: string, head: string, repo?: string): Promise<MergeBaseResponse> {
+    const qs = buildQueryString({ base, head, repo });
+    return apiGet<MergeBaseResponse>(`/api/v1/merge-base${qs}`);
   }
 
   // Repos

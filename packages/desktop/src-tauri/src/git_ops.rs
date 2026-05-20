@@ -94,6 +94,26 @@ pub fn resolve_ref(repo: &Repository, ref_name: &str) -> Result<String, String> 
     Ok(commit.id().to_string())
 }
 
+/// Find the merge-base SHA of two refs — the fork point used by three-dot diff semantics.
+pub fn merge_base(repo: &Repository, base: &str, head: &str) -> Result<String, String> {
+    let base_oid = repo
+        .revparse_single(base)
+        .map_err(|e| format!("Failed to resolve base '{}': {}", base, e))?
+        .peel_to_commit()
+        .map_err(|e| format!("Base '{}' is not a commit: {}", base, e))?
+        .id();
+    let head_oid = repo
+        .revparse_single(head)
+        .map_err(|e| format!("Failed to resolve head '{}': {}", head, e))?
+        .peel_to_commit()
+        .map_err(|e| format!("Head '{}' is not a commit: {}", head, e))?
+        .id();
+    let mb = repo
+        .merge_base(base_oid, head_oid)
+        .map_err(|e| format!("Failed to find merge-base of '{}' and '{}': {}", base, head, e))?;
+    Ok(mb.to_string())
+}
+
 // ---------------------------------------------------------------------------
 // Diff helpers
 // ---------------------------------------------------------------------------
