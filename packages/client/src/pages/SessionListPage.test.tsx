@@ -382,6 +382,100 @@ describe('SessionListPage', () => {
   });
 
   // -------------------------------------------------------------------------
+  // Healthy session deletion (two-step confirm)
+  // -------------------------------------------------------------------------
+
+  describe('healthy session deletion', () => {
+    it('renders a delete button on healthy session cards', () => {
+      const session = makeSession({ headCommit: 'healthy111' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { healthy111: { status: 'ok' } },
+      });
+      renderPage();
+
+      expect(screen.getByTitle('Delete review')).toBeInTheDocument();
+    });
+
+    it('does not call deleteSession on the first click (asks for confirmation)', async () => {
+      mockDeleteSession.mockResolvedValue(undefined);
+
+      const session = makeSession({ headCommit: 'healthy222' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { healthy222: { status: 'ok' } },
+      });
+      renderPage();
+
+      const deleteBtn = screen.getByTitle('Delete review');
+      fireEvent.click(deleteBtn);
+
+      // After one click, button text changes but delete has NOT been called
+      expect(mockDeleteSession).not.toHaveBeenCalled();
+      expect(deleteBtn).toHaveTextContent(/confirm delete/i);
+    });
+
+    it('calls deleteSession on the second click (confirmation)', async () => {
+      mockDeleteSession.mockResolvedValue(undefined);
+
+      const session = makeSession({ headCommit: 'healthy333', repoPath: '/repo/h' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { healthy333: { status: 'ok' } },
+      });
+      renderPage();
+
+      const deleteBtn = screen.getByTitle('Delete review');
+      fireEvent.click(deleteBtn); // first click — asks for confirm
+      fireEvent.click(deleteBtn); // second click — actually deletes
+
+      await waitFor(() => {
+        expect(mockDeleteSession).toHaveBeenCalledWith('healthy333', '/repo/h');
+      });
+    });
+
+    it('refetches after a successful healthy deletion', async () => {
+      mockDeleteSession.mockResolvedValue(undefined);
+
+      const session = makeSession({ headCommit: 'healthy444' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { healthy444: { status: 'ok' } },
+      });
+      renderPage();
+
+      const deleteBtn = screen.getByTitle('Delete review');
+      fireEvent.click(deleteBtn);
+      fireEvent.click(deleteBtn);
+
+      await waitFor(() => {
+        expect(mockRefetch).toHaveBeenCalled();
+      });
+    });
+
+    it('resets confirmation and re-enables the button when deletion fails', async () => {
+      mockDeleteSession.mockRejectedValue(new Error('Delete failed'));
+
+      const session = makeSession({ headCommit: 'healthy555' });
+      setupDefaultMocks({
+        sessions: [session],
+        health: { healthy555: { status: 'ok' } },
+      });
+      renderPage();
+
+      const deleteBtn = screen.getByTitle('Delete review');
+      fireEvent.click(deleteBtn); // confirm
+      fireEvent.click(deleteBtn); // actual delete (fails)
+
+      await waitFor(() => {
+        expect(vi.mocked(window.alert)).toHaveBeenCalledWith('Delete failed');
+      });
+      expect(deleteBtn).not.toBeDisabled();
+      expect(deleteBtn).toHaveTextContent(/^delete$/i);
+    });
+  });
+
+  // -------------------------------------------------------------------------
   // Session grouping (multiple repos)
   // -------------------------------------------------------------------------
 
