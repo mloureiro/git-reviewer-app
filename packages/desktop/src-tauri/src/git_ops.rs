@@ -206,8 +206,12 @@ pub fn get_diff_text(repo: &Repository, base: &str, head: &str) -> Result<String
         .map_err(|e| format!("Head '{}' is not a commit: {}", head, e))?
         .id();
 
-    // Find merge base (three-dot semantics)
-    let merge_base = repo.merge_base(base_oid, head_oid).unwrap_or(base_oid);
+    // Find merge base (three-dot semantics). Propagate the error instead of falling back
+    // to base_oid, which would silently degrade to two-dot behavior and surface unrelated
+    // changes from the base branch.
+    let merge_base = repo
+        .merge_base(base_oid, head_oid)
+        .map_err(|e| format!("Failed to find merge-base of '{}' and '{}': {}", base, head, e))?;
 
     let base_tree = repo
         .find_commit(merge_base)
@@ -288,7 +292,9 @@ pub fn get_changed_files(
         .map_err(|e| format!("Head '{}' is not a commit: {}", head, e))?
         .id();
 
-    let merge_base = repo.merge_base(base_oid, head_oid).unwrap_or(base_oid);
+    let merge_base = repo
+        .merge_base(base_oid, head_oid)
+        .map_err(|e| format!("Failed to find merge-base of '{}' and '{}': {}", base, head, e))?;
 
     let base_tree = repo
         .find_commit(merge_base)
