@@ -101,6 +101,7 @@ function SessionCard({
   const { session } = reviewData;
   const isStale = health?.status === 'stale';
   const [removing, setRemoving] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const openInNewWindow = useCallback(async () => {
     try {
@@ -125,6 +126,22 @@ function SessionCard({
       setRemoving(false);
     }
   }, [session.headCommit, session.repoPath, onRemoved]);
+
+  const handleDeleteHealthy = useCallback(async () => {
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
+    setRemoving(true);
+    try {
+      await deleteSession(session.headCommit, session.repoPath);
+      onRemoved();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : String(err));
+      setRemoving(false);
+      setConfirmingDelete(false);
+    }
+  }, [confirmingDelete, session.headCommit, session.repoPath, onRemoved]);
 
   const cardClass = ['session-card', isStale ? 'session-card--stale' : '']
     .filter(Boolean)
@@ -191,6 +208,17 @@ function SessionCard({
               <polyline points="15 3 21 3 21 9" />
               <line x1="10" y1="14" x2="21" y2="3" />
             </svg>
+          </Button>
+        )}
+        {!isStale && (
+          <Button
+            variant="danger"
+            size="sm"
+            onClick={handleDeleteHealthy}
+            disabled={removing}
+            title="Delete review"
+          >
+            {removing ? 'Deleting...' : confirmingDelete ? 'Confirm delete?' : 'Delete'}
           </Button>
         )}
         <StatusBadge status={session.status} />
