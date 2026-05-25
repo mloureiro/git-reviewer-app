@@ -94,24 +94,79 @@ pub fn resolve_ref(repo: &Repository, ref_name: &str) -> Result<String, String> 
     Ok(commit.id().to_string())
 }
 
-/// Find the merge-base SHA of two refs — the fork point used by three-dot diff semantics.
+/// Find the fork-point SHA used by three-dot diff semantics, automatically
+/// considering both the given `base` ref and its local/remote counterpart.
+///
+/// When `base` is e.g. `master` and the branch was rebased onto `origin/master`
+/// after the local `master` fell behind, the naïve merge-base would land on the
+/// outdated local ref and the diff would include unrelated commits. This helper
+/// computes the merge-base of `head` against each candidate (local + counterpart),
+/// then picks whichever merge-base is closest to `head` — i.e. is a descendant
+/// of the other.
 pub fn merge_base(repo: &Repository, base: &str, head: &str) -> Result<String, String> {
-    let base_oid = repo
-        .revparse_single(base)
-        .map_err(|e| format!("Failed to resolve base '{}': {}", base, e))?
-        .peel_to_commit()
-        .map_err(|e| format!("Base '{}' is not a commit: {}", base, e))?
-        .id();
-    let head_oid = repo
-        .revparse_single(head)
-        .map_err(|e| format!("Failed to resolve head '{}': {}", head, e))?
-        .peel_to_commit()
-        .map_err(|e| format!("Head '{}' is not a commit: {}", head, e))?
-        .id();
-    let mb = repo
-        .merge_base(base_oid, head_oid)
-        .map_err(|e| format!("Failed to find merge-base of '{}' and '{}': {}", base, head, e))?;
-    Ok(mb.to_string())
+    let head_oid = resolve_to_oid(repo, head)
+        .map_err(|e| format!("Failed to resolve head '{}': {}", head, e))?;
+
+    let candidates = expand_base_candidates(repo, base);
+
+    let mut mbs: Vec<Oid> = Vec::with_capacity(candidates.len());
+    for candidate in &candidates {
+        let Ok(c_oid) = resolve_to_oid(repo, candidate) else { continue };
+        if let Ok(mb) = repo.merge_base(c_oid, head_oid) {
+            mbs.push(mb);
+        }
+    }
+
+    if mbs.is_empty() {
+        return Err(format!(
+            "Failed to find merge-base of '{}' and '{}'",
+            base, head
+        ));
+    }
+
+    // Pick the merge-base closest to head: the one that is a descendant of all others.
+    let best = mbs
+        .into_iter()
+        .reduce(|a, b| match repo.merge_base(a, b) {
+            Ok(common) if common == a => b, // a is ancestor of b → b is closer to head
+            Ok(common) if common == b => a, // b is ancestor of a → a is closer to head
+            _ => a,                         // diverged or error: stick with first
+        })
+        .expect("non-empty mbs was checked above");
+
+    Ok(best.to_string())
+}
+
+fn resolve_to_oid(repo: &Repository, ref_name: &str) -> Result<Oid, git2::Error> {
+    repo.revparse_single(ref_name)?.peel_to_commit().map(|c| c.id())
+}
+
+/// Given a base ref, return `[base, counterpart(base)]`. Counterpart is the
+/// remote-tracking sibling for a local branch, or the local sibling for a
+/// remote-tracking ref. Unresolvable counterparts are filtered out by the caller.
+fn expand_base_candidates(repo: &Repository, base: &str) -> Vec<String> {
+    let mut out = vec![base.to_string()];
+
+    // Case 1: base is already a remote-tracking ref like "origin/master".
+    if let Ok(remotes) = repo.remotes() {
+        for remote_name in remotes.iter().flatten() {
+            let prefix = format!("{}/", remote_name);
+            if let Some(local_name) = base.strip_prefix(&prefix) {
+                out.push(local_name.to_string());
+                return out;
+            }
+        }
+    }
+
+    // Case 2: base looks local. Add the remote counterpart using the branch's
+    // configured upstream remote, falling back to "origin".
+    let remote_name = repo
+        .config()
+        .ok()
+        .and_then(|cfg| cfg.get_string(&format!("branch.{}.remote", base)).ok())
+        .unwrap_or_else(|| "origin".to_string());
+    out.push(format!("{}/{}", remote_name, base));
+    out
 }
 
 // ---------------------------------------------------------------------------
@@ -211,30 +266,15 @@ fn diff_to_files(diff: &git2::Diff) -> Result<Vec<DiffFile>, String> {
 // Diff text
 // ---------------------------------------------------------------------------
 
-/// Get the unified diff text between two refs using the three-dot (merge-base) semantics.
+/// Get the unified diff text between two refs using three-dot (merge-base) semantics.
 pub fn get_diff_text(repo: &Repository, base: &str, head: &str) -> Result<String, String> {
-    let base_oid = repo
-        .revparse_single(base)
-        .map_err(|e| format!("Failed to resolve base '{}': {}", base, e))?
-        .peel_to_commit()
-        .map_err(|e| format!("Base '{}' is not a commit: {}", base, e))?
-        .id();
-    let head_oid = repo
-        .revparse_single(head)
-        .map_err(|e| format!("Failed to resolve head '{}': {}", head, e))?
-        .peel_to_commit()
-        .map_err(|e| format!("Head '{}' is not a commit: {}", head, e))?
-        .id();
-
-    // Find merge base (three-dot semantics). Propagate the error instead of falling back
-    // to base_oid, which would silently degrade to two-dot behavior and surface unrelated
-    // changes from the base branch.
-    let merge_base = repo
-        .merge_base(base_oid, head_oid)
-        .map_err(|e| format!("Failed to find merge-base of '{}' and '{}': {}", base, head, e))?;
+    let head_oid = resolve_to_oid(repo, head)
+        .map_err(|e| format!("Failed to resolve head '{}': {}", head, e))?;
+    let mb_sha = merge_base(repo, base, head)?;
+    let mb_oid = Oid::from_str(&mb_sha).map_err(|e| format!("Invalid merge-base SHA: {}", e))?;
 
     let base_tree = repo
-        .find_commit(merge_base)
+        .find_commit(mb_oid)
         .and_then(|c| c.tree())
         .map_err(|e| format!("Failed to get base tree: {}", e))?;
     let head_tree = repo
@@ -299,25 +339,13 @@ pub fn get_changed_files(
     base: &str,
     head: &str,
 ) -> Result<Vec<DiffFile>, String> {
-    let base_oid = repo
-        .revparse_single(base)
-        .map_err(|e| format!("Failed to resolve base '{}': {}", base, e))?
-        .peel_to_commit()
-        .map_err(|e| format!("Base '{}' is not a commit: {}", base, e))?
-        .id();
-    let head_oid = repo
-        .revparse_single(head)
-        .map_err(|e| format!("Failed to resolve head '{}': {}", head, e))?
-        .peel_to_commit()
-        .map_err(|e| format!("Head '{}' is not a commit: {}", head, e))?
-        .id();
-
-    let merge_base = repo
-        .merge_base(base_oid, head_oid)
-        .map_err(|e| format!("Failed to find merge-base of '{}' and '{}': {}", base, head, e))?;
+    let head_oid = resolve_to_oid(repo, head)
+        .map_err(|e| format!("Failed to resolve head '{}': {}", head, e))?;
+    let mb_sha = merge_base(repo, base, head)?;
+    let mb_oid = Oid::from_str(&mb_sha).map_err(|e| format!("Invalid merge-base SHA: {}", e))?;
 
     let base_tree = repo
-        .find_commit(merge_base)
+        .find_commit(mb_oid)
         .and_then(|c| c.tree())
         .map_err(|e| format!("Failed to get base tree: {}", e))?;
     let head_tree = repo
