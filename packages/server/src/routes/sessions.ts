@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import type { SimpleGit } from 'simple-git';
 import { getCommitDate, getCommitList } from '../git/commits.js';
-import { getUncommittedChangedFiles } from '../git/diff.js';
+import { getUncommittedChangedFiles, smartMergeBase } from '../git/diff.js';
 import { listReviewNotes, readReviewNote } from '../git/notes.js';
 import type { RepoRegistry } from '../git/repo-registry.js';
 import { validateCommitSha, resolveRepo, type ResolvedRepoLocals } from './middleware.js';
@@ -194,7 +194,8 @@ export function createSessionsRouter(registry: RepoRegistry): Router {
         // Compute lightweight diff stats for healthy sessions
         let noteStats: SessionStats | undefined;
         try {
-          const summary = await git.diffSummary([`${baseResult.trim()}...${headResult.trim()}`]);
+          const mb = await smartMergeBase(git, baseRef, headRef);
+          const summary = await git.diffSummary([`${mb}..${headResult.trim()}`]);
           noteStats = {
             files: summary.changed,
             additions: summary.insertions,

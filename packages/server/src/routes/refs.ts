@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { RepoRegistry } from '../git/repo-registry.js';
+import { smartMergeBase } from '../git/diff.js';
 import { isValidRef } from './ref-validation.js';
 
 export function createRefsRouter(registry: RepoRegistry): Router {
@@ -47,7 +48,7 @@ export function createRefsRouter(registry: RepoRegistry): Router {
         res.status(400).json({ error: 'Invalid ref: contains unsafe characters' });
         return;
       }
-      const mergeBase = (await git.raw(['merge-base', base, head])).trim();
+      const mergeBase = await smartMergeBase(git, base, head);
       res.json({ mergeBase });
     } catch (error) {
       next(error);
