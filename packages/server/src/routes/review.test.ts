@@ -19,6 +19,7 @@ vi.mock('../git/diff.js', () => ({
   getUncommittedChangedFiles: vi.fn(),
   getFileDiffHashes: vi.fn().mockReturnValue({}),
   createGitClient: vi.fn(),
+  smartMergeBase: vi.fn(),
 }));
 
 import {
@@ -34,6 +35,7 @@ import {
   getUncommittedChangedFiles,
   getFileDiffHashes,
   createGitClient,
+  smartMergeBase,
 } from '../git/diff.js';
 
 const mockListReviewNotes = vi.mocked(listReviewNotes);
@@ -46,6 +48,7 @@ const mockGetChangedFiles = vi.mocked(getChangedFiles);
 const mockGetUncommittedChangedFiles = vi.mocked(getUncommittedChangedFiles);
 const mockGetFileDiffHashes = vi.mocked(getFileDiffHashes);
 const mockCreateGitClient = vi.mocked(createGitClient);
+const mockSmartMergeBase = vi.mocked(smartMergeBase);
 
 // Minimal SimpleGit stub — routes call git.revparse only in POST /sessions
 const mockRevparse = vi.fn();
@@ -875,6 +878,7 @@ describe('review API routes — integration', () => {
       // revparse called twice: baseRef then headRef
       mockRevparse.mockResolvedValueOnce(`${BASE_SHA}\n`);
       mockRevparse.mockResolvedValueOnce(`${HEAD_SHA}\n`);
+      mockSmartMergeBase.mockResolvedValueOnce(BASE_SHA);
       // diffSummary called for stats
       const mockDiffSummary = vi.fn().mockResolvedValueOnce({
         changed: 3,
